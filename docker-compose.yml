@@ -1,0 +1,18 @@
+services:
+  api:
+    build: ./backend
+    environment:
+      KINDRED_SECRET_KEY: ${KINDRED_SECRET_KEY:-change-me-to-a-long-random-string}
+      KINDRED_DEMO_MODE: "true"
+    volumes:
+      - kindred-data:/data
+
+  web:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+volumes:
+  kindred-data:
