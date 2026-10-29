@@ -136,10 +136,19 @@ async def websocket_endpoint(websocket: WebSocket, token: str = "") -> None:
         log.exception("websocket error for user %s", user.id)
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
     finally:
+        # This handler may be finishing because its task was cancelled (client gone, server
+        # shutting down), so the database work runs as a hub task rather than in here.
         if hub.manager.disconnect(user.id, websocket):
-            async with hub.db.session() as session:
-                fresh = await session.get(User, user.id)
-                if fresh is not None:
-                    fresh.last_active_at = utcnow()
-                    await session.commit()
-                    await _broadcast_presence(hub, fresh, online=False)
+            hub.spawn(_went_offline(hub, user.id))
+
+
+async def _went_offline(hub: Hub, user_id: int) -> None:
+    if hub.manager.is_online(user_id):  # reconnected in the meantime
+        return
+    async with hub.db.session() as session:
+        user = await session.get(User, user_id)
+        if user is None:
+            return
+        user.last_active_at = utcnow()
+        await session.commit()
+        await _broadcast_presence(hub, user, online=False)

@@ -118,10 +118,10 @@ def test_live_chat_between_two_people(client: TestClient, make_user) -> None:
             hers.send_json({"type": "ping"})
             assert _receive_until(hers, "pong") == {"type": "pong"}
 
-        # The test client cancels the server task on close, so check the registry directly.
-        hub = client.app.state.hub
-        assert not hub.manager.is_online(her.id)
-        assert hub.manager.is_online(me.id)
+        offline = _receive_until(mine, "presence")
+        assert (offline["user_id"], offline["online"]) == (her.id, False)
+        assert offline["last_active_at"] is not None
+        assert client.app.state.hub.manager.is_online(me.id)
 
 
 def test_websocket_reports_bad_events_without_disconnecting(client: TestClient, make_user) -> None:
