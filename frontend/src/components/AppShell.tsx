@@ -4,6 +4,7 @@ import { BarChart3, Gavel, Heart, LogOut, MessageCircle, Settings, Sparkles, Use
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { EmailBanner } from '@/components/EmailBanner'
 import { api } from '@/lib/api'
 import { keys, totalUnread } from '@/lib/cache'
 import { NAVIGATE_EVENT, titleWithCount } from '@/lib/desktop'
@@ -228,6 +229,7 @@ export function AppShell() {
           </header>
         )}
         <main className={clsx('flex-1', !inChat && 'pb-24 lg:pb-0')}>
+          {!inChat && <EmailBanner />}
           <Outlet />
         </main>
       </div>

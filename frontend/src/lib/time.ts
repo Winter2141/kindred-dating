@@ -12,6 +12,13 @@ export function shortAgo(iso: string, now: Date = new Date()): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
+/** "just now", "5m ago", "2d ago", or a date once it's over a week old. */
+export function ago(iso: string, now: Date = new Date()): string {
+  const short = shortAgo(iso, now)
+  if (short === 'now') return 'just now'
+  return /^\d+[mhd]$/.test(short) ? `${short} ago` : `on ${short}`
+}
+
 /** Presence line under a name: "Online now", "Active 12m ago", "Active yesterday". */
 export function lastSeen(iso: string, online: boolean, now: Date = new Date()): string {
   if (online) return 'Online now'

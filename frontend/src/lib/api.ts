@@ -16,6 +16,7 @@ import type {
   Meta,
   ModerationStats,
   NotificationList,
+  OutboxEmail,
   ProfileStrength,
   Prompt,
   QuestionCatalog,
@@ -122,6 +123,13 @@ export const api = {
     request<Session>('/api/auth/login', { method: 'POST', body: { email, password } }),
   register: (data: RegisterInput) =>
     request<Session>('/api/auth/register', { method: 'POST', body: { ...data } }),
+  forgotPassword: (email: string) => request<void>('/api/auth/forgot-password', { method: 'POST', body: { email } }),
+  resetPassword: (token: string, newPassword: string) =>
+    request<Session>('/api/auth/reset-password', { method: 'POST', body: { token, new_password: newPassword } }),
+  verifyEmail: (token: string) =>
+    request<{ email: string; verified: true }>('/api/auth/verify-email', { method: 'POST', body: { token } }),
+  resendVerification: () => request<void>('/api/me/verify-email/resend', { method: 'POST' }),
+  outbox: () => request<OutboxEmail[]>('/api/dev/outbox'),
 
   me: () => request<Me>('/api/me'),
   strength: () => request<ProfileStrength>('/api/me/strength'),

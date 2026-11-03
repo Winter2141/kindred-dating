@@ -9,7 +9,7 @@ import { VerificationQueue } from '@/components/Verification'
 import { Avatar, EmptyState, Spinner } from '@/components/ui'
 import { api } from '@/lib/api'
 import { keys } from '@/lib/cache'
-import { shortAgo } from '@/lib/time'
+import { ago } from '@/lib/time'
 import type { AdminReport, ReportStatus } from '@/lib/types'
 import { useToasts } from '@/store/live'
 
@@ -198,7 +198,7 @@ export function ReportCard({ report }: { report: AdminReport }) {
           )}
           <p className="mt-3 flex items-center gap-2 text-xs text-faint">
             <Avatar src={report.reporter.photos[0]} name={report.reporter.name} size={18} />
-            Reported by {report.reporter.name} · {shortAgo(report.created_at)} ago
+            Reported by {report.reporter.name} · {ago(report.created_at)}
           </p>
         </div>
       </div>

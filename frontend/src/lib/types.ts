@@ -60,6 +60,17 @@ export interface Me extends PublicProfile {
   has_location: boolean
   is_paused: boolean
   is_admin: boolean
+  /** They followed the link in the confirmation email. */
+  email_verified?: boolean
+}
+
+export interface OutboxEmail {
+  id: number
+  to: string
+  subject: string
+  body: string
+  kind: string
+  created_at: string
 }
 
 export interface Candidate extends PublicProfile {

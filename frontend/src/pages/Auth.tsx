@@ -15,7 +15,7 @@ import { useDemoLogin } from './Landing'
 
 const COLLAGE = ['1534528741775-53994a69daeb', '1506794778202-cad84cf45f1d', '1531123897727-8f129e1688ce', '1500648767791-00dcc994a43e']
 
-function AuthLayout({ children }: { children: ReactNode }) {
+export function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="ambient grid min-h-dvh lg:grid-cols-[1fr_1.1fr]">
       <div className="relative hidden overflow-hidden lg:block">
@@ -48,7 +48,7 @@ function AuthLayout({ children }: { children: ReactNode }) {
   )
 }
 
-function ErrorNote({ message }: { message: string | null }) {
+export function ErrorNote({ message }: { message: string | null }) {
   return (
     <AnimatePresence>
       {message && (
@@ -96,7 +96,12 @@ export function LoginPage() {
           <input className="field" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
         <label className="block">
-          <span className="label">Password</span>
+          <span className="mb-2 flex items-baseline justify-between">
+            <span className="label mb-0">Password</span>
+            <Link to="/forgot-password" className="text-xs font-semibold text-apricot hover:underline">
+              Forgot it?
+            </Link>
+          </span>
           <input className="field" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </label>
         <ErrorNote message={login.error?.message ?? null} />

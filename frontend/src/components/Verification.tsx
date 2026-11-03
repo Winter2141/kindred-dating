@@ -5,7 +5,7 @@ import { useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { keys } from '@/lib/cache'
 import { photoProblem } from '@/lib/photos'
-import { shortAgo } from '@/lib/time'
+import { ago } from '@/lib/time'
 import type { VerificationReview, VerificationState } from '@/lib/types'
 import { useToasts } from '@/store/live'
 import { EmptyState, Photo, Spinner } from './ui'
@@ -174,7 +174,7 @@ function ReviewCard({ request }: { request: VerificationReview }) {
           {person.name}, {person.age}
         </h2>
         <span className="text-xs text-faint">
-          Sent {request.submitted_at ? `${shortAgo(request.submitted_at)} ago` : 'just now'}
+          Sent {request.submitted_at ? ago(request.submitted_at) : 'just now'}
         </span>
       </div>
       <p className="mt-1 text-sm text-muted">

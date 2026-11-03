@@ -9,6 +9,7 @@ import { DiscoverPage } from '@/pages/Discover'
 import { InsightsPage } from '@/pages/Insights'
 import { LandingPage } from '@/pages/Landing'
 import { LikesPage } from '@/pages/Likes'
+import { DevOutboxPage, ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from '@/pages/AccountRecovery'
 import { LoginPage, SignupPage } from '@/pages/Auth'
 import { MatchesLayout, NoChatSelected } from '@/pages/Matches'
 import { ModerationPage } from '@/pages/Moderation'
@@ -41,6 +42,11 @@ export function App() {
       <Route path="/" element={<GuestOnly><LandingPage /></GuestOnly>} />
       <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
       <Route path="/signup" element={<GuestOnly><SignupPage /></GuestOnly>} />
+      <Route path="/forgot-password" element={<GuestOnly><ForgotPasswordPage /></GuestOnly>} />
+      {/* Reset and confirm links work whether or not you're signed in on this device. */}
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/dev/outbox" element={<DevOutboxPage />} />
       <Route path="/app" element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route index element={<Navigate to="discover" replace />} />
         <Route path="discover" element={<DiscoverPage />} />

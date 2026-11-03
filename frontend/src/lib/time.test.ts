@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { describeError } from './api'
-import { ageFromBirthdate, dayLabel, lastSeen, shortAgo, timeUntil } from './time'
+import { ago as agoLabel, ageFromBirthdate, dayLabel, lastSeen, shortAgo, timeUntil } from './time'
 
 const now = new Date(2026, 9, 28, 12, 0, 0)
 const ago = (ms: number) => new Date(now.getTime() - ms).toISOString()
 const MINUTE = 60_000
+
+describe('agoLabel', () => {
+  it('reads naturally at every age', () => {
+    expect(agoLabel(new Date(now.getTime() - 20_000).toISOString(), now)).toBe('just now')
+    expect(agoLabel(new Date(now.getTime() - 5 * 60_000).toISOString(), now)).toBe('5m ago')
+    expect(agoLabel(new Date(now.getTime() - 3 * 86_400_000).toISOString(), now)).toBe('3d ago')
+    expect(agoLabel(new Date(2026, 8, 1).toISOString(), now)).toMatch(/^on /)
+  })
+})
 
 describe('shortAgo', () => {
   it('uses compact units', () => {
