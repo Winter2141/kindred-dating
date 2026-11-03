@@ -193,8 +193,8 @@ export const api = {
 
   discover: (filters: DiscoverFilters = NO_FILTERS) => request<Candidate[]>(`/api/discover${filtersToQuery(filters)}`),
   topPicks: () => request<TopPicks>('/api/discover/top-picks'),
-  swipe: (targetId: number, action: SwipeAction) =>
-    request<SwipeResult>('/api/swipes', { method: 'POST', body: { target_id: targetId, action } }),
+  swipe: (targetId: number, action: SwipeAction, extras: { liked_item?: string; comment?: string } = {}) =>
+    request<SwipeResult>('/api/swipes', { method: 'POST', body: { target_id: targetId, action, ...extras } }),
   undoSwipe: () => request<PublicProfile>('/api/swipes/undo', { method: 'POST' }),
   likes: () => request<Like[]>('/api/likes'),
 

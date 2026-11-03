@@ -222,10 +222,19 @@ export interface SwipeResult {
   match: Match | null
 }
 
+export interface LikedItem {
+  kind: 'photo' | 'prompt'
+  photo: string | null
+  question: string | null
+  answer: string | null
+}
+
 export interface Like {
   user: PublicProfile
   action: SwipeAction
   created_at: string
+  comment?: string | null
+  liked_item?: LikedItem | null
 }
 
 export type ReportStatus = 'open' | 'dismissed' | 'actioned'

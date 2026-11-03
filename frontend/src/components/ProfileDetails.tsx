@@ -1,4 +1,6 @@
+import clsx from 'clsx'
 import { Briefcase, MapPin, Quote } from 'lucide-react'
+import { LikePromptButton } from './LikeComment'
 import { formatDistance } from '@/lib/distance'
 import type { PublicProfile } from '@/lib/types'
 import { lastSeen } from '@/lib/time'
@@ -10,10 +12,13 @@ export function ProfileDetails({
   profile,
   shared = [],
   showHeader = true,
+  onLikePrompt,
 }: {
   profile: PublicProfile
   shared?: string[]
   showHeader?: boolean
+  /** When set, each prompt gets a heart to like it with a comment. */
+  onLikePrompt?: (prompt: PublicProfile['prompts'][number]) => void
 }) {
   const emoji = useInterestEmoji()
   return (
@@ -47,11 +52,18 @@ export function ProfileDetails({
       {profile.bio && <p className="text-[15px] leading-relaxed text-cream/90">{profile.bio}</p>}
 
       {profile.prompts.map((prompt) => (
-        <figure key={prompt.question} className="rounded-3xl border border-line bg-raised/60 p-5">
+        <figure key={prompt.question} className="relative rounded-3xl border border-line bg-raised/60 p-5">
           <figcaption className="flex items-center gap-2 text-xs font-semibold tracking-[0.12em] text-muted uppercase">
             <Quote className="size-3.5 text-coral" /> {prompt.question}
           </figcaption>
-          <blockquote className="mt-2.5 font-display text-2xl leading-snug">{prompt.answer}</blockquote>
+          <blockquote className={clsx('mt-2.5 font-display text-2xl leading-snug', onLikePrompt && 'pr-10')}>
+            {prompt.answer}
+          </blockquote>
+          {onLikePrompt && (
+            <div className="absolute right-4 bottom-4">
+              <LikePromptButton name={profile.name} onClick={() => onLikePrompt(prompt)} />
+            </div>
+          )}
         </figure>
       ))}
 

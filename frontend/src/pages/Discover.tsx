@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Heart, RotateCcw, SearchX, Star, X } from 'lucide-react'
+import { Heart, MessageCircleHeart, RotateCcw, SearchX, Star, X } from 'lucide-react'
 import { AnimatePresence, motion, type HTMLMotionProps } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
@@ -8,6 +8,7 @@ import { MatchCelebration } from '@/components/MatchCelebration'
 import { ProfileDetails } from '@/components/ProfileDetails'
 import { SwipeCard } from '@/components/SwipeCard'
 import { FiltersButton } from '@/components/DiscoverFilters'
+import { LikeCommentDialog, likedItemKey, type LikeTarget } from '@/components/LikeComment'
 import { TopPicksButton } from '@/components/TopPicks'
 import { EmptyState, Spinner } from '@/components/ui'
 import { api, ApiError } from '@/lib/api'
@@ -43,9 +44,17 @@ export function DiscoverPage() {
   }, [discover.data, gone, restored])
   const top = deck[0]
 
+  const [likeTarget, setLikeTarget] = useState<LikeTarget | null>(null)
   const swipe = useMutation({
-    mutationFn: ({ candidate, action }: { candidate: Candidate; action: SwipeAction }) =>
-      api.swipe(candidate.id, action),
+    mutationFn: ({
+      candidate,
+      action,
+      extras,
+    }: {
+      candidate: Candidate
+      action: SwipeAction
+      extras?: { liked_item?: string; comment?: string }
+    }) => api.swipe(candidate.id, action, extras),
     onSuccess: (result) => {
       if (result.matched && result.match) {
         setMatch(result.match)
@@ -87,17 +96,23 @@ export function DiscoverPage() {
   })
 
   const act = useCallback(
-    (action: SwipeAction) => {
+    (action: SwipeAction, extras?: { liked_item?: string; comment?: string }) => {
       if (!top) return
       setLastAction(action)
       setDetailsOpen(false)
       setGone((g) => ({ ...g, [top.id]: action }))
       setRestored((r) => r.filter((c) => c.id !== top.id))
       setHistory((h) => [...h.slice(-9), top])
-      swipe.mutate({ candidate: top, action })
+      swipe.mutate({ candidate: top, action, extras })
     },
     [top, swipe],
   )
+
+  const sendLike = (target: LikeTarget, comment: string) => {
+    setLikeTarget(null)
+    act('like', { liked_item: likedItemKey(target), comment: comment || undefined })
+    if (comment) useToasts.getState().push({ title: 'Like sent', body: 'Your comment goes with it.' })
+  }
 
   // Fetch more people when the deck runs low (once per swipe, so an empty server can't loop).
   const remaining = deck.length
@@ -113,7 +128,7 @@ export function DiscoverPage() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (match || (e.target as HTMLElement).closest('input, textarea')) return
+      if (match || likeTarget || (e.target as HTMLElement).closest('input, textarea')) return
       if (e.key === 'ArrowRight') act('like')
       else if (e.key === 'ArrowLeft') act('pass')
       else if (e.key === 'ArrowUp') act('super')
@@ -123,7 +138,7 @@ export function DiscoverPage() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [act, match, history.length, undo])
+  }, [act, match, likeTarget, history.length, undo])
 
   return (
     <div className="mx-auto flex w-full max-w-6xl justify-center gap-10 px-4 pt-5 pb-6 sm:px-8 lg:pt-10">
@@ -241,7 +256,14 @@ export function DiscoverPage() {
                   You both love {formatList(top.shared_interests.map((s) => s.toLowerCase()))}.
                 </p>
               )}
-              <ProfileDetails profile={top} shared={top.shared_interests} />
+              <ProfileDetails
+                profile={top}
+                shared={top.shared_interests}
+                onLikePrompt={(prompt) => setLikeTarget({ kind: 'prompt', prompt })}
+              />
+              <button type="button" className="btn-secondary mt-6 w-full" onClick={() => setLikeTarget({ kind: 'profile' })}>
+                <MessageCircleHeart className="size-4 text-coral" /> Like with a comment
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -265,13 +287,21 @@ export function DiscoverPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-line-strong" />
-              <ProfileDetails profile={top} shared={top.shared_interests} />
+              <ProfileDetails
+                profile={top}
+                shared={top.shared_interests}
+                onLikePrompt={(prompt) => setLikeTarget({ kind: 'prompt', prompt })}
+              />
+              <button type="button" className="btn-secondary mt-6 w-full" onClick={() => setLikeTarget({ kind: 'profile' })}>
+                <MessageCircleHeart className="size-4 text-coral" /> Like with a comment
+              </button>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
       <MatchCelebration match={match} onClose={() => setMatch(null)} />
+      <LikeCommentDialog name={top?.name ?? ''} target={likeTarget} onClose={() => setLikeTarget(null)} onSend={sendLike} />
     </div>
   )
 }

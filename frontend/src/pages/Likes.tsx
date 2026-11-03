@@ -7,6 +7,7 @@ import { MatchCelebration } from '@/components/MatchCelebration'
 import { ProfileDetails } from '@/components/ProfileDetails'
 import { EmptyState, Photo, Spinner } from '@/components/ui'
 import { api } from '@/lib/api'
+import { LikeCommentNote } from '@/components/LikeComment'
 import { VerifiedBadge } from '@/components/Verification'
 import { keys } from '@/lib/cache'
 import type { Like, Match, SwipeAction } from '@/lib/types'
@@ -98,6 +99,11 @@ export function LikesPage() {
                     {like.user.verified && <VerifiedBadge className="ml-1.5 inline size-5 align-baseline" />}
                   </p>
                   <p className="mt-1 truncate text-xs text-cream/70">{like.user.job_title}</p>
+                  {(like.comment || like.liked_item) && (
+                    <div className="mt-2">
+                      <LikeCommentNote comment={like.comment ?? null} item={like.liked_item ?? null} />
+                    </div>
+                  )}
                   <div className="pointer-events-auto mt-3 flex gap-2">
                     <button
                       type="button"
