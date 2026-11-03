@@ -7,6 +7,8 @@ export const keys = {
   strength: ['strength'] as const,
   insights: (days: number) => ['insights', days] as const,
   meta: ['meta'] as const,
+  questions: ['questions'] as const,
+  agreement: (userId: number) => ['agreement', userId] as const,
   discover: ['discover'] as const,
   topPicks: ['top-picks'] as const,
   likes: ['likes'] as const,

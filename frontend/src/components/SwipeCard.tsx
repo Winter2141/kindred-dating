@@ -84,8 +84,18 @@ export function SwipeCard({
         ) : (
           <span />
         )}
-        <span title="Compatibility">
-          <CompatibilityRing value={candidate.compatibility} />
+        <span className="flex flex-col items-end gap-2">
+          <span title="Compatibility">
+            <CompatibilityRing value={candidate.compatibility} />
+          </span>
+          {candidate.agreement != null && (
+            <span
+              className="rounded-full bg-ink/60 px-2.5 py-1 text-[11px] font-bold text-apricot backdrop-blur"
+              title="How well your answers to the compatibility questions fit"
+            >
+              {candidate.agreement}% agree
+            </span>
+          )}
         </span>
       </div>
 

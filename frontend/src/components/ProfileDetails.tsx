@@ -2,6 +2,7 @@ import { Briefcase, MapPin, Quote } from 'lucide-react'
 import { formatDistance } from '@/lib/distance'
 import type { PublicProfile } from '@/lib/types'
 import { lastSeen } from '@/lib/time'
+import { AgreementPanel } from './Questions'
 import { InterestChip, useInterestEmoji } from './ui'
 
 export function ProfileDetails({
@@ -51,6 +52,8 @@ export function ProfileDetails({
           <blockquote className="mt-2.5 font-display text-2xl leading-snug">{prompt.answer}</blockquote>
         </figure>
       ))}
+
+      <AgreementPanel userId={profile.id} />
 
       {profile.interests.length > 0 && (
         <div>

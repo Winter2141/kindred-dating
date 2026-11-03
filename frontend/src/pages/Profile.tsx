@@ -13,6 +13,7 @@ import {
   Segmented,
 } from '@/components/ProfileFields'
 import { ProfileStrength } from '@/components/ProfileStrength'
+import { QuestionsCard } from '@/components/Questions'
 import { Photo, Spinner, useMeta } from '@/components/ui'
 import { api, type ProfileUpdate } from '@/lib/api'
 import { keys } from '@/lib/cache'
@@ -319,6 +320,7 @@ function PhotoManager({ user, onChange }: { user: Me; onChange: (me: Me) => void
         {error ?? 'Lead with a clear photo of your face. Uploads are resized and converted to WebP on the server.'}
       </p>
       <ProfileStrength />
+      <QuestionsCard />
     </section>
   )
 }

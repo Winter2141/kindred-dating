@@ -40,6 +40,28 @@ export interface Candidate extends PublicProfile {
   compatibility: number
   shared_interests: string[]
   super_liked_you: boolean
+  /** 0-100 agreement on compatibility questions, once you share enough answers. */
+  agreement?: number | null
+}
+
+export interface Question {
+  id: string
+  text: string
+  options: string[]
+  topic: string
+}
+
+export interface QuestionCatalog {
+  questions: Question[]
+  importance_labels: string[]
+  min_common: number
+  answers: Record<string, { answer: number; acceptable: number[]; importance: number }>
+}
+
+export interface Agreement {
+  percent: number | null
+  common: number
+  same: { question: string; answer: string }[]
 }
 
 export interface Reaction {

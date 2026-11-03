@@ -1,6 +1,8 @@
 import { useAuth } from '@/store/auth'
+import type { QuestionAnswer } from './questions'
 import type {
   AdminReport,
+  Agreement,
   AppNotification,
   ChatSettings,
   DateProposal,
@@ -15,6 +17,7 @@ import type {
   NotificationList,
   ProfileStrength,
   Prompt,
+  QuestionCatalog,
   PublicProfile,
   ReportReason,
   ReportStatus,
@@ -129,6 +132,11 @@ export const api = {
   deletePhoto: (url: string) =>
     request<Me>(`/api/me/photos?url=${encodeURIComponent(url)}`, { method: 'DELETE' }),
   user: (id: number) => request<PublicProfile>(`/api/users/${id}`),
+  questions: () => request<QuestionCatalog>('/api/questions'),
+  answerQuestion: (id: string, answer: QuestionAnswer) =>
+    request<QuestionAnswer>(`/api/questions/${id}`, { method: 'PUT', body: { ...answer } }),
+  skipQuestion: (id: string) => request<void>(`/api/questions/${id}`, { method: 'DELETE' }),
+  agreement: (userId: number) => request<Agreement>(`/api/users/${userId}/agreement`),
   places: (query: string) => request<string[]>(`/api/places?q=${encodeURIComponent(query)}`),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<Session>('/api/me/password', {
