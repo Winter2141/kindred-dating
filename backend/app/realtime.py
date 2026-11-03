@@ -149,6 +149,10 @@ class ConnectionManager:
             for peer in self._peers.values()
         )
 
+    def local_counts(self) -> tuple[int, int]:
+        """(people, sockets) connected to this process, for metrics."""
+        return len(self._sockets), sum(len(s) for s in self._sockets.values())
+
     def online_among(self, user_ids: Iterable[int]) -> set[int]:
         return {uid for uid in user_ids if self.is_online(uid)}
 

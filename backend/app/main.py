@@ -1,14 +1,16 @@
-import logging
+import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Annotated
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.broker import RedisBroker
 from app.config import Settings, get_settings
 from app.db import Database
+from app.observability import Metrics, RequestContextMiddleware, configure_logging
 from app.realtime import ConnectionManager, Hub
 from app.routers import (
     account,
@@ -82,13 +84,34 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ):
         app.include_router(module.router)
     app.mount(settings.media_url, StaticFiles(directory=settings.media_dir), name="media")
+    # Added last, so it wraps everything else and sees every request.
+    metrics = Metrics()
+    app.add_middleware(RequestContextMiddleware, metrics=metrics)
 
     @app.get("/api/health", tags=["meta"])
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/metrics", tags=["meta"], include_in_schema=False)
+    async def prometheus(
+        request: Request, authorization: Annotated[str | None, Header()] = None
+    ) -> Response:
+        """Prometheus metrics for this process."""
+        if settings.metrics_token and not secrets.compare_digest(
+            authorization or "", f"Bearer {settings.metrics_token}"
+        ):
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Metrics need a token")
+        people, sockets = request.app.state.hub.manager.local_counts()
+        body = metrics.render(
+            {
+                "kindred_websocket_connections": ("Open WebSockets on this process.", sockets),
+                "kindred_online_users": ("People with a WebSocket on this process.", people),
+            }
+        )
+        return Response(body, media_type="text/plain; version=0.0.4; charset=utf-8")
+
     return app
 
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+configure_logging(get_settings().log_format)
 app = create_app()

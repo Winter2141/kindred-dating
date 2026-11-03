@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     ice_servers: list[dict[str, Any]] = [{"urls": ["stun:stun.l.google.com:19302"]}]
     call_ring_seconds: float = 45
 
+    # "json" writes one JSON object per log line, for log collectors. Setting a metrics token
+    # makes GET /metrics require "Authorization: Bearer <token>".
+    log_format: Literal["text", "json"] = "text"
+    metrics_token: str | None = None
+
     # Demo mode makes the seeded personas feel alive: they like you back and reply in chat.
     demo_mode: bool = True
     seed_on_startup: bool = True
