@@ -328,7 +328,7 @@ export function ChatPage() {
   return (
     <div className="flex h-dvh lg:h-full">
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="glass z-10 flex items-center gap-3 border-b border-line px-3 py-3 sm:px-5">
+        <header className="glass z-10 flex items-center gap-1.5 border-b border-line px-3 py-3 sm:gap-3 sm:px-5">
           <Link
             to="/app/matches"
             className="grid size-10 place-items-center rounded-full text-muted transition hover:bg-raised hover:text-cream lg:hidden"
@@ -352,10 +352,11 @@ export function ChatPage() {
               </span>
             </span>
           </button>
+          {/* Phones open the profile by tapping the name, so the header keeps room for it. */}
           <button
             type="button"
             onClick={() => setShowProfile((v) => !v)}
-            className="grid size-10 place-items-center rounded-full text-muted transition hover:bg-raised hover:text-cream"
+            className="hidden size-10 place-items-center rounded-full text-muted transition hover:bg-raised hover:text-cream sm:grid"
             aria-label="View profile"
             title="View profile"
           >
