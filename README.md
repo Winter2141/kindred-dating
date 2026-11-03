@@ -2,9 +2,9 @@
 
 # Kindred
 
-**A full-stack dating app with real-time chat, built with FastAPI and React.**
+**A full-stack dating app with real-time chat and video calls, built with FastAPI and React.**
 
-Swipe through people who fit you, see *why* they fit, match, chat live and plan the first date: typing indicators, read receipts, reactions and presence over WebSockets.
+Swipe through people who fit you, see *why* they fit, match, then talk: live chat with replies, reactions and voice notes, peer-to-peer video calls, and a date planner. Everything updates over one WebSocket.
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-async-009688?logo=fastapi&logoColor=white)
@@ -13,9 +13,10 @@ Swipe through people who fit you, see *why* they fit, match, chat live and plan 
 ![Redis](https://img.shields.io/badge/Redis-pub%2Fsub-DC382D?logo=redis&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)
+![WebRTC](https://img.shields.io/badge/WebRTC-calls-333333?logo=webrtc&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-e2e-2EAD33?logo=playwright&logoColor=white)
 
-<img src="docs/screenshots/discover.png" alt="Discover: swipe deck with compatibility score and profile details" width="900" />
+<img src="docs/screenshots/discover.png" alt="Discover: swipe deck with compatibility score, question agreement and profile details" width="900" />
 
 </div>
 
@@ -24,27 +25,42 @@ Swipe through people who fit you, see *why* they fit, match, chat live and plan 
 **Meeting people**
 - **Swipe deck** with drag gestures, keyboard shortcuts (← → ↑ ⌫), like / pass / super like and undo.
 - **Transparent matching.** Every card shows a 0–100 compatibility score and the interests you share. Discover only shows people whose gender, age *and distance* preferences fit yours, and yours theirs.
-- **Distance** from a built-in list of places or the browser's location. Others only ever see a rounded distance, never coordinates.
-- **Daily top picks:** four standouts from your strongest fits, with a reason for each, refreshed at midnight.
-- **Likes you** page and an **"It's a match!"** celebration, pushed to both people in real time.
+- **Compatibility questions.** Answer twenty questions with what you'd accept from a match and how much it matters; profiles show your agreement and the answers you share.
+- **Filters** for verified profiles, recent activity, interests, prompts and minimum agreement, plus **daily top picks** with a reason for each.
+- **Likes with a comment** on a specific prompt. If it turns into a match, the comment opens the chat.
+- **Photo verification:** copy a random pose in a selfie, a moderator compares it with your photos, and you get a blue tick.
 
 **Talking**
-- **Live chat over WebSockets**: instant delivery, typing indicators, read receipts, online presence, optimistic sending with retry, an offline queue and auto-reconnect with backoff.
-- **Reactions** (double-click to ❤️), **unsend** within 15 minutes, **photo messages** with a lightbox, and **icebreakers** from shared interests.
-- **Date planning** inside the chat: propose a place and time from suggested ideas, accept or decline live, and add it to your calendar (`.ics`).
-- **Notifications** for likes, matches and missed messages, a bell with a live feed, unread counts in the tab title and opt-in desktop notifications.
+- **Live chat over WebSockets**: instant delivery, typing indicators, read receipts, presence, optimistic sending with retry, an offline queue and auto-reconnect with backoff.
+- **Replies** that quote the original (swipe a bubble on a phone), **edits** and **unsend** within 15 minutes, **reactions**, **photo messages** and **voice notes** with a recorder and a seekable waveform.
+- **Audio and video calls**, peer to peer over WebRTC, with the WebSocket doing the signalling. Calls ring, can be declined or missed, and leave a record in the chat.
+- **Search** across all your conversations, with highlighted snippets that jump to the message, even if it's pages back.
+- **Pin, mute and archive** chats; muted chats stay quiet and out of the unread count.
+- **Date planning** inside the chat: propose a place and time, accept or decline live, add it to your calendar (`.ics`), and get a **reminder** two hours before.
+- **Notifications** for likes, matches, missed messages and reminders: a live bell, unread counts in the tab title and opt-in desktop notifications.
 
-**Your profile**
-- **Profile editor** with photo upload (validated, EXIF-rotated, resized and converted to WebP with Pillow), interests, prompts and preferences, plus a **profile strength** meter with tips.
-- **Insights:** likes, match rate, reply rate and reply speed, day-by-day charts and what the people who like you are into.
-- **Settings:** pause your profile, change your password (which signs out your other devices), sign out everywhere, desktop notifications, blocked people and account deletion.
+**Your account**
+- **Profile editor** with photo upload (validated, EXIF-rotated, resized to WebP with Pillow), interests, prompts and preferences, plus a **profile strength** meter.
+- **Email confirmation and password reset** through signed, single-purpose links.
+- **Two-factor sign-in** with any authenticator app (TOTP, written to RFC 6238) and one-time recovery codes.
+- **Download your data** as one JSON file, pause your profile, sign out everywhere or delete the account.
+- **Insights** on likes, match rate, reply rate and reply speed, with day-by-day charts.
+- **Light and dark themes**, **keyboard shortcuts** (press `?`) and an **installable PWA**.
 
 **Safety and operations**
-- **Block and report** from any chat. A block works in both directions and ends the match live.
-- **Moderation queue** for admins: review reports, dismiss them, or ban (which revokes tokens and closes sockets immediately).
-- **Rate limits** on sign-in, sign-up, swipes, messages, uploads and reports.
-- **Installable PWA** with an offline app shell.
-- **A demo that feels alive.** About 45 seeded personas like you back, reply in context and say yes to dates, so a reviewer can try every flow alone.
+- **Block and report** from any chat. Moderators get a report queue, a **photo verification** queue, a **member directory** with direct bans and an append-only **audit log**.
+- **Rate limits** on sign-in, sign-up, swipes, messages, uploads and emails.
+- **Scales out:** with Redis, events, presence *and* rate limits are shared by every API worker.
+- **Observable:** request IDs on every response and log line, optional JSON logs and a Prometheus `/metrics` endpoint.
+- **A demo that feels alive.** About 45 seeded personas like you back, reply in context (even to voice notes) and say yes to dates, so a reviewer can try every flow alone.
+
+| Video call | Replies, edits, voice notes and a call record | Search |
+| --- | --- | --- |
+| <img src="docs/screenshots/video-call.png" alt="A video call in progress" /> | <img src="docs/screenshots/chat-features.png" alt="Chat with a quoted reply, an edited message, a voice note and a call record" /> | <img src="docs/screenshots/search.png" alt="Search results with the matching words highlighted" /> |
+
+| Compatibility questions | Filters | Two-factor sign-in |
+| --- | --- | --- |
+| <img src="docs/screenshots/questions.png" alt="Answering a compatibility question" /> | <img src="docs/screenshots/filters.png" alt="Discover filters" /> | <img src="docs/screenshots/two-factor.png" alt="Setting up an authenticator app with a QR code" /> |
 
 | Match | Live chat | Likes you |
 | --- | --- | --- |
@@ -54,13 +70,17 @@ Swipe through people who fit you, see *why* they fit, match, chat live and plan 
 | --- | --- | --- |
 | <img src="docs/screenshots/top-picks.png" alt="Today's top picks with reasons" /> | <img src="docs/screenshots/date-plan.png" alt="Plan a date dialog with ideas" /> | <img src="docs/screenshots/date.png" alt="Accepted date pinned in the chat" /> |
 
-| Insights | Notifications | Moderation |
+| Photo verification | Members | Moderation |
 | --- | --- | --- |
-| <img src="docs/screenshots/insights.png" alt="Insights with daily charts" /> | <img src="docs/screenshots/notifications.png" alt="Notification bell panel" /> | <img src="docs/screenshots/moderation.png" alt="Moderation queue" /> |
+| <img src="docs/screenshots/verification-review.png" alt="Comparing a posed selfie with the profile photo" /> | <img src="docs/screenshots/members.png" alt="Member directory for moderators" /> | <img src="docs/screenshots/moderation.png" alt="Report queue" /> |
 
-| Landing | Icebreakers | Profile |
+| Insights | Notifications | Profile |
 | --- | --- | --- |
-| <img src="docs/screenshots/landing.png" alt="Landing page" /> | <img src="docs/screenshots/icebreakers.png" alt="Icebreakers for a new match" /> | <img src="docs/screenshots/profile.png" alt="Profile editor with strength meter" /> |
+| <img src="docs/screenshots/insights.png" alt="Insights with daily charts" /> | <img src="docs/screenshots/notifications.png" alt="Notification bell panel" /> | <img src="docs/screenshots/profile.png" alt="Profile editor with strength meter and questions" /> |
+
+| Light theme | Light theme chat | Landing |
+| --- | --- | --- |
+| <img src="docs/screenshots/light-discover.png" alt="Discover in the light theme" /> | <img src="docs/screenshots/light-chat.png" alt="A chat in the light theme" /> | <img src="docs/screenshots/landing.png" alt="Landing page" /> |
 
 <p align="center">
   <img src="docs/screenshots/mobile-discover.png" alt="Mobile discover" width="240" />
@@ -78,6 +98,7 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
+cp .env.example .env             # turns on the dev outbox for emails
 uvicorn app.main:app --reload
 ```
 
@@ -95,7 +116,9 @@ The database is migrated and seeded on first start. Open http://localhost:5173 a
 | Demo user (also a moderator) | `alex@kindred.app` | `kindred123` |
 | Second real user | `maya@kindred.app` | `kindred123` |
 
-**See two people chat live:** sign in as Alex in one window and as Maya in a private window. They're already matched, so open the conversation on both sides and watch messages, typing, reactions and read receipts update instantly. To start over, run `python -m app.seed --reset`.
+**See two people together:** sign in as Alex in one window and as Maya in a private window. They're already matched: open the conversation on both sides and watch messages, typing, reactions and read receipts update instantly, then press the video button to call. `localhost` counts as a secure origin, so the browser will let the call use your camera.
+
+**Emails** (sign-up confirmation, password resets) go to an outbox table instead of a mail server. With the example `.env`, read them at http://localhost:5173/dev/outbox. To start over, run `python -m app.seed --reset`.
 
 ### Or with Docker
 
@@ -104,7 +127,7 @@ docker compose up --build
 # open http://localhost:8080
 ```
 
-Compose runs the API on **Postgres 17** with **Redis** as the real-time broker, behind nginx, which serves the built React app and proxies `/api`, `/media` and the `/ws` WebSocket. Uploaded photos live in a named volume.
+Compose runs the API on **Postgres 17** with **Redis** sharing events, presence and rate limits between workers, behind nginx, which serves the built React app and proxies `/api`, `/media` and the `/ws` WebSocket. Uploads live in a named volume.
 
 ## Architecture
 
@@ -114,16 +137,20 @@ flowchart LR
         UI[React 19 + Router] --> RQ[TanStack Query cache]
         UI --> WS[RealtimeClient<br/>auto-reconnect, queue]
         WS -- events --> RQ
+        UI --> RTC[RTCPeerConnection]
         SW[Service worker<br/>offline shell]
     end
-    RQ -- REST /api --> API
-    WS -- WebSocket /ws --> API
+    RTC <-. media, peer to peer .-> RTC2[The other browser]
+    RQ -- REST /api --> MW
+    WS -- WebSocket /ws<br/>chat + call signalling --> API
     subgraph FastAPI workers
-        API[Routers + rate limits] --> SVC[Services<br/>discovery · chat · dates · notifications · insights · safety]
+        MW[Request IDs, access log,<br/>metrics] --> API[Routers + rate limits]
+        API --> SVC[Services<br/>discovery · chat · calls · dates · verification · questions · …]
         SVC --> DB[(SQLAlchemy 2 async<br/>Postgres / SQLite<br/>Alembic migrations)]
-        SVC --> HUB[ConnectionManager<br/>per-user sockets]
+        SVC --> HUB[ConnectionManager<br/>sockets + presence]
         HUB <--> BR[Broker<br/>local or Redis pub/sub]
         HUB --> WS
+        JOBS[Scheduler<br/>date reminders] --> SVC
     end
 ```
 
@@ -131,28 +158,31 @@ flowchart LR
 
 | Path | Responsibility |
 | --- | --- |
-| `main.py` | App factory, lifespan (migrate, seed, start the broker, shut down background tasks), CORS, static media |
-| `models.py` | Users, swipes, matches, messages, reactions, blocks, reports, notifications and date proposals, with the constraints that keep them honest |
-| `migrations/` | Alembic revisions, applied on startup. A test fails if the models drift from them |
-| `schemas.py` | Pydantic v2 models: validation (18+, known interests and prompts, ranges, aware datetimes) and response shapes |
-| `routers/` | `auth`, `users`, `account`, `discover`, `matches`, `dates`, `notifications`, `safety`, `admin`, `ws` |
-| `services/discovery.py` | Who can see whom (mutual gender, age and distance fit, blocks, pauses, bans) and the daily top picks |
-| `services/matching.py` | Age maths, the compatibility score, haversine distance and the SQL bounding box |
-| `services/chat.py` | Sending, reactions, unsend, read receipts and persona auto-replies, shared by REST and WebSocket |
-| `services/dates.py` · `notifications.py` · `insights.py` · `profile_strength.py` · `safety.py` · `images.py` | One feature each |
-| `realtime.py` · `broker.py` | `ConnectionManager` (multi-tab, per-user fan-out) behind a broker: in-process by default, Redis pub/sub across workers |
-| `limits.py` · `ratelimit.py` | Sliding-window limiter and the FastAPI dependencies that apply it |
+| `main.py` | App factory and lifespan: migrate, seed, start the broker and the scheduler, metrics, CORS, static media |
+| `models.py` · `migrations/` | 14 tables with the constraints that keep them honest; 22 Alembic revisions applied on startup, and a test that fails if models and migrations drift |
+| `schemas.py` | Pydantic v2 validation (18+, known interests, prompts and questions, ranges, aware datetimes) and response shapes |
+| `routers/` | `auth`, `email`, `two_factor`, `users`, `account`, `questions`, `discover`, `matches`, `search`, `dates`, `notifications`, `safety`, `verification`, `admin`, `admin_users`, `ws` |
+| `services/discovery.py` · `matching.py` · `agreement.py` | Who can see whom, filters, top picks, the compatibility score, distance and question agreement |
+| `services/chat.py` · `chat_settings.py` · `audio.py` | Messages, replies, edits, unsend, reactions, voice notes, read receipts, persona replies; pin, mute and archive |
+| `services/calls.py` | Call registry and WebRTC signalling relay: ringing, busy, missed and the call record |
+| `services/verification.py` · `audit.py` · `export.py` | Posed-selfie verification, the moderator audit log, and the data export |
+| `totp.py` · `security.py` · `mail.py` | RFC 6238 one-time codes and recovery codes; access and single-purpose tokens; SMTP or outbox email |
+| `realtime.py` · `broker.py` | Per-user socket fan-out and shared presence (heartbeats per worker), through an in-process or Redis broker |
+| `limits.py` · `ratelimit.py` | Sliding-window limits in memory or in Redis sorted sets, and the FastAPI dependencies that apply them |
+| `observability.py` · `scheduler.py` | Request IDs, JSON logs and Prometheus metrics; the background job that sends date reminders |
 
 **Frontend (`frontend/src`)**
 
 | Path | Responsibility |
 | --- | --- |
 | `lib/realtime.ts` | Framework-free WebSocket client: backoff with jitter, keep-alive pings, offline queue, 4401 sign-out |
-| `realtime/RealtimeProvider.tsx` | Folds server events into the React Query cache; typing timeouts, toasts and desktop notifications |
-| `lib/cache.ts` · `notifications.ts` · `dates.ts` | Pure, unit-tested reducers (`upsertMessage`, `applyReaction`, `applyNotification`, `upsertDate`, …) |
-| `pages/` | Landing, Login/Signup, Discover, Likes, Chats + Chat, Profile, Insights, Settings, Moderation |
-| `components/` | `SwipeCard`, `TopPicks`, `DatePlanner`, `Reactions`, `MessageActions`, `Safety`, `Notifications`, `ProfileStrength`, … |
-| `store/` | Zustand: persisted auth and preferences, live presence/typing state, toasts |
+| `lib/calls.ts` | The WebRTC side of calls: peer connection, offer/answer, early ICE candidates, and the call state store |
+| `lib/voice.ts` | MediaRecorder recording with a live level meter, and the waveform maths |
+| `realtime/RealtimeProvider.tsx` | Folds server events into the React Query cache: messages, edits, reactions, presence, chat settings, calls, notifications |
+| `lib/cache.ts` · `quotes.ts` · `search.ts` · `filters.ts` · `shortcuts.ts` · `theme.ts` · … | Pure, unit-tested helpers (`upsertMessage`, `applyEdit`, `applyChatSettings`, `highlightParts`, …) |
+| `pages/` | Landing, sign in and up, password reset, Discover, Likes, Chats, Profile, Insights, Settings, Moderation |
+| `components/` | `SwipeCard`, `CallScreen`, `VoiceNotes`, `Replies`, `ChatSearch`, `Questions`, `TwoFactor`, `Verification`, … |
+| `e2e/` | Playwright tests against the real API and web app |
 
 ### Real-time protocol
 
@@ -160,23 +190,38 @@ One socket per tab at `/ws?token=<JWT>` (browsers can't set headers on WebSocket
 
 | Direction | Event | Payload |
 | --- | --- | --- |
-| client → server | `message.send` | `match_id`, `body`, `client_id` (echoed back to reconcile the optimistic message) |
-| | `typing` · `read` | `match_id` (+ `is_typing`) |
-| | `react` | `match_id`, `message_id`, `emoji` (or `null` to remove) |
+| client → server | `message.send` | `match_id`, `body`, `client_id` (echoed back to reconcile the optimistic message), optional `reply_to_id` |
+| | `typing` · `read` · `react` | live indicators and reactions |
+| | `call.invite` · `call.accept` · `call.signal` · `call.end` | ring someone, answer, relay an offer, answer or ICE candidate, hang up |
 | | `ping` | keeps proxies from closing idle sockets |
 | server → client | `hello` | which of your matches are online right now |
-| | `message.new` · `message.deleted` | the stored message, or which one was unsent |
+| | `message.new` · `message.edited` · `message.deleted` | the stored message, its new text, or which one was unsent |
 | | `typing` · `read` · `reaction` · `presence` | live indicators |
-| | `match.new` · `match.removed` | pushed when a like becomes mutual, or on unmatch and block |
-| | `date.updated` | a date proposal was made, answered or called off |
-| | `notification.new` | a like, match or missed message for the bell |
+| | `match.new` · `match.removed` · `match.settings` | new matches, unmatches and blocks, and pin/mute/archive changes from your other tabs |
+| | `call.ringing` · `call.incoming` · `call.accepted` · `call.signal` · `call.ended` · `call.failed` | the call as it happens |
+| | `date.updated` · `notification.new` | date proposals and the bell |
 | | `error` | validation problems or rate limits; the socket stays open |
 
-Bad, revoked or banned tokens are closed with code `4401`, which makes the client sign out instead of retrying. With `KINDRED_REDIS_URL` set, every event goes through Redis pub/sub, so a message sent through one API worker reaches sockets held by another. Presence is still tracked per process.
+Bad, revoked or banned tokens are closed with code `4401`, which makes the client sign out instead of retrying.
 
-### Compatibility score
+### Calls
 
-A deliberately simple, explainable formula (`services/matching.py`):
+Media never touches the server: the browsers connect peer to peer with WebRTC, using the STUN/TURN servers from `GET /api/matches/{id}/call-config`. The server's part is small and strict. It rings only matches who are online, not already on a call and not demo personas; it only relays signals between the two people in a call (capped in size); it gives up after 45 seconds without an answer; and it hangs up when someone's last tab closes. Each call then leaves a record in the chat ("Video call · 3:12", "Missed audio call"). For callers behind strict NATs, add a TURN server to `KINDRED_ICE_SERVERS`.
+
+### Running several workers
+
+With `KINDRED_REDIS_URL` set:
+
+- **Events** go through Redis pub/sub, so a message sent through one worker reaches sockets held by another.
+- **Presence** is shared: each worker announces people coming online and going offline, and repeats its full list every ten seconds as a heartbeat. A worker that misses three heartbeats is forgotten, so a crash can't leave anyone "online" forever.
+- **Rate limits** are counted in Redis sorted sets, so the limits hold across workers instead of multiplying.
+- **Date reminders** run on every worker, but each one is claimed with a conditional `UPDATE`, so it's sent once.
+
+The call registry is still per worker, so both people in a call need to reach the same one (sticky sessions).
+
+### Matching, explained
+
+The **compatibility score** (`services/matching.py`) is a deliberately simple, explainable formula:
 
 | Signal | Weight | How |
 | --- | --- | --- |
@@ -184,19 +229,35 @@ A deliberately simple, explainable formula (`services/matching.py`):
 | Age closeness | 25 | full marks within 2 years, fading to 0 at a 12-year gap |
 | Recent activity | 20 | full marks if active today, fading over two weeks |
 
-The SQL query narrows candidates on indexed columns (not swiped, not rejected by them, not blocked, gender, birthdate range, a latitude/longitude bounding box). The JSON "interested in" check, exact distance and scoring run in Python, so the same code works on SQLite and Postgres.
+**Question agreement** (`services/agreement.py`) uses the questions two people have both answered. For each person, it takes the share of their importance-weighted questions (1, 10 or 50 points) where the other's answer is one they'd accept. The agreement is the geometric mean of the two shares, so it's only high when the fit goes both ways. It's shown once three questions are in common.
+
+The SQL query narrows candidates on indexed columns (not swiped, not rejected by them, not blocked, gender, birthdate range, a latitude/longitude bounding box, and the verified and recently-active filters). The JSON checks, exact distance and scoring run in Python, so the same code works on SQLite and Postgres.
+
+### Security notes
+
+- Passwords are hashed with bcrypt. Sessions are JWTs carrying a **token version**, so a password change, a reset, "sign out everywhere" or a ban revokes every token at once.
+- Emailed links are **single-purpose tokens**, which can't be used as sessions or as each other. Reset links carry the token version, so each one works only once.
+- **Two-factor codes** can't be replayed: the last accepted time step is stored. Recovery codes are stored as hashes and work once.
+- Uploads are checked by content, not file name: images by decoding them, voice notes by their first bytes.
+- "Forgot password" never reveals whether an account exists. The dev outbox (`KINDRED_EXPOSE_OUTBOX`) is off by default because it shows reset links.
 
 ## Tests and CI
 
 ```bash
-cd backend && pytest            # 105 tests: auth, account, discover, distance, chat, reactions, photos, dates,
-                                #   notifications, insights, safety, moderation, rate limits, broker, migrations, seed
-cd frontend && npm run lint && npm test   # 82 tests: realtime client, cache reducers, components and pages
+cd backend && pytest                       # 213 tests
+cd frontend && npm run lint && npm test    # 169 tests
+cd frontend && npm run e2e                 # 6 browser tests (starts its own API and web app)
 ```
 
-The WebSocket tests drive real connections through the app: presence, typing, delivery, the `client_id` echo, read receipts, reactions, live `match.new` pushes, personas replying and accepting dates, and bans closing sockets. The broker tests run two workers against one fake Redis. A migration test upgrades a database that holds a conversation and checks every row survives.
+- **Backend tests** drive real WebSocket connections through the app: delivery, replies, edits, presence across two workers, a whole video call, missed calls and busy signals, bans closing sockets. They also check TOTP against the RFC's test vectors, run two rate limiters against one fake Redis, and include a migration test that upgrades a database holding a conversation and checks every row survives.
+- **End-to-end tests** run the real API (fresh SQLite, demo data) and web app in Chromium with a fake camera. They cover signing up and confirming the email, resetting a password, swiping into a match, two people chatting live, and a video call between two browsers.
 
-CI (`.github/workflows/ci.yml`) runs ruff and pytest on SQLite, the whole backend suite again on a **Postgres 17** service, and ESLint, the TypeScript check, Vitest and a production build for the web app.
+CI (`.github/workflows/ci.yml`) runs four jobs:
+
+- ruff and pytest on SQLite;
+- the whole backend suite again on **Postgres 17**;
+- ESLint, the TypeScript check, Vitest and a production build for the web app;
+- the **Playwright** suite, which keeps its report when something fails.
 
 ## Configuration
 
@@ -204,10 +265,16 @@ All settings are environment variables with a `KINDRED_` prefix (see `backend/.e
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `KINDRED_SECRET_KEY` | dev value | **Set this in production** (JWT signing key) |
+| `KINDRED_SECRET_KEY` | dev value | **Set this in production** (signs sessions and emailed links) |
 | `KINDRED_DATABASE_URL` | `sqlite+aiosqlite:///backend/kindred.db` | Any async SQLAlchemy URL, e.g. `postgresql+asyncpg://…` (`pip install ".[postgres]"`) |
-| `KINDRED_REDIS_URL` | unset | Fan events out through Redis to run several workers (`pip install ".[redis]"`) |
-| `KINDRED_RATE_LIMIT_ENABLED` | `true` | Per-process sliding-window limits |
+| `KINDRED_REDIS_URL` | unset | Share events, presence and rate limits between workers (`pip install ".[redis]"`) |
+| `KINDRED_APP_URL` | `http://localhost:5173` | Where links in emails point |
+| `KINDRED_MAIL_BACKEND` | `outbox` | `smtp` to send for real, with `KINDRED_SMTP_HOST`, `_PORT`, `_USERNAME`, `_PASSWORD` |
+| `KINDRED_EXPOSE_OUTBOX` | `false` | Local development only: read sent emails at `/api/dev/outbox` |
+| `KINDRED_ICE_SERVERS` | Google's public STUN | JSON list of `RTCIceServer`s; add TURN for strict networks |
+| `KINDRED_LOG_FORMAT` | `text` | `json` for one JSON object per log line |
+| `KINDRED_METRICS_TOKEN` | unset | Require `Authorization: Bearer <token>` for `/metrics` |
+| `KINDRED_RATE_LIMIT_ENABLED` | `true` | Sliding-window limits |
 | `KINDRED_DEMO_MODE` | `true` | Personas like back, reply and accept dates |
 | `KINDRED_SEED_ON_STARTUP` | `true` | Seed an empty database on boot |
 | `KINDRED_CORS_ORIGINS` | `["http://localhost:5173"]` | JSON list |
@@ -216,9 +283,8 @@ Schema changes go through Alembic: edit `models.py`, then run `alembic revision 
 
 ## What I'd add next
 
-- Presence and rate-limit counters in Redis, so they're shared across workers too
-- Web Push, so notifications arrive while the app is closed
-- End-to-end tests with Playwright in CI
+- Web Push, so notifications and calls arrive while the app is closed
+- A TURN server in Docker Compose, and a shared call registry so calls work across workers without sticky sessions
 - Automated screening of uploaded photos before they reach the moderation queue
 - Translations
 
