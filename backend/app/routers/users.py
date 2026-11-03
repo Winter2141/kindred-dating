@@ -11,6 +11,7 @@ from app.config import Settings
 from app.deps import CurrentUser, HubDep, SessionDep, SettingsDep
 from app.models import Gender, User
 from app.schemas import Interest, MeOut, MetaOut, ProfileUpdate, PublicProfile
+from app.services.safety import is_hidden
 
 router = APIRouter(prefix="/api", tags=["profile"])
 
@@ -118,9 +119,9 @@ async def delete_photo(
 
 @router.get("/users/{user_id}")
 async def read_user(
-    user_id: int, _: CurrentUser, session: SessionDep, hub: HubDep
+    user_id: int, user: CurrentUser, session: SessionDep, hub: HubDep
 ) -> PublicProfile:
     other = await session.get(User, user_id)
-    if other is None:
+    if other is None or await is_hidden(session, user.id, other.id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
     return PublicProfile.build(other, online=hub.manager.is_online(other.id))

@@ -9,6 +9,7 @@ from app.schemas import Candidate, LikeOut, MatchOut, PublicProfile, SwipeIn, Sw
 from app.services import chat
 from app.services.matching import birthdate_bounds, compatibility, is_mutual_fit
 from app.services.personas import likes_back
+from app.services.safety import hidden_ids, is_hidden
 
 router = APIRouter(prefix="/api", tags=["discover"])
 
@@ -41,6 +42,7 @@ async def discover(
             User.is_paused.is_(False),
             User.id.not_in(swiped_by_me),
             User.id.not_in(passed_on_me),
+            User.id.not_in(hidden_ids(user.id)),
             User.gender.in_(user.interested_in),
             User.birthdate.between(earliest, latest),
         )
@@ -76,7 +78,7 @@ async def swipe(data: SwipeIn, user: CurrentUser, session: SessionDep, hub: HubD
     if data.target_id == user.id:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "You can't swipe on yourself")
     target = await session.get(User, data.target_id)
-    if target is None:
+    if target is None or await is_hidden(session, user.id, target.id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
     existing = await session.scalar(
         select(Swipe).where(Swipe.swiper_id == user.id, Swipe.target_id == target.id)
@@ -140,6 +142,7 @@ async def likes_you(user: CurrentUser, session: SessionDep, hub: HubDep) -> list
             Swipe.target_id == user.id,
             Swipe.action != SwipeAction.PASS,
             Swipe.swiper_id.not_in(swiped_by_me),
+            Swipe.swiper_id.not_in(hidden_ids(user.id)),
         )
         .order_by(Swipe.created_at.desc())
     )

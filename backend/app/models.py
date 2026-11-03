@@ -35,6 +35,21 @@ class SwipeAction(StrEnum):
         return self is not SwipeAction.PASS
 
 
+class ReportReason(StrEnum):
+    FAKE_PROFILE = "fake_profile"
+    INAPPROPRIATE = "inappropriate"
+    HARASSMENT = "harassment"
+    SPAM = "spam"
+    UNDERAGE = "underage"
+    OTHER = "other"
+
+
+class ReportStatus(StrEnum):
+    OPEN = "open"
+    DISMISSED = "dismissed"
+    ACTIONED = "actioned"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -129,3 +144,28 @@ class Message(Base):
     match: Mapped[Match] = relationship(back_populates="messages")
 
     __table_args__ = (Index("ix_messages_match_id_id", "match_id", "id"),)
+
+
+class Block(Base):
+    """`blocker` never sees `blocked` again, and vice versa."""
+
+    __tablename__ = "blocks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    blocker_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    blocked_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    __table_args__ = (UniqueConstraint("blocker_id", "blocked_id", name="uq_blocks_pair"),)
+
+
+class Report(Base):
+    __tablename__ = "reports"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    reporter_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    reported_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    reason: Mapped[str] = mapped_column(String(24))
+    details: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(16), default=ReportStatus.OPEN, index=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

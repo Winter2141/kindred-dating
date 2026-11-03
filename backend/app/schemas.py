@@ -12,7 +12,7 @@ from pydantic import (
 )
 
 from app.catalog import INTERESTS, MAX_INTERESTS, MAX_PROMPTS, PROMPT_QUESTIONS
-from app.models import Gender, Match, Message, SwipeAction, User
+from app.models import Gender, Match, Message, ReportReason, SwipeAction, User
 from app.services.matching import age_on
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
@@ -277,3 +277,14 @@ class MetaOut(BaseModel):
     max_interests: int = MAX_INTERESTS
     max_prompts: int = MAX_PROMPTS
     max_photos: int
+
+
+class BlockIn(BaseModel):
+    user_id: int
+
+
+class ReportIn(BaseModel):
+    user_id: int
+    reason: ReportReason
+    details: Annotated[str, StringConstraints(strip_whitespace=True, max_length=1000)] = ""
+    block: bool = Field(default=True, description="Also block them (recommended)")
