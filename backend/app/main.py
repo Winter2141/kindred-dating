@@ -22,6 +22,7 @@ from app.routers import (
     safety,
     search,
     users,
+    verification,
     ws,
 )
 from app.seed import seed_demo_data
@@ -69,6 +70,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         dates,
         notifications,
         safety,
+        verification,
         admin,
         ws,
     ):

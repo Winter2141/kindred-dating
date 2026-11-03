@@ -27,6 +27,7 @@ from app.models import (
     ReportStatus,
     SwipeAction,
     User,
+    VerificationStatus,
 )
 from app.services.chat_settings import MuteFor
 from app.services.matching import age_on, display_distance
@@ -183,10 +184,12 @@ class PublicProfile(BaseModel):
     last_active_at: datetime
     is_online: bool = False
     distance_km: int | None = None
+    verified: bool = False
 
     @classmethod
     def build(cls, user: User, *, online: bool = False, distance_km: float | None = None) -> Self:
         return cls(
+            verified=user.verified_at is not None,
             id=user.id,
             name=user.name,
             age=age_on(user.birthdate, date.today()),
@@ -505,7 +508,37 @@ class ResolveIn(BaseModel):
     action: Literal["dismiss", "ban"]
 
 
+class PoseOut(BaseModel):
+    id: str
+    emoji: str
+    text: str
+
+
+class VerificationOut(BaseModel):
+    status: VerificationStatus | Literal["none"]
+    verified: bool
+    pose: PoseOut | None = Field(default=None, description="The pose to copy, once started")
+    note: str = Field(default="", description="Why a selfie was turned down")
+
+
+class VerificationReviewIn(BaseModel):
+    approve: bool
+    note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] = ""
+
+
+class VerificationReviewOut(BaseModel):
+    id: int
+    user: PublicProfile
+    pose: PoseOut
+    selfie_url: str | None
+    status: VerificationStatus
+    note: str
+    submitted_at: datetime | None
+    reviewed_at: datetime | None
+
+
 class ModerationStats(BaseModel):
+    pending_verifications: int = 0
     open_reports: int
     resolved_this_week: int
     banned_users: int

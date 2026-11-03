@@ -100,6 +100,7 @@ def test_banning_locks_the_account_and_clears_their_reports(client: TestClient, 
 
     stats = client.get("/api/admin/stats", headers=admin.headers).json()
     assert stats == {
+        "pending_verifications": 0,
         "open_reports": 0,
         "resolved_this_week": 2,
         "banned_users": 1,

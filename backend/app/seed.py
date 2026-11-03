@@ -24,6 +24,8 @@ from app.models import (
     Swipe,
     SwipeAction,
     User,
+    VerificationRequest,
+    VerificationStatus,
 )
 from app.places import geocode
 from app.questions import QUESTIONS
@@ -266,8 +268,28 @@ async def seed_demo_data(db: Database) -> bool:
                 )
             )
         _seed_answers([alex, *people.values()], session)
+        _seed_verification(list(people.values()), now, session)
         await session.commit()
     return True
+
+
+def _seed_verification(people: list[User], now: datetime, session: AsyncSession) -> None:
+    """A third of the personas are verified, and two selfies wait in the moderation queue."""
+    for index, person in enumerate(people):
+        if index % 3 == 0:
+            person.verified_at = person.created_at + timedelta(days=1)
+    waiting = [p for i, p in enumerate(people) if i % 3 != 0][:2]
+    for hours_ago, (person, pose) in enumerate(zip(waiting, ("peace", "thumbs_up"), strict=True)):
+        session.add(
+            VerificationRequest(
+                user_id=person.id,
+                pose=pose,
+                selfie_url=person.photos[0],
+                status=VerificationStatus.PENDING,
+                created_at=now - timedelta(hours=hours_ago + 2),
+                submitted_at=now - timedelta(hours=hours_ago + 1),
+            )
+        )
 
 
 def _seed_answers(users: list[User], session: AsyncSession) -> None:

@@ -55,6 +55,15 @@ class NotificationKind(StrEnum):
     SUPER_LIKE = "super_like"
     MATCH = "match"
     MESSAGE = "message"
+    VERIFIED = "verified"
+    VERIFICATION_REJECTED = "verification_rejected"
+
+
+class VerificationStatus(StrEnum):
+    AWAITING_PHOTO = "awaiting_photo"
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
 
 
 class DateStatus(StrEnum):
@@ -99,6 +108,8 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column(default=False, server_default=false())
     # Banned accounts can't sign in and are hidden from everyone.
     banned_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    # Set when a moderator matched a posed selfie to the profile photos.
+    verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     last_active_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
@@ -313,3 +324,26 @@ class QuestionAnswer(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "question_id", name="uq_question_answers_user_question"),
     )
+
+
+class VerificationRequest(Base):
+    """A selfie copying a random pose, which a moderator compares with the profile photos."""
+
+    __tablename__ = "verification_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    pose: Mapped[str] = mapped_column(String(32))
+    selfie_url: Mapped[str | None] = mapped_column(String(255), default=None)
+    status: Mapped[str] = mapped_column(
+        String(16), default=VerificationStatus.AWAITING_PHOTO, index=True
+    )
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    submitted_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    reviewed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    reviewed_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+
+    user: Mapped[User] = relationship(foreign_keys=[user_id], lazy="joined")

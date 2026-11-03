@@ -7,7 +7,7 @@ from sqlalchemy import func, select, update
 
 from app.db import utcnow
 from app.deps import AdminUser, HubDep, SessionDep
-from app.models import Report, ReportStatus, User
+from app.models import Report, ReportStatus, User, VerificationRequest, VerificationStatus
 from app.routers.ws import CLOSE_UNAUTHORIZED
 from app.schemas import ModerationStats, ReportOut, ResolveIn
 
@@ -95,6 +95,11 @@ async def stats(_: AdminUser, session: SessionDep) -> ModerationStats:
         return await session.scalar(query) or 0
 
     return ModerationStats(
+        pending_verifications=await count(
+            select(func.count())
+            .select_from(VerificationRequest)
+            .where(VerificationRequest.status == VerificationStatus.PENDING)
+        ),
         open_reports=await count(select(func.count()).where(Report.status == ReportStatus.OPEN)),
         resolved_this_week=await count(select(func.count()).where(Report.resolved_at >= week_ago)),
         banned_users=await count(
