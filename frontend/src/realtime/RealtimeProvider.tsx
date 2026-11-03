@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { useLocation } from 'react-router'
 import {
   applyMessageToMatches,
@@ -43,7 +43,14 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const token = useAuth((s) => s.token)
   const queryClient = useQueryClient()
   const location = useLocation()
-  const [client, setClient] = useState<RealtimeClient | null>(null)
+  // Constructing the client is free of side effects; the effect below opens and closes it.
+  const client = useMemo(
+    () =>
+      token
+        ? new RealtimeClient(socketUrl(token), { onUnauthorized: () => useAuth.getState().signOut() })
+        : null,
+    [token],
+  )
 
   const pathRef = useRef(location.pathname)
   useEffect(() => {
@@ -52,12 +59,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const typingTimers = useRef(new Map<number, ReturnType<typeof setTimeout>>())
 
   useEffect(() => {
-    if (!token) return
-    const realtime = new RealtimeClient(socketUrl(token), {
-      onUnauthorized: () => useAuth.getState().signOut(),
-    })
+    if (!client) return
     let wasReconnecting = false
-    const offStatus = realtime.onStatus((status) => {
+    const offStatus = client.onStatus((status) => {
       useLive.getState().setStatus(status)
       if (status === 'reconnecting') wasReconnecting = true
       if (status === 'open' && wasReconnecting) {
@@ -67,14 +71,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         void queryClient.invalidateQueries({ queryKey: ['messages'] })
       }
     })
-    realtime.start()
-    setClient(realtime)
+    client.start()
     return () => {
       offStatus()
-      realtime.stop()
-      setClient(null)
+      client.stop()
     }
-  }, [token, queryClient])
+  }, [client, queryClient])
 
   useEffect(() => {
     if (!client) return

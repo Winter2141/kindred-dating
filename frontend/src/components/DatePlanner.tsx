@@ -44,7 +44,8 @@ export function DateForm({ match, onDone }: { match: Match; onDone: () => void }
   const [note, setNote] = useState('')
   const ideas = useQuery({ queryKey: keys.dateIdeas(match.id), queryFn: () => api.dateIdeas(match.id), staleTime: Infinity })
   const update = useDateUpdate(match.id)
-  const earliest = toLocalInput(new Date(Date.now() + 30 * 60 * 1000))
+  // Fixed when the form opens; the server re-checks the 30-minute lead time anyway.
+  const [earliest] = useState(() => toLocalInput(new Date(Date.now() + 30 * 60 * 1000)))
 
   const propose = useMutation({
     mutationFn: () =>
