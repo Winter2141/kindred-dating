@@ -6,10 +6,10 @@ from sqlalchemy import select
 from app.deps import CurrentUser, HubDep, SessionDep, SettingsDep
 from app.models import Match
 from app.routers.auth import token_for
-from app.routers.users import local_photo_path
 from app.routers.ws import CLOSE_UNAUTHORIZED
 from app.schemas import AccountDelete, PasswordChange, TokenOut
 from app.security import hash_password, verify_password
+from app.services.images import delete_local
 
 router = APIRouter(prefix="/api/me", tags=["account"])
 
@@ -69,6 +69,5 @@ async def delete_account(
         await hub.manager.send(partner_id, {"type": "match.removed", "match_id": match_id})
     await hub.manager.close_all(user_id, CLOSE_UNAUTHORIZED)
     for url in photos:
-        if (path := local_photo_path(url, settings)) is not None:
-            path.unlink(missing_ok=True)
+        delete_local(url, settings)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

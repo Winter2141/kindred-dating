@@ -175,11 +175,22 @@ def compose_reply(
     rng = rng or random.Random()
     persona_turns = sum(1 for m in history if m.sender_id == persona_id)
     since_persona = []
+    sent_photo = False
     for message in reversed(history):
         if message.sender_id == persona_id:
             break
         since_persona.append(message.body)
-    incoming = " ".join(reversed(since_persona)).lower()
+        sent_photo = sent_photo or bool(getattr(message, "image_url", None))
+    incoming = " ".join(reversed(since_persona)).lower().strip()
+
+    if sent_photo and not incoming:
+        return rng.choice(
+            [
+                "Okay, that's a great photo 📸 Where was that taken?",
+                "Love this! You've got a good eye. Is that near you?",
+                "Ha, I love it. Now I need the story behind this picture.",
+            ]
+        )
 
     shared = [i for i in persona.interests if i in human.interests]
     talkable = [i for i in shared if _talk(i)] or [i for i in persona.interests if _talk(i)]

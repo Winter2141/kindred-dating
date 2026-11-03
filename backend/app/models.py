@@ -149,6 +149,8 @@ class Message(Base):
     match_id: Mapped[int] = mapped_column(ForeignKey("matches.id", ondelete="CASCADE"))
     sender_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     body: Mapped[str] = mapped_column(Text)
+    # Photo messages carry an image and an optional caption in `body`.
+    image_url: Mapped[str | None] = mapped_column(String(255), default=None)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     read_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
     # Unsent messages keep their place in the conversation but lose their text.

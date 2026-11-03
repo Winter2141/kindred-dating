@@ -1,24 +1,16 @@
-import io
-import uuid
-from pathlib import Path
-
 from fastapi import APIRouter, HTTPException, Query, UploadFile, status
-from fastapi.concurrency import run_in_threadpool
-from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.catalog import INTERESTS, PROMPT_QUESTIONS
-from app.config import Settings
 from app.deps import CurrentUser, HubDep, SessionDep, SettingsDep
 from app.models import Gender, User
 from app.places import geocode
 from app.places import search as search_places
 from app.schemas import Interest, MeOut, MetaOut, ProfileUpdate, PublicProfile
+from app.services.images import PROFILE_PHOTO_SIDE, delete_local, save_upload
 from app.services.matching import distance_between
 from app.services.safety import is_hidden
 
 router = APIRouter(prefix="/api", tags=["profile"])
-
-MAX_PHOTO_SIDE = 1200
 
 
 @router.get("/meta")
@@ -71,24 +63,6 @@ async def update_me(data: ProfileUpdate, user: CurrentUser, session: SessionDep)
     return MeOut.build(user)
 
 
-def _process_photo(raw: bytes, destination: Path) -> None:
-    try:
-        with Image.open(io.BytesIO(raw)) as image:
-            image = ImageOps.exif_transpose(image).convert("RGB")
-            image.thumbnail((MAX_PHOTO_SIDE, MAX_PHOTO_SIDE))
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            image.save(destination, "WEBP", quality=85)
-    except (UnidentifiedImageError, OSError) as exc:
-        raise ValueError("not an image") from exc
-
-
-def local_photo_path(url: str, settings: Settings) -> Path | None:
-    prefix = settings.media_url.rstrip("/") + "/"
-    if not url.startswith(prefix):
-        return None
-    return settings.media_dir / Path(url.removeprefix(prefix)).name
-
-
 @router.post("/me/photos", status_code=status.HTTP_201_CREATED)
 async def upload_photo(
     file: UploadFile, user: CurrentUser, session: SessionDep, settings: SettingsDep
@@ -97,19 +71,8 @@ async def upload_photo(
         raise HTTPException(
             status.HTTP_409_CONFLICT, f"You can have up to {settings.max_photos} photos"
         )
-    raw = await file.read(settings.max_photo_bytes + 1)
-    if len(raw) > settings.max_photo_bytes:
-        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Photo is too large")
-
-    name = f"{uuid.uuid4().hex}.webp"
-    try:
-        await run_in_threadpool(_process_photo, raw, settings.media_dir / name)
-    except ValueError:
-        raise HTTPException(
-            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "That file isn't a supported image"
-        ) from None
-
-    user.photos = [*user.photos, f"{settings.media_url.rstrip('/')}/{name}"]
+    url = await save_upload(file, settings, PROFILE_PHOTO_SIDE)
+    user.photos = [*user.photos, url]
     await session.commit()
     return MeOut.build(user)
 
@@ -125,8 +88,7 @@ async def delete_photo(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Photo not found")
     user.photos = [p for p in user.photos if p != url]
     await session.commit()
-    if (path := local_photo_path(url, settings)) is not None:
-        path.unlink(missing_ok=True)
+    delete_local(url, settings)
     return MeOut.build(user)
 
 

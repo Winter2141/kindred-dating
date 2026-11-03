@@ -1,10 +1,13 @@
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from typing import Annotated
+
+from fastapi import APIRouter, Form, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import select
 
-from app.deps import CurrentUser, HubDep, SessionDep
+from app.deps import CurrentUser, HubDep, SessionDep, SettingsDep
 from app.models import Match, Message
 from app.schemas import MatchOut, MessageIn, MessageOut, ReactionIn
 from app.services import chat
+from app.services.images import CHAT_PHOTO_SIDE, save_upload
 from app.services.personas import icebreakers
 
 router = APIRouter(prefix="/api/matches", tags=["matches"])
@@ -76,6 +79,23 @@ async def post_message(
     """REST fallback for sending; the web client sends over the WebSocket."""
     match = await _match_or_404(session, match_id, user.id)
     message = await chat.send_message(session, hub, match, user.id, data.body)
+    return MessageOut.model_validate(message)
+
+
+@router.post("/{match_id}/photos", status_code=status.HTTP_201_CREATED)
+async def post_photo(
+    match_id: int,
+    file: UploadFile,
+    user: CurrentUser,
+    session: SessionDep,
+    hub: HubDep,
+    settings: SettingsDep,
+    caption: Annotated[str, Form(max_length=500)] = "",
+) -> MessageOut:
+    """Send a photo, with an optional caption. It's delivered live like any message."""
+    match = await _match_or_404(session, match_id, user.id)
+    url = await save_upload(file, settings, CHAT_PHOTO_SIDE)
+    message = await chat.send_message(session, hub, match, user.id, caption.strip(), image_url=url)
     return MessageOut.model_validate(message)
 
 

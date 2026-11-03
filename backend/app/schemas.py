@@ -256,6 +256,7 @@ class MessageOut(BaseModel):
     match_id: int
     sender_id: int
     body: str
+    image_url: str | None = None
     created_at: datetime
     read_at: datetime | None
     deleted_at: datetime | None = None

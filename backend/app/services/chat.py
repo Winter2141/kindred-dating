@@ -12,6 +12,7 @@ from app.db import utcnow
 from app.models import Match, Message, Reaction, User
 from app.realtime import Hub
 from app.schemas import MatchOut, MessageOut
+from app.services.images import delete_local
 from app.services.personas import compose_reply
 
 # How long after sending a message its sender can still unsend it.
@@ -91,11 +92,17 @@ async def send_message(
     sender_id: int,
     body: str,
     client_id: str | None = None,
+    image_url: str | None = None,
 ) -> Message:
     recipient = match.other_user(sender_id)
     sender = match.other_user(recipient.id)
     message = Message(
-        match_id=match.id, sender_id=sender_id, body=body, created_at=utcnow(), reactions=[]
+        match_id=match.id,
+        sender_id=sender_id,
+        body=body,
+        image_url=image_url,
+        created_at=utcnow(),
+        reactions=[],
     )
     session.add(message)
     match.last_activity_at = message.created_at
@@ -156,7 +163,9 @@ async def unsend(
         minutes = int(UNSEND_WINDOW.total_seconds() // 60)
         raise CannotUnsend(f"Messages can only be unsent within {minutes} minutes")
 
+    delete_local(message.image_url, hub.settings)
     message.body = ""
+    message.image_url = None
     message.deleted_at = utcnow()
     message.reactions.clear()
     await session.commit()
