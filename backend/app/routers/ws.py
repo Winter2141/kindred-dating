@@ -8,8 +8,8 @@ Client -> server events:
     {"type": "ping"}
 
 Server -> client events:
-    hello, message.new, typing, read, reaction, presence, match.new, match.removed, pong,
-    error
+    hello, message.new, message.deleted, typing, read, reaction, presence, match.new,
+    match.removed, pong, error
 """
 
 import logging

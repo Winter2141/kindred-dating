@@ -3,6 +3,7 @@
 import asyncio
 import random
 from dataclasses import dataclass
+from datetime import timedelta
 
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,9 @@ from app.models import Match, Message, Reaction, User
 from app.realtime import Hub
 from app.schemas import MatchOut, MessageOut
 from app.services.personas import compose_reply
+
+# How long after sending a message its sender can still unsend it.
+UNSEND_WINDOW = timedelta(minutes=15)
 
 
 async def get_match(session: AsyncSession, match_id: int, user_id: int) -> Match | None:
@@ -135,6 +139,39 @@ class MessageNotFound(LookupError):
     pass
 
 
+class CannotUnsend(Exception):
+    pass
+
+
+async def unsend(
+    session: AsyncSession, hub: Hub, match: Match, message_id: int, user_id: int
+) -> Message:
+    """Wipe a message's text and reactions for both people. Only the sender, only briefly."""
+    message = await session.get(Message, message_id)
+    if message is None or message.match_id != match.id or message.deleted_at is not None:
+        raise MessageNotFound(message_id)
+    if message.sender_id != user_id:
+        raise CannotUnsend("You can only unsend your own messages")
+    if utcnow() - message.created_at > UNSEND_WINDOW:
+        minutes = int(UNSEND_WINDOW.total_seconds() // 60)
+        raise CannotUnsend(f"Messages can only be unsent within {minutes} minutes")
+
+    message.body = ""
+    message.deleted_at = utcnow()
+    message.reactions.clear()
+    await session.commit()
+    await hub.manager.send_many(
+        [match.user_a_id, match.user_b_id],
+        {
+            "type": "message.deleted",
+            "match_id": match.id,
+            "message_id": message.id,
+            "deleted_at": message.deleted_at,
+        },
+    )
+    return message
+
+
 async def set_reaction(
     session: AsyncSession,
     hub: Hub,
@@ -145,7 +182,7 @@ async def set_reaction(
 ) -> Message:
     """Set, change or (with None, or the same emoji again) clear `user_id`'s reaction."""
     message = await session.get(Message, message_id)
-    if message is None or message.match_id != match.id:
+    if message is None or message.match_id != match.id or message.deleted_at is not None:
         raise MessageNotFound(message_id)
     mine = next((r for r in message.reactions if r.user_id == user_id), None)
     if mine is not None and (emoji is None or emoji == mine.emoji):
@@ -201,7 +238,9 @@ async def _persona_reply(hub: Hub, match_id: int, persona_id: int, human_id: int
                 return
             history = (
                 await session.scalars(
-                    select(Message).where(Message.match_id == match_id).order_by(Message.id)
+                    select(Message)
+                    .where(Message.match_id == match_id, Message.deleted_at.is_(None))
+                    .order_by(Message.id)
                 )
             ).all()
             persona, human = match.other_user(human_id), match.other_user(persona_id)

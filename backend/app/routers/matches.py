@@ -79,6 +79,21 @@ async def post_message(
     return MessageOut.model_validate(message)
 
 
+@router.delete("/{match_id}/messages/{message_id}")
+async def unsend_message(
+    match_id: int, message_id: int, user: CurrentUser, session: SessionDep, hub: HubDep
+) -> MessageOut:
+    """Unsend one of your messages within a few minutes of sending it."""
+    match = await _match_or_404(session, match_id, user.id)
+    try:
+        message = await chat.unsend(session, hub, match, message_id, user.id)
+    except chat.MessageNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Message not found") from None
+    except chat.CannotUnsend as exc:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from None
+    return MessageOut.model_validate(message)
+
+
 @router.put("/{match_id}/messages/{message_id}/reaction")
 async def react(
     match_id: int,

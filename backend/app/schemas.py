@@ -258,6 +258,7 @@ class MessageOut(BaseModel):
     body: str
     created_at: datetime
     read_at: datetime | None
+    deleted_at: datetime | None = None
     reactions: list[ReactionOut] = []
 
 
