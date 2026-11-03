@@ -3,7 +3,7 @@ import { ArrowRight, CheckCheck, Heart, MessageCircle, Sparkles, Wand2 } from 'l
 import { motion } from 'motion/react'
 import { Link, useNavigate } from 'react-router'
 import { CompatibilityRing, Logo, Photo, Spinner } from '@/components/ui'
-import { api } from '@/lib/api'
+import { api, isMfaChallenge } from '@/lib/api'
 import { useAuth } from '@/store/auth'
 
 export const DEMO_ACCOUNT = { email: 'alex@kindred.app', password: 'kindred123' }
@@ -22,8 +22,10 @@ export function useDemoLogin() {
   const navigate = useNavigate()
   return useMutation({
     mutationFn: () => api.login(DEMO_ACCOUNT.email, DEMO_ACCOUNT.password),
-    onSuccess: (session) => {
-      signIn(session)
+    onSuccess: (result) => {
+      // Someone may have switched on two-factor for the shared demo account; send them to sign in.
+      if (isMfaChallenge(result)) return navigate('/login')
+      signIn(result)
       navigate('/app/discover')
     },
   })

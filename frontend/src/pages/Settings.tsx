@@ -1,8 +1,20 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Ban, BadgeCheck, BellRing, EyeOff, Gavel, KeyRound, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
+import {
+  Ban,
+  BadgeCheck,
+  BellRing,
+  EyeOff,
+  Gavel,
+  KeyRound,
+  LogOut,
+  MonitorSmartphone,
+  ShieldCheck,
+  Trash2,
+} from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { BlockedList } from '@/components/Safety'
+import { TwoFactorSettings } from '@/components/TwoFactor'
 import { VerificationFlow } from '@/components/Verification'
 import { Spinner, Switch } from '@/components/ui'
 import { api } from '@/lib/api'
@@ -38,6 +50,13 @@ export function SettingsPage() {
         </Section>
         <DesktopSection />
         <PasswordSection />
+        <Section
+          icon={<ShieldCheck className="size-5" />}
+          title="Two-factor sign-in"
+          description="Ask for a code from an authenticator app as well as your password, so a leaked password isn't enough."
+        >
+          <TwoFactorSettings />
+        </Section>
         <SessionsSection />
         <Section
           icon={<Ban className="size-5" />}

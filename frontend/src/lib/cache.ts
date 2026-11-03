@@ -26,6 +26,7 @@ export const keys = {
   reports: (status: string) => ['reports', status] as const,
   moderationStats: ['moderation-stats'] as const,
   verification: ['verification'] as const,
+  twoFactor: ['two-factor'] as const,
   verificationQueue: ['verification-queue'] as const,
 }
 

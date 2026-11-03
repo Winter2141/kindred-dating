@@ -6,7 +6,8 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { AgeRange, CityInput, GENDER_LABELS, GENDER_SELF, InterestPicker, PromptEditor, Segmented } from '@/components/ProfileFields'
 import { Logo, Photo, Spinner } from '@/components/ui'
-import { api, type RegisterInput } from '@/lib/api'
+import { TwoFactorStep } from '@/components/TwoFactor'
+import { api, isMfaChallenge, type RegisterInput } from '@/lib/api'
 import type { Gender } from '@/lib/types'
 import { ageFromBirthdate } from '@/lib/time'
 import { useAuth } from '@/store/auth'
@@ -72,13 +73,34 @@ export function LoginPage() {
   const demo = useDemoLogin()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [mfaToken, setMfaToken] = useState<string | null>(null)
   const login = useMutation({
     mutationFn: () => api.login(email, password),
-    onSuccess: (session) => {
-      signIn(session)
+    onSuccess: (result) => {
+      if (isMfaChallenge(result)) {
+        setMfaToken(result.mfa_token)
+        return
+      }
+      signIn(result)
       navigate('/app/discover')
     },
   })
+
+  if (mfaToken) {
+    return (
+      <AuthLayout>
+        <h1 className="font-display text-6xl leading-none">One more step</h1>
+        <p className="mt-3 text-muted">Enter the code from your authenticator app.</p>
+        <TwoFactorStep
+          mfaToken={mfaToken}
+          onBack={() => {
+            setMfaToken(null)
+            setPassword('')
+          }}
+        />
+      </AuthLayout>
+    )
+  }
 
   return (
     <AuthLayout>
@@ -95,15 +117,17 @@ export function LoginPage() {
           <span className="label">Email</span>
           <input className="field" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
-        <label className="block">
-          <span className="mb-2 flex items-baseline justify-between">
-            <span className="label mb-0">Password</span>
+        <div>
+          <div className="mb-2 flex items-baseline justify-between">
+            <label htmlFor="login-password" className="label mb-0">
+              Password
+            </label>
             <Link to="/forgot-password" className="text-xs font-semibold text-apricot hover:underline">
               Forgot it?
             </Link>
-          </span>
-          <input className="field" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-        </label>
+          </div>
+          <input id="login-password" className="field" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+        </div>
         <ErrorNote message={login.error?.message ?? null} />
         <button type="submit" className="btn-primary w-full py-4 text-base" disabled={login.isPending}>
           {login.isPending ? <Spinner className="size-5" /> : 'Sign in'}

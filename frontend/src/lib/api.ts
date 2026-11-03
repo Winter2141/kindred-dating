@@ -14,6 +14,7 @@ import type {
   Me,
   Message,
   Meta,
+  MfaChallenge,
   ModerationStats,
   NotificationList,
   OutboxEmail,
@@ -28,10 +29,16 @@ import type {
   SwipeAction,
   SwipeResult,
   TopPicks,
+  TwoFactorSetup,
+  TwoFactorStatus,
   UpcomingDate,
   VerificationReview,
   VerificationState,
 } from './types'
+
+export function isMfaChallenge(result: Session | MfaChallenge): result is MfaChallenge {
+  return 'mfa_required' in result
+}
 
 export class ApiError extends Error {
   readonly status: number
@@ -119,8 +126,19 @@ export interface ChatSettingsChange {
 
 export const api = {
   meta: () => request<Meta>('/api/meta'),
+  /** A session, or a challenge to finish with loginWithCode when two-factor is on. */
   login: (email: string, password: string) =>
-    request<Session>('/api/auth/login', { method: 'POST', body: { email, password } }),
+    request<Session | MfaChallenge>('/api/auth/login', { method: 'POST', body: { email, password } }),
+  loginWithCode: (mfaToken: string, code: string) =>
+    request<Session>('/api/auth/login/2fa', { method: 'POST', body: { mfa_token: mfaToken, code } }),
+  twoFactorStatus: () => request<TwoFactorStatus>('/api/me/2fa'),
+  startTwoFactor: () => request<TwoFactorSetup>('/api/me/2fa/setup', { method: 'POST' }),
+  enableTwoFactor: (code: string) =>
+    request<{ recovery_codes: string[] }>('/api/me/2fa/enable', { method: 'POST', body: { code } }),
+  disableTwoFactor: (password: string, code: string) =>
+    request<void>('/api/me/2fa/disable', { method: 'POST', body: { password, code } }),
+  regenerateRecoveryCodes: (password: string) =>
+    request<{ recovery_codes: string[] }>('/api/me/2fa/recovery-codes', { method: 'POST', body: { password } }),
   register: (data: RegisterInput) =>
     request<Session>('/api/auth/register', { method: 'POST', body: { ...data } }),
   forgotPassword: (email: string) => request<void>('/api/auth/forgot-password', { method: 'POST', body: { email } }),

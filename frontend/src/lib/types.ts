@@ -62,6 +62,23 @@ export interface Me extends PublicProfile {
   is_admin: boolean
   /** They followed the link in the confirmation email. */
   email_verified?: boolean
+  two_factor_enabled?: boolean
+}
+
+export interface MfaChallenge {
+  mfa_required: true
+  mfa_token: string
+}
+
+export interface TwoFactorStatus {
+  enabled: boolean
+  recovery_codes_left: number
+}
+
+export interface TwoFactorSetup {
+  secret: string
+  otpauth_url: string
+  qr_svg: string
 }
 
 export interface OutboxEmail {
