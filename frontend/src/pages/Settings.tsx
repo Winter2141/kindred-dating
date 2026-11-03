@@ -4,6 +4,7 @@ import {
   BadgeCheck,
   BellRing,
   EyeOff,
+  FileDown,
   Gavel,
   KeyRound,
   LogOut,
@@ -65,6 +66,13 @@ export function SettingsPage() {
         >
           <BlockedList />
         </Section>
+        <Section
+          icon={<FileDown className="size-5" />}
+          title="Your data"
+          description="Download everything Kindred holds about you: your profile, answers, swipes, conversations, dates and notifications, as one JSON file."
+        >
+          <ExportButton />
+        </Section>
         <DeleteSection />
       </div>
     </div>
@@ -103,6 +111,28 @@ function Section({
         </div>
       </div>
     </section>
+  )
+}
+
+export function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+export function ExportButton() {
+  const download = useMutation({
+    mutationFn: api.exportData,
+    onSuccess: (blob) => saveBlob(blob, `kindred-export-${new Date().toISOString().slice(0, 10)}.json`),
+    onError: (error) => useToasts.getState().push({ title: "Couldn't export", body: error.message }),
+  })
+  return (
+    <button type="button" className="btn-secondary" disabled={download.isPending} onClick={() => download.mutate()}>
+      {download.isPending ? <Spinner className="size-4" /> : <FileDown className="size-4" />} Download my data
+    </button>
   )
 }
 

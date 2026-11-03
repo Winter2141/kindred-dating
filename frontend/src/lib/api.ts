@@ -173,6 +173,16 @@ export const api = {
       body: { current_password: currentPassword, new_password: newPassword },
     }),
   signOutEverywhere: () => request<void>('/api/me/sign-out-everywhere', { method: 'POST' }),
+  /** The JSON export as a file to save. */
+  exportData: async (): Promise<Blob> => {
+    const { token } = useAuth.getState()
+    const response = await fetch('/api/me/export', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      throw new ApiError(response.status, describeError(payload.detail))
+    }
+    return response.blob()
+  },
   deleteAccount: (password: string) =>
     request<void>('/api/me', { method: 'DELETE', body: { password } }),
 

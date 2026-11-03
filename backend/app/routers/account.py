@@ -1,14 +1,20 @@
-"""Account security: password changes, signing out everywhere and deleting the account."""
+"""Account security and data: passwords, signing out everywhere, exports and deletion."""
+
+import json
 
 from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy import select
 
+from app.db import utcnow
 from app.deps import CurrentUser, HubDep, SessionDep, SettingsDep
+from app.limits import EXPORTS
 from app.models import Match
+from app.ratelimit import per_user
 from app.routers.auth import token_for
 from app.routers.ws import CLOSE_UNAUTHORIZED
 from app.schemas import AccountDelete, PasswordChange, TokenOut
 from app.security import hash_password, verify_password
+from app.services.export import build_export
 from app.services.images import delete_local
 
 router = APIRouter(prefix="/api/me", tags=["account"])
@@ -33,6 +39,18 @@ async def change_password(
     user.token_version += 1
     await session.commit()
     return token_for(user, settings)
+
+
+@router.get("/export", dependencies=[per_user(EXPORTS)])
+async def export_my_data(user: CurrentUser, session: SessionDep) -> Response:
+    """Download everything Kindred holds about you as one JSON file."""
+    now = utcnow()
+    data = await build_export(session, user, now)
+    return Response(
+        content=json.dumps(data, ensure_ascii=False, indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="kindred-export-{now.date()}.json"'},
+    )
 
 
 @router.post("/sign-out-everywhere", status_code=status.HTTP_204_NO_CONTENT)
