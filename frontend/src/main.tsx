@@ -16,6 +16,11 @@ const queryClient = new QueryClient({
   },
 })
 
+// Offline app shell and installability; skipped in development so Vite's server stays in charge.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => void navigator.serviceWorker.register('/sw.js'))
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
