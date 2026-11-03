@@ -2,6 +2,7 @@ import { useAuth } from '@/store/auth'
 import type {
   AdminReport,
   AppNotification,
+  DateProposal,
   Candidate,
   Like,
   Match,
@@ -18,6 +19,7 @@ import type {
   SwipeAction,
   SwipeResult,
   TopPicks,
+  UpcomingDate,
 } from './types'
 
 export class ApiError extends Error {
@@ -146,6 +148,19 @@ export const api = {
   },
   unsend: (matchId: number, messageId: number) =>
     request<Message>(`/api/matches/${matchId}/messages/${messageId}`, { method: 'DELETE' }),
+
+  dates: (matchId: number) => request<DateProposal[]>(`/api/matches/${matchId}/dates`),
+  dateIdeas: (matchId: number) => request<string[]>(`/api/matches/${matchId}/date-ideas`),
+  proposeDate: (matchId: number, data: { place: string; starts_at: string; note: string }) =>
+    request<DateProposal>(`/api/matches/${matchId}/dates`, { method: 'POST', body: data }),
+  respondToDate: (matchId: number, dateId: number, response: 'accept' | 'decline') =>
+    request<DateProposal>(`/api/matches/${matchId}/dates/${dateId}/respond`, {
+      method: 'POST',
+      body: { response },
+    }),
+  cancelDate: (matchId: number, dateId: number) =>
+    request<DateProposal>(`/api/matches/${matchId}/dates/${dateId}/cancel`, { method: 'POST' }),
+  upcomingDates: () => request<UpcomingDate[]>('/api/dates/upcoming'),
 
   notifications: () => request<NotificationList>('/api/notifications'),
   readNotification: (id: number) =>

@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { MessageCircleHeart, Search } from 'lucide-react'
+import { CalendarCheck, MessageCircleHeart, Search } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { Avatar, EmptyState, Spinner, TypingDots } from '@/components/ui'
 import { api } from '@/lib/api'
 import { keys } from '@/lib/cache'
+import { formatDateTime } from '@/lib/dates'
 import type { Match } from '@/lib/types'
 import { shortAgo } from '@/lib/time'
 import { previewText } from '@/lib/photos'
@@ -48,6 +49,7 @@ function MatchList() {
   const online = useLive((s) => s.online)
   const typing = useLive((s) => s.typing)
   const [filter, setFilter] = useState('')
+  const upcoming = useQuery({ queryKey: keys.upcomingDates, queryFn: api.upcomingDates })
 
   if (matches.isPending) {
     return (
@@ -83,6 +85,31 @@ function MatchList() {
       <div className="px-5 pt-5 lg:pt-10">
         <h1 className="font-display text-5xl leading-none">Chats</h1>
       </div>
+
+      {upcoming.data && upcoming.data.length > 0 && (
+        <section className="mt-6 px-3">
+          <p className="label px-2">Upcoming dates</p>
+          <ul className="space-y-1">
+            {upcoming.data.map((date) => (
+              <li key={date.id}>
+                <Link
+                  to={`/app/matches/${date.match_id}`}
+                  className="flex items-center gap-3 rounded-2xl border border-mint/20 bg-mint/5 px-3 py-2.5 transition hover:bg-mint/10"
+                >
+                  <Avatar src={date.with_user.photos[0]} name={date.with_user.name} size={40} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">
+                      {date.with_user.name} · {date.place}
+                    </span>
+                    <span className="block text-xs text-mint">{formatDateTime(date.starts_at)}</span>
+                  </span>
+                  <CalendarCheck className="size-4 shrink-0 text-mint" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {fresh.length > 0 && (
         <section className="mt-6">

@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ProfileDetails } from '@/components/ProfileDetails'
+import { DateBar, PlanDateButton } from '@/components/DatePlanner'
 import { Lightbox } from '@/components/Lightbox'
 import { MessageMenu } from '@/components/MessageActions'
 import { ReactionChips, ReactionPicker } from '@/components/Reactions'
@@ -218,8 +219,10 @@ export function ChatPage() {
           >
             <Info className="size-5" />
           </button>
+          <PlanDateButton match={match} />
           <SafetyMenu person={other} onUnmatch={() => unmatch.mutate()} onGone={() => navigate('/app/matches')} />
         </header>
+        <DateBar match={match} meId={me?.id ?? -1} />
 
         <MessageList
           match={match}

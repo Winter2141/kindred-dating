@@ -11,10 +11,18 @@ import {
   setPresence,
   upsertMessage,
 } from '@/lib/cache'
+import { upsertDate } from '@/lib/dates'
 import { applyNotification } from '@/lib/notifications'
 import { previewText } from '@/lib/photos'
 import { RealtimeClient, socketUrl } from '@/lib/realtime'
-import type { ClientEvent, Match, Message, NotificationList, ServerEvent } from '@/lib/types'
+import type {
+  ClientEvent,
+  DateProposal,
+  Match,
+  Message,
+  NotificationList,
+  ServerEvent,
+} from '@/lib/types'
 import { useAuth } from '@/store/auth'
 import { useLive, useToasts } from '@/store/live'
 
@@ -187,6 +195,26 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             void queryClient.invalidateQueries({ queryKey: keys.likes })
           }
           break
+        case 'date.updated': {
+          const { date } = event
+          queryClient.setQueryData<DateProposal[]>(keys.dates(date.match_id), (list) => upsertDate(list, date))
+          void queryClient.invalidateQueries({ queryKey: keys.upcomingDates })
+          const me = useAuth.getState().user
+          const elsewhere = useLive.getState().activeMatchId !== date.match_id
+          const match = queryClient.getQueryData<Match[]>(keys.matches)?.find((m) => m.id === date.match_id)
+          const theirMove =
+            (date.status === 'proposed' && date.proposer_id !== me?.id) ||
+            (date.status === 'accepted' && date.proposer_id === me?.id)
+          if (match && elsewhere && theirMove) {
+            useToasts.getState().push({
+              title: date.status === 'accepted' ? `${match.user.name} said yes!` : `${match.user.name} asked you out`,
+              body: date.place,
+              image: match.user.photos[0],
+              href: `/app/matches/${match.id}`,
+            })
+          }
+          break
+        }
         case 'match.removed':
           queryClient.setQueryData<Match[]>(keys.matches, (matches) =>
             matches?.filter((m) => m.id !== event.match_id),

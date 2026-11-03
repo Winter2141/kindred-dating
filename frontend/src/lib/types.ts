@@ -56,6 +56,24 @@ export interface TopPicks {
   refreshes_at: string
 }
 
+export type DateStatus = 'proposed' | 'accepted' | 'declined' | 'cancelled'
+
+export interface DateProposal {
+  id: number
+  match_id: number
+  proposer_id: number
+  place: string
+  starts_at: string
+  note: string
+  status: DateStatus
+  created_at: string
+  responded_at: string | null
+}
+
+export interface UpcomingDate extends DateProposal {
+  with_user: PublicProfile
+}
+
 export interface Message {
   id: number
   match_id: number
@@ -157,6 +175,7 @@ export type ServerEvent =
   | { type: 'match.new'; match: Match }
   | { type: 'match.removed'; match_id: number }
   | { type: 'notification.new'; notification: AppNotification }
+  | { type: 'date.updated'; date: DateProposal }
   | { type: 'pong' }
   | { type: 'error'; detail: string; match_id?: number }
 
