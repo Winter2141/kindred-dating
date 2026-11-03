@@ -19,6 +19,7 @@ from app.routers import (
     matches,
     notifications,
     safety,
+    search,
     users,
     ws,
 )
@@ -62,6 +63,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         account,
         discover,
         matches,
+        search,
         dates,
         notifications,
         safety,

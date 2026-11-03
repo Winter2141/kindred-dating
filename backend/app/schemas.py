@@ -354,6 +354,18 @@ class MatchOut(BaseModel):
         )
 
 
+class SearchHit(BaseModel):
+    match_id: int
+    with_user: PublicProfile
+    message: MessageOut
+
+
+class SearchOut(BaseModel):
+    query: str
+    people: list[MatchOut]
+    messages: list[SearchHit]
+
+
 class SwipeOut(BaseModel):
     matched: bool
     match: MatchOut | None = None
