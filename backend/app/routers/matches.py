@@ -22,6 +22,12 @@ async def _match_or_404(session: SessionDep, match_id: int, user_id: int) -> Mat
     return match
 
 
+def _reply_gone() -> HTTPException:
+    return HTTPException(
+        status.HTTP_422_UNPROCESSABLE_CONTENT, "The message you're replying to is gone"
+    )
+
+
 @router.get("")
 async def list_matches(user: CurrentUser, session: SessionDep, hub: HubDep) -> list[MatchOut]:
     summaries = await chat.list_matches(session, user.id)
@@ -84,7 +90,12 @@ async def post_message(
 ) -> MessageOut:
     """REST fallback for sending; the web client sends over the WebSocket."""
     match = await _match_or_404(session, match_id, user.id)
-    message = await chat.send_message(session, hub, match, user.id, data.body)
+    try:
+        message = await chat.send_message(
+            session, hub, match, user.id, data.body, reply_to_id=data.reply_to_id
+        )
+    except chat.MessageNotFound:
+        raise _reply_gone() from None
     return MessageOut.model_validate(message)
 
 
@@ -99,11 +110,19 @@ async def post_photo(
     hub: HubDep,
     settings: SettingsDep,
     caption: Annotated[str, Form(max_length=500)] = "",
+    reply_to_id: Annotated[int | None, Form()] = None,
 ) -> MessageOut:
     """Send a photo, with an optional caption. It's delivered live like any message."""
     match = await _match_or_404(session, match_id, user.id)
+    if reply_to_id is not None:  # check before storing the upload
+        try:
+            await chat.reply_target(session, match, reply_to_id)
+        except chat.MessageNotFound:
+            raise _reply_gone() from None
     url = await save_upload(file, settings, CHAT_PHOTO_SIDE)
-    message = await chat.send_message(session, hub, match, user.id, caption.strip(), image_url=url)
+    message = await chat.send_message(
+        session, hub, match, user.id, caption.strip(), image_url=url, reply_to_id=reply_to_id
+    )
     return MessageOut.model_validate(message)
 
 

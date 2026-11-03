@@ -263,6 +263,27 @@ class ReactionOut(BaseModel):
     emoji: str
 
 
+# How much of a quoted message travels with each reply.
+QUOTE_LENGTH = 160
+
+
+class QuotedMessage(BaseModel):
+    """The message a reply answers, trimmed to what the quote above the reply shows."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    sender_id: int
+    body: str
+    image_url: str | None = None
+    deleted_at: datetime | None = None
+
+    @field_validator("body")
+    @classmethod
+    def trimmed(cls, value: str) -> str:
+        return value if len(value) <= QUOTE_LENGTH else value[: QUOTE_LENGTH - 1].rstrip() + "…"
+
+
 class MessageOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -271,6 +292,7 @@ class MessageOut(BaseModel):
     sender_id: int
     body: str
     image_url: str | None = None
+    reply_to: QuotedMessage | None = None
     created_at: datetime
     read_at: datetime | None
     deleted_at: datetime | None = None
@@ -292,6 +314,7 @@ class ReactionIn(BaseModel):
 
 class MessageIn(BaseModel):
     body: MessageBody
+    reply_to_id: int | None = Field(default=None, description="Quote an earlier message")
 
 
 class MatchOut(BaseModel):

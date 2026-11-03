@@ -165,6 +165,10 @@ class Message(Base):
     body: Mapped[str] = mapped_column(Text)
     # Photo messages carry an image and an optional caption in `body`.
     image_url: Mapped[str | None] = mapped_column(String(255), default=None)
+    # The message this one answers, quoted above it in the chat.
+    reply_to_id: Mapped[int | None] = mapped_column(
+        ForeignKey("messages.id", ondelete="SET NULL"), default=None
+    )
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     read_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
     # Unsent messages keep their place in the conversation but lose their text.
@@ -174,6 +178,8 @@ class Message(Base):
     reactions: Mapped[list["Reaction"]] = relationship(
         cascade="all, delete-orphan", passive_deletes=True, lazy="selectin", order_by="Reaction.id"
     )
+    # Self-referential eager loads stop after one level, so a quote never loads its own quote.
+    reply_to: Mapped["Message | None"] = relationship(remote_side=[id], lazy="selectin")
 
     __table_args__ = (Index("ix_messages_match_id_id", "match_id", "id"),)
 

@@ -1,7 +1,8 @@
 """The real-time channel: chat messages, typing indicators, read receipts and presence.
 
 Client -> server events:
-    {"type": "message.send", "match_id": 1, "body": "hi", "client_id": "tmp-123"}
+    {"type": "message.send", "match_id": 1, "body": "hi", "client_id": "tmp-123",
+     "reply_to_id": 7}
     {"type": "typing", "match_id": 1, "is_typing": true}
     {"type": "read", "match_id": 1}
     {"type": "react", "match_id": 1, "message_id": 9, "emoji": "❤️"}
@@ -37,6 +38,7 @@ class SendMessage(BaseModel):
     match_id: int
     body: MessageBody
     client_id: Annotated[str, Field(max_length=64)] | None = None
+    reply_to_id: int | None = None
 
 
 class Typing(BaseModel):
@@ -97,8 +99,18 @@ async def _handle(
             return {"type": "error", "detail": "Match not found", "match_id": event.match_id}
 
         match event:
-            case SendMessage(body=body, client_id=client_id):
-                await chat.send_message(session, hub, match, user_id, body, client_id)
+            case SendMessage(body=body, client_id=client_id, reply_to_id=reply_to_id):
+                try:
+                    await chat.send_message(
+                        session, hub, match, user_id, body, client_id, reply_to_id=reply_to_id
+                    )
+                except chat.MessageNotFound:
+                    return {
+                        "type": "error",
+                        "detail": "The message you're replying to is gone",
+                        "match_id": match.id,
+                        "client_id": client_id,
+                    }
             case Typing(is_typing=is_typing):
                 await hub.manager.send(
                     match.other_id(user_id), chat.typing_event(match.id, user_id, is_typing)

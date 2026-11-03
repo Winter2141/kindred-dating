@@ -95,6 +95,18 @@ async def create_match(session: AsyncSession, hub: Hub, first: User, second: Use
     return match
 
 
+class MessageNotFound(LookupError):
+    pass
+
+
+async def reply_target(session: AsyncSession, match: Match, message_id: int) -> Message:
+    """The message being answered: it has to be in the same conversation and not unsent."""
+    target = await session.get(Message, message_id)
+    if target is None or target.match_id != match.id or target.deleted_at is not None:
+        raise MessageNotFound(message_id)
+    return target
+
+
 async def send_message(
     session: AsyncSession,
     hub: Hub,
@@ -103,9 +115,11 @@ async def send_message(
     body: str,
     client_id: str | None = None,
     image_url: str | None = None,
+    reply_to_id: int | None = None,
 ) -> Message:
     recipient = match.other_user(sender_id)
     sender = match.other_user(recipient.id)
+    reply_to = None if reply_to_id is None else await reply_target(session, match, reply_to_id)
     message = Message(
         match_id=match.id,
         sender_id=sender_id,
@@ -113,6 +127,8 @@ async def send_message(
         image_url=image_url,
         created_at=utcnow(),
         reactions=[],
+        # Set the object, not just the id, so building the payload needs no lazy load.
+        reply_to=reply_to,
     )
     session.add(message)
     match.last_activity_at = message.created_at
@@ -162,10 +178,6 @@ async def mark_read(session: AsyncSession, hub: Hub, match: Match, reader_id: in
             {"type": "read", "match_id": match.id, "reader_id": reader_id, "read_at": now},
         )
     return result.rowcount
-
-
-class MessageNotFound(LookupError):
-    pass
 
 
 class CannotUnsend(Exception):
