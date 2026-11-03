@@ -108,6 +108,12 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column(default=False, server_default=false())
     # Banned accounts can't sign in and are hidden from everyone.
     banned_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    # Two-factor sign-in: the authenticator secret, when it was switched on, the last code's
+    # time step (so a code can't be reused) and SHA-256 hashes of unused recovery codes.
+    totp_secret: Mapped[str | None] = mapped_column(String(64), default=None)
+    totp_enabled_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    totp_last_counter: Mapped[int | None] = mapped_column(default=None)
+    recovery_codes: Mapped[list[str] | None] = mapped_column(JSON, default=None)
     # Set once they follow the link in the confirmation email.
     email_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
     # Set when a moderator matched a posed selfie to the profile photos.

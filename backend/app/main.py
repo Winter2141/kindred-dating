@@ -22,6 +22,7 @@ from app.routers import (
     questions,
     safety,
     search,
+    two_factor,
     users,
     verification,
     ws,
@@ -62,6 +63,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     for module in (
         auth,
+        two_factor,
         email,
         users,
         questions,

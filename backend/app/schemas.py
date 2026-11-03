@@ -153,6 +153,45 @@ class OutboxEmailOut(BaseModel):
     created_at: datetime
 
 
+class MfaChallenge(BaseModel):
+    """Password accepted; send a code from the authenticator app to finish signing in."""
+
+    mfa_required: Literal[True] = True
+    mfa_token: str
+
+
+class MfaLoginIn(BaseModel):
+    mfa_token: str
+    code: Annotated[str, StringConstraints(strip_whitespace=True, min_length=6, max_length=12)]
+
+
+class TwoFactorStatus(BaseModel):
+    enabled: bool
+    recovery_codes_left: int
+
+
+class TwoFactorSetupOut(BaseModel):
+    secret: str = Field(description="For typing into the app if the QR code can't be scanned")
+    otpauth_url: str
+    qr_svg: str
+
+
+class TwoFactorCodeIn(BaseModel):
+    code: Annotated[str, StringConstraints(strip_whitespace=True, min_length=6, max_length=12)]
+
+
+class TwoFactorDisableIn(TwoFactorCodeIn):
+    password: str
+
+
+class PasswordConfirm(BaseModel):
+    password: str
+
+
+class RecoveryCodesOut(BaseModel):
+    recovery_codes: list[str]
+
+
 class PasswordChange(BaseModel):
     current_password: str
     new_password: Password
@@ -246,6 +285,7 @@ class MeOut(PublicProfile):
     is_paused: bool
     is_admin: bool
     email_verified: bool = False
+    two_factor_enabled: bool = False
 
     @classmethod
     def build(cls, user: User, *, online: bool = True) -> Self:
@@ -262,6 +302,7 @@ class MeOut(PublicProfile):
             is_paused=user.is_paused,
             is_admin=user.is_admin,
             email_verified=user.email_verified_at is not None,
+            two_factor_enabled=user.totp_enabled_at is not None,
         )
 
 

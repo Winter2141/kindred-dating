@@ -7,8 +7,13 @@ from app.mail import send_verification
 from app.models import User
 from app.places import geocode
 from app.ratelimit import per_ip
-from app.schemas import LoginIn, MeOut, RegisterIn, TokenOut
-from app.security import create_access_token, hash_password, verify_password
+from app.schemas import LoginIn, MeOut, MfaChallenge, RegisterIn, TokenOut
+from app.security import (
+    create_access_token,
+    create_purpose_token,
+    hash_password,
+    verify_password,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -51,8 +56,16 @@ async def register(data: RegisterIn, session: SessionDep, settings: SettingsDep)
     return token_for(user, settings)
 
 
+# A signed-in-halfway token: password checked, authenticator code still to come.
+MFA_LOGIN = "mfa_login"
+MFA_TTL_MINUTES = 5
+
+
 @router.post("/login", dependencies=[per_ip(LOGIN)])
-async def login(data: LoginIn, session: SessionDep, settings: SettingsDep) -> TokenOut:
+async def login(
+    data: LoginIn, session: SessionDep, settings: SettingsDep
+) -> TokenOut | MfaChallenge:
+    """Sign in. With two-factor on, this returns a challenge for /auth/login/2fa instead."""
     user = await session.scalar(select(User).where(User.email == data.email.lower()))
     if user is None or not verify_password(data.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wrong email or password")
@@ -60,4 +73,9 @@ async def login(data: LoginIn, session: SessionDep, settings: SettingsDep) -> To
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "This account was suspended for breaking our guidelines"
         )
+    if user.totp_enabled_at is not None:
+        token = create_purpose_token(
+            user.id, MFA_LOGIN, settings.secret_key, MFA_TTL_MINUTES, {"ver": user.token_version}
+        )
+        return MfaChallenge(mfa_token=token)
     return token_for(user, settings)

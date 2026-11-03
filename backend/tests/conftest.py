@@ -35,6 +35,7 @@ def _database_url(tmp_path: Path) -> str:
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
     return Settings(
+        _env_file=None,  # a developer's backend/.env must not change what the tests see
         database_url=_database_url(tmp_path),
         secret_key="test-secret-that-is-long-enough-for-hs256",
         media_dir=tmp_path / "media",
