@@ -11,6 +11,7 @@ import { LikesPage } from '@/pages/Likes'
 import { LoginPage, SignupPage } from '@/pages/Auth'
 import { MatchesLayout, NoChatSelected } from '@/pages/Matches'
 import { ProfilePage } from '@/pages/Profile'
+import { SettingsPage } from '@/pages/Settings'
 import { RealtimeProvider } from '@/realtime/RealtimeProvider'
 import { useAuth } from '@/store/auth'
 
@@ -47,6 +48,7 @@ export function App() {
           <Route path=":matchId" element={<ChatPage />} />
         </Route>
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

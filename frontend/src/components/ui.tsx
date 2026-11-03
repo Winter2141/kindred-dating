@@ -176,6 +176,44 @@ export function EmptyState({
   )
 }
 
+export function Switch({
+  checked,
+  onChange,
+  label,
+  disabled,
+}: {
+  checked: boolean
+  onChange: (checked: boolean) => void
+  label: string
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className="group inline-flex items-center gap-3 text-[15px] font-semibold disabled:opacity-60"
+    >
+      <span
+        className={clsx(
+          'relative h-7 w-12 rounded-full border transition',
+          checked ? 'border-transparent bg-gradient-brand' : 'border-line-strong bg-raised',
+        )}
+      >
+        <span
+          className={clsx(
+            'absolute top-1/2 size-5 -translate-y-1/2 rounded-full shadow transition-all',
+            checked ? 'left-[calc(100%-1.4rem)] bg-ink' : 'left-1 bg-muted',
+          )}
+        />
+      </span>
+      {label}
+    </button>
+  )
+}
+
 export function Spinner({ className }: { className?: string }) {
   return (
     <span

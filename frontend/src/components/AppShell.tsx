@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Heart, LogOut, MessageCircle, Sparkles, UserRound } from 'lucide-react'
+import { Heart, LogOut, MessageCircle, Settings, Sparkles, UserRound } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { api } from '@/lib/api'
@@ -140,6 +140,14 @@ export function AppShell() {
                 <p className="truncate text-sm font-semibold">{user.name}</p>
                 <p className="truncate text-xs text-muted">{user.email}</p>
               </div>
+              <Link
+                to="/app/settings"
+                className="grid size-9 place-items-center rounded-xl text-muted transition hover:bg-raised hover:text-cream"
+                aria-label="Settings"
+                title="Settings"
+              >
+                <Settings className="size-4" />
+              </Link>
               <button
                 type="button"
                 onClick={signOut}

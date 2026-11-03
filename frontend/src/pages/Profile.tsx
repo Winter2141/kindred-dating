@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Camera, Check, ImagePlus, Star, X } from 'lucide-react'
+import { Camera, Check, EyeOff, ImagePlus, Settings, Star, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { AgeRange, GENDER_LABELS, InterestPicker, PromptEditor, Segmented } from '@/components/ProfileFields'
 import { Photo, Spinner, useMeta } from '@/components/ui'
 import { api, type ProfileUpdate } from '@/lib/api'
@@ -62,7 +63,20 @@ function ProfileEditor({ user }: { user: Me }) {
           <h1 className="font-display text-5xl leading-none">Your profile</h1>
           <p className="mt-2 text-sm text-muted">This is what people see when you show up in their deck.</p>
         </div>
+        <Link to="/app/settings" className="btn-secondary">
+          <Settings className="size-4" /> Settings
+        </Link>
       </header>
+
+      {user.is_paused && (
+        <Link
+          to="/app/settings"
+          className="mb-8 flex items-center gap-3 rounded-2xl border border-apricot/30 bg-apricot/10 px-4 py-3 text-sm text-apricot"
+        >
+          <EyeOff className="size-4 shrink-0" />
+          Your profile is paused, so you're hidden from Discover. Turn it back on in Settings.
+        </Link>
+      )}
 
       <div className="grid gap-8 xl:grid-cols-[360px_minmax(0,1fr)]">
         <PhotoManager user={user} onChange={onSaved} />

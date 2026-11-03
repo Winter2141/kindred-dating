@@ -86,6 +86,7 @@ export type ProfileUpdate = Partial<
     | 'age_min'
     | 'age_max'
     | 'photos'
+    | 'is_paused'
   >
 >
 
@@ -106,6 +107,14 @@ export const api = {
   deletePhoto: (url: string) =>
     request<Me>(`/api/me/photos?url=${encodeURIComponent(url)}`, { method: 'DELETE' }),
   user: (id: number) => request<PublicProfile>(`/api/users/${id}`),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<Session>('/api/me/password', {
+      method: 'POST',
+      body: { current_password: currentPassword, new_password: newPassword },
+    }),
+  signOutEverywhere: () => request<void>('/api/me/sign-out-everywhere', { method: 'POST' }),
+  deleteAccount: (password: string) =>
+    request<void>('/api/me', { method: 'DELETE', body: { password } }),
 
   discover: () => request<Candidate[]>('/api/discover'),
   swipe: (targetId: number, action: SwipeAction) =>

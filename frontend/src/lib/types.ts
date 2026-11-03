@@ -27,6 +27,7 @@ export interface Me extends PublicProfile {
   interested_in: Gender[]
   age_min: number
   age_max: number
+  is_paused: boolean
 }
 
 export interface Candidate extends PublicProfile {
