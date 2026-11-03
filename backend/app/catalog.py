@@ -58,5 +58,8 @@ PROMPT_QUESTIONS: list[str] = [
     "Typical Friday night",
 ]
 
+# Quick reactions on chat messages, in the order the picker shows them.
+REACTIONS = ["❤️", "😂", "😮", "😢", "🔥", "👍"]
+
 MAX_INTERESTS = 8
 MAX_PROMPTS = 3

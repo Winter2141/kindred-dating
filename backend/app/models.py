@@ -153,8 +153,27 @@ class Message(Base):
     read_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
 
     match: Mapped[Match] = relationship(back_populates="messages")
+    reactions: Mapped[list["Reaction"]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True, lazy="selectin", order_by="Reaction.id"
+    )
 
     __table_args__ = (Index("ix_messages_match_id_id", "match_id", "id"),)
+
+
+class Reaction(Base):
+    """One emoji per person per message; reacting again changes or removes it."""
+
+    __tablename__ = "reactions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    message_id: Mapped[int] = mapped_column(
+        ForeignKey("messages.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    emoji: Mapped[str] = mapped_column(String(16))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    __table_args__ = (UniqueConstraint("message_id", "user_id", name="uq_reactions_message_user"),)
 
 
 class Block(Base):

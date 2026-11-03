@@ -8,7 +8,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import utcnow
-from app.models import Match, Message, User
+from app.models import Match, Message, Reaction, User
 from app.realtime import Hub
 from app.schemas import MatchOut, MessageOut
 from app.services.personas import compose_reply
@@ -90,7 +90,9 @@ async def send_message(
 ) -> Message:
     recipient = match.other_user(sender_id)
     sender = match.other_user(recipient.id)
-    message = Message(match_id=match.id, sender_id=sender_id, body=body, created_at=utcnow())
+    message = Message(
+        match_id=match.id, sender_id=sender_id, body=body, created_at=utcnow(), reactions=[]
+    )
     session.add(message)
     match.last_activity_at = message.created_at
     sender.last_active_at = message.created_at
@@ -127,6 +129,45 @@ async def mark_read(session: AsyncSession, hub: Hub, match: Match, reader_id: in
             {"type": "read", "match_id": match.id, "reader_id": reader_id, "read_at": now},
         )
     return result.rowcount
+
+
+class MessageNotFound(LookupError):
+    pass
+
+
+async def set_reaction(
+    session: AsyncSession,
+    hub: Hub,
+    match: Match,
+    message_id: int,
+    user_id: int,
+    emoji: str | None,
+) -> Message:
+    """Set, change or (with None, or the same emoji again) clear `user_id`'s reaction."""
+    message = await session.get(Message, message_id)
+    if message is None or message.match_id != match.id:
+        raise MessageNotFound(message_id)
+    mine = next((r for r in message.reactions if r.user_id == user_id), None)
+    if mine is not None and (emoji is None or emoji == mine.emoji):
+        message.reactions.remove(mine)
+        emoji = None
+    elif mine is not None:
+        mine.emoji = emoji
+    elif emoji is not None:
+        message.reactions.append(Reaction(user_id=user_id, emoji=emoji))
+    await session.commit()
+
+    await hub.manager.send_many(
+        [match.user_a_id, match.user_b_id],
+        {
+            "type": "reaction",
+            "match_id": match.id,
+            "message_id": message.id,
+            "user_id": user_id,
+            "emoji": emoji,
+        },
+    )
+    return message
 
 
 def typing_event(match_id: int, user_id: int, is_typing: bool) -> dict[str, object]:

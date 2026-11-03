@@ -4,10 +4,12 @@ Client -> server events:
     {"type": "message.send", "match_id": 1, "body": "hi", "client_id": "tmp-123"}
     {"type": "typing", "match_id": 1, "is_typing": true}
     {"type": "read", "match_id": 1}
+    {"type": "react", "match_id": 1, "message_id": 9, "emoji": "❤️"}
     {"type": "ping"}
 
 Server -> client events:
-    hello, message.new, typing, read, presence, match.new, match.removed, pong, error
+    hello, message.new, typing, read, reaction, presence, match.new, match.removed, pong,
+    error
 """
 
 import logging
@@ -20,7 +22,7 @@ from app.db import utcnow
 from app.deps import user_from_token
 from app.models import User
 from app.realtime import Hub
-from app.schemas import MessageBody
+from app.schemas import MessageBody, ReactionEmoji
 from app.services import chat
 
 log = logging.getLogger(__name__)
@@ -47,12 +49,19 @@ class Read(BaseModel):
     match_id: int
 
 
+class React(BaseModel):
+    type: Literal["react"]
+    match_id: int
+    message_id: int
+    emoji: ReactionEmoji
+
+
 class Ping(BaseModel):
     type: Literal["ping"]
 
 
 ClientEvent = TypeAdapter(
-    Annotated[SendMessage | Typing | Read | Ping, Field(discriminator="type")]
+    Annotated[SendMessage | Typing | Read | React | Ping, Field(discriminator="type")]
 )
 
 
@@ -74,7 +83,9 @@ async def _broadcast_presence(hub: Hub, user: User, online: bool) -> None:
     )
 
 
-async def _handle(hub: Hub, user_id: int, event: SendMessage | Typing | Read | Ping) -> dict | None:
+async def _handle(
+    hub: Hub, user_id: int, event: SendMessage | Typing | Read | React | Ping
+) -> dict | None:
     """Apply one client event. Returns a payload to send back to this socket, if any."""
     if isinstance(event, Ping):
         return {"type": "pong"}
@@ -93,6 +104,11 @@ async def _handle(hub: Hub, user_id: int, event: SendMessage | Typing | Read | P
                 )
             case Read():
                 await chat.mark_read(session, hub, match, user_id)
+            case React(message_id=message_id, emoji=emoji):
+                try:
+                    await chat.set_reaction(session, hub, match, message_id, user_id, emoji)
+                except chat.MessageNotFound:
+                    return {"type": "error", "detail": "Message not found", "match_id": match.id}
     return None
 
 

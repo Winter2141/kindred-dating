@@ -2,6 +2,7 @@ from datetime import date, datetime
 from typing import Annotated, Literal, Self
 
 from pydantic import (
+    AfterValidator,
     BaseModel,
     ConfigDict,
     EmailStr,
@@ -11,7 +12,7 @@ from pydantic import (
     model_validator,
 )
 
-from app.catalog import INTERESTS, MAX_INTERESTS, MAX_PROMPTS, PROMPT_QUESTIONS
+from app.catalog import INTERESTS, MAX_INTERESTS, MAX_PROMPTS, PROMPT_QUESTIONS, REACTIONS
 from app.models import (
     Gender,
     Match,
@@ -241,6 +242,13 @@ class SwipeIn(BaseModel):
     action: SwipeAction
 
 
+class ReactionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: int
+    emoji: str
+
+
 class MessageOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -250,6 +258,20 @@ class MessageOut(BaseModel):
     body: str
     created_at: datetime
     read_at: datetime | None
+    reactions: list[ReactionOut] = []
+
+
+def _known_reaction(value: str | None) -> str | None:
+    if value is not None and value not in REACTIONS:
+        raise ValueError(f"reaction must be one of {' '.join(REACTIONS)}")
+    return value
+
+
+ReactionEmoji = Annotated[str | None, AfterValidator(_known_reaction)]
+
+
+class ReactionIn(BaseModel):
+    emoji: ReactionEmoji = Field(description="One of the quick reactions, or null to remove yours")
 
 
 class MessageIn(BaseModel):
@@ -307,6 +329,7 @@ class MetaOut(BaseModel):
     max_interests: int = MAX_INTERESTS
     max_prompts: int = MAX_PROMPTS
     max_photos: int
+    reactions: list[str] = REACTIONS
 
 
 class BlockIn(BaseModel):

@@ -3,7 +3,7 @@ from sqlalchemy import select
 
 from app.deps import CurrentUser, HubDep, SessionDep
 from app.models import Match, Message
-from app.schemas import MatchOut, MessageIn, MessageOut
+from app.schemas import MatchOut, MessageIn, MessageOut, ReactionIn
 from app.services import chat
 from app.services.personas import icebreakers
 
@@ -76,6 +76,24 @@ async def post_message(
     """REST fallback for sending; the web client sends over the WebSocket."""
     match = await _match_or_404(session, match_id, user.id)
     message = await chat.send_message(session, hub, match, user.id, data.body)
+    return MessageOut.model_validate(message)
+
+
+@router.put("/{match_id}/messages/{message_id}/reaction")
+async def react(
+    match_id: int,
+    message_id: int,
+    data: ReactionIn,
+    user: CurrentUser,
+    session: SessionDep,
+    hub: HubDep,
+) -> MessageOut:
+    """React to a message. Sending your current emoji again (or null) removes it."""
+    match = await _match_or_404(session, match_id, user.id)
+    try:
+        message = await chat.set_reaction(session, hub, match, message_id, user.id, data.emoji)
+    except chat.MessageNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Message not found") from None
     return MessageOut.model_validate(message)
 
 
