@@ -1,14 +1,16 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Form, HTTPException, Query, Response, UploadFile, status
+from pydantic import TypeAdapter, ValidationError
 from sqlalchemy import select
 
 from app.deps import CurrentUser, HubDep, SessionDep, SettingsDep
-from app.limits import MESSAGES, PHOTOS
+from app.limits import MESSAGES, PHOTOS, VOICE_NOTES
 from app.models import Match, Message
 from app.ratelimit import per_user
 from app.schemas import MatchOut, MessageEdit, MessageIn, MessageOut, ReactionIn
 from app.services import chat
+from app.services.audio import MAX_VOICE_MS, MIN_VOICE_MS, clean_waveform, save_voice
 from app.services.images import CHAT_PHOTO_SIDE, save_upload
 from app.services.personas import icebreakers
 
@@ -122,6 +124,48 @@ async def post_photo(
     url = await save_upload(file, settings, CHAT_PHOTO_SIDE)
     message = await chat.send_message(
         session, hub, match, user.id, caption.strip(), image_url=url, reply_to_id=reply_to_id
+    )
+    return MessageOut.model_validate(message)
+
+
+@router.post(
+    "/{match_id}/voice", status_code=status.HTTP_201_CREATED, dependencies=[per_user(VOICE_NOTES)]
+)
+async def post_voice_note(
+    match_id: int,
+    file: UploadFile,
+    user: CurrentUser,
+    session: SessionDep,
+    hub: HubDep,
+    settings: SettingsDep,
+    duration_ms: Annotated[int, Form(ge=MIN_VOICE_MS, le=MAX_VOICE_MS)],
+    waveform: Annotated[
+        str, Form(max_length=20_000, description="JSON list of 0-100 peaks")
+    ] = "[]",
+    reply_to_id: Annotated[int | None, Form()] = None,
+) -> MessageOut:
+    """Send a recorded voice note (WebM/Opus, Ogg, MP4/AAC or MP3), up to two minutes."""
+    try:
+        levels = TypeAdapter(list[float]).validate_json(waveform)
+    except ValidationError:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "waveform must be a JSON list of numbers"
+        ) from None
+    match = await _match_or_404(session, match_id, user.id)
+    if reply_to_id is not None:
+        try:
+            await chat.reply_target(session, match, reply_to_id)
+        except chat.MessageNotFound:
+            raise _reply_gone() from None
+    url = await save_voice(file, settings)
+    message = await chat.send_message(
+        session,
+        hub,
+        match,
+        user.id,
+        "",
+        reply_to_id=reply_to_id,
+        audio=(url, duration_ms, clean_waveform(levels)),
     )
     return MessageOut.model_validate(message)
 

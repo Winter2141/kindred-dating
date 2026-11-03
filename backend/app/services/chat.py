@@ -119,7 +119,9 @@ async def send_message(
     client_id: str | None = None,
     image_url: str | None = None,
     reply_to_id: int | None = None,
+    audio: tuple[str, int, list[int]] | None = None,
 ) -> Message:
+    """Store and deliver a message. `audio` is (url, length in ms, waveform) for voice notes."""
     recipient = match.other_user(sender_id)
     sender = match.other_user(recipient.id)
     reply_to = None if reply_to_id is None else await reply_target(session, match, reply_to_id)
@@ -128,6 +130,9 @@ async def send_message(
         sender_id=sender_id,
         body=body,
         image_url=image_url,
+        audio_url=audio[0] if audio else None,
+        audio_ms=audio[1] if audio else None,
+        waveform=audio[2] if audio else None,
         created_at=utcnow(),
         reactions=[],
         # Set the object, not just the id, so building the payload needs no lazy load.
@@ -146,7 +151,7 @@ async def send_message(
     await hub.manager.send_many([match.user_a_id, match.user_b_id], payload)
 
     if not hub.manager.is_online(recipient.id) and not recipient.is_persona:
-        preview = body or "Sent a photo"
+        preview = body or ("Sent a voice note" if audio else "Sent a photo")
         await notify(
             session,
             hub,
@@ -205,8 +210,12 @@ async def unsend(
         raise CannotUnsend(f"Messages can only be unsent within {minutes} minutes")
 
     delete_local(message.image_url, hub.settings)
+    delete_local(message.audio_url, hub.settings)
     message.body = ""
     message.image_url = None
+    message.audio_url = None
+    message.audio_ms = None
+    message.waveform = None
     message.deleted_at = utcnow()
     message.reactions.clear()
     await session.commit()
@@ -234,6 +243,8 @@ async def edit(
     if utcnow() - message.created_at > EDIT_WINDOW:
         minutes = int(EDIT_WINDOW.total_seconds() // 60)
         raise CannotEdit(f"Messages can only be edited within {minutes} minutes")
+    if message.audio_url is not None:
+        raise CannotEdit("Voice notes can't be edited")
     if message.image_url is None and not body:
         raise CannotEdit("A message can't be empty. Unsend it instead")
     if message.image_url is not None and len(body) > MAX_CAPTION:

@@ -175,13 +175,23 @@ def compose_reply(
     rng = rng or random.Random()
     persona_turns = sum(1 for m in history if m.sender_id == persona_id)
     since_persona = []
-    sent_photo = False
+    sent_photo = sent_voice = False
     for message in reversed(history):
         if message.sender_id == persona_id:
             break
         since_persona.append(message.body)
         sent_photo = sent_photo or bool(getattr(message, "image_url", None))
+        sent_voice = sent_voice or bool(getattr(message, "audio_url", None))
     incoming = " ".join(reversed(since_persona)).lower().strip()
+
+    if sent_voice and not incoming:
+        return rng.choice(
+            [
+                "Okay, your voice is not what I expected, in a good way 😄",
+                "A voice note! Bold move. I'm into it. Tell me more about your week?",
+                "Ha, I listened to that twice. You sound like you'd be fun to talk to for hours.",
+            ]
+        )
 
     if sent_photo and not incoming:
         return rng.choice(

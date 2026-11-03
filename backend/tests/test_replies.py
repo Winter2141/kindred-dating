@@ -28,6 +28,7 @@ def test_a_reply_carries_a_quote_of_the_original(client: TestClient, make_user) 
         "sender_id": her.id,
         "body": "Mountains or the sea?",
         "image_url": None,
+        "audio_url": None,
         "deleted_at": None,
     }
 

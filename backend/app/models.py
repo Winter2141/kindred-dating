@@ -165,6 +165,10 @@ class Message(Base):
     body: Mapped[str] = mapped_column(Text)
     # Photo messages carry an image and an optional caption in `body`.
     image_url: Mapped[str | None] = mapped_column(String(255), default=None)
+    # Voice notes: the recording, its length and a coarse waveform (0-100 per bar) to draw.
+    audio_url: Mapped[str | None] = mapped_column(String(255), default=None)
+    audio_ms: Mapped[int | None] = mapped_column(default=None)
+    waveform: Mapped[list[int] | None] = mapped_column(JSON, default=None)
     # The message this one answers, quoted above it in the chat.
     reply_to_id: Mapped[int | None] = mapped_column(
         ForeignKey("messages.id", ondelete="SET NULL"), default=None

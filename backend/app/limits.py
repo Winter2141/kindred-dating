@@ -22,6 +22,7 @@ REGISTER = Limit("register", 5, 60 * 60)
 SWIPES = Limit("swipes", 120, 60)
 MESSAGES = Limit("messages", 20, 10)
 PHOTOS = Limit("photos", 20, 60 * 60)
+VOICE_NOTES = Limit("voice-notes", 40, 60 * 60)
 REPORTS = Limit("reports", 10, 60 * 60)
 
 

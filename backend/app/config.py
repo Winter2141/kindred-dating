@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     media_url: str = "/media"
     max_photo_bytes: int = 8 * 1024 * 1024
     max_photos: int = 6
+    max_voice_bytes: int = 5 * 1024 * 1024
 
     # Per-process sliding-window limits on login, sign-up, swipes, messages and uploads.
     rate_limit_enabled: bool = True
