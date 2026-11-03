@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { keys } from '@/lib/cache'
 import type { Match } from '@/lib/types'
 import { shortAgo } from '@/lib/time'
+import { previewText } from '@/lib/photos'
 import { useAuth } from '@/store/auth'
 import { useLive } from '@/store/live'
 
@@ -183,7 +184,7 @@ function ConversationRow({
           ) : (
             <p className={clsx('truncate text-sm', unread ? 'text-cream' : 'text-muted')}>
               {last?.sender_id === meId && <span className="text-faint">You: </span>}
-              {last?.deleted_at ? <span className="italic">Message unsent</span> : last?.body}
+              {last?.deleted_at ? <span className="italic">Message unsent</span> : last && previewText(last)}
             </p>
           )}
           {unread && (

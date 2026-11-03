@@ -11,6 +11,7 @@ import {
   setPresence,
   upsertMessage,
 } from '@/lib/cache'
+import { previewText } from '@/lib/photos'
 import { RealtimeClient, socketUrl } from '@/lib/realtime'
 import type { ClientEvent, Match, Message, ServerEvent } from '@/lib/types'
 import { useAuth } from '@/store/auth'
@@ -99,7 +100,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }
       useToasts.getState().push({
         title: match.user.name,
-        body: message.body,
+        body: previewText(message),
         image: match.user.photos[0],
         href: `/app/matches/${match.id}`,
       })

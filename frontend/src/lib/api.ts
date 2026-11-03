@@ -134,6 +134,12 @@ export const api = {
   messages: (id: number, before?: number) =>
     request<Message[]>(`/api/matches/${id}/messages${before ? `?before=${before}` : ''}`),
   icebreakers: (id: number) => request<string[]>(`/api/matches/${id}/icebreakers`),
+  sendPhoto: (matchId: number, file: File, caption: string) => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('caption', caption)
+    return request<Message>(`/api/matches/${matchId}/photos`, { method: 'POST', body: form })
+  },
   unsend: (matchId: number, messageId: number) =>
     request<Message>(`/api/matches/${matchId}/messages/${messageId}`, { method: 'DELETE' }),
 

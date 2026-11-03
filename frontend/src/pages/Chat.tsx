@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { ArrowLeft, Check, CheckCheck, Info, SendHorizontal, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, Check, CheckCheck, ImagePlus, Info, SendHorizontal, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ProfileDetails } from '@/components/ProfileDetails'
+import { Lightbox } from '@/components/Lightbox'
 import { MessageMenu } from '@/components/MessageActions'
 import { ReactionChips, ReactionPicker } from '@/components/Reactions'
 import { SafetyMenu } from '@/components/Safety'
@@ -20,6 +21,7 @@ import {
   upsertMessage,
 } from '@/lib/cache'
 import type { Match, Message } from '@/lib/types'
+import { photoProblem } from '@/lib/photos'
 import { clockTime, dayLabel, isSameDay, lastSeen, shortAgo } from '@/lib/time'
 import { useRealtimeSend } from '@/realtime/RealtimeProvider'
 import { useAuth } from '@/store/auth'
@@ -119,11 +121,46 @@ export function ChatPage() {
     onError: (error) => useToasts.getState().push({ title: "Couldn't unsend", body: error.message }),
   })
 
+  // Files for photos still uploading (or failed), so "Tap to retry" can send them again.
+  const pendingPhotos = useRef(new Map<string, File>())
+
+  const sendPhoto = async (file: File, caption: string) => {
+    if (!me) return
+    const clientId = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+    pendingPhotos.current.set(clientId, file)
+    const optimistic: Message = {
+      id: Number.MAX_SAFE_INTEGER,
+      match_id: matchId,
+      sender_id: me.id,
+      body: caption,
+      image_url: URL.createObjectURL(file),
+      created_at: new Date().toISOString(),
+      read_at: null,
+      pending: clientId,
+    }
+    queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => [...(list ?? []), optimistic])
+    try {
+      const sent = await api.sendPhoto(matchId, file, caption)
+      queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => upsertMessage(list, sent, clientId))
+      pendingPhotos.current.delete(clientId)
+      URL.revokeObjectURL(optimistic.image_url!)
+    } catch (error) {
+      queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => markPendingFailed(list, clientId))
+      useToasts.getState().push({ title: "Photo didn't send", body: (error as Error).message })
+    }
+  }
+
   const retry = (message: Message) => {
     queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) =>
       list?.filter((m) => m.pending !== message.pending),
     )
-    sendMessage(message.body)
+    const file = message.pending ? pendingPhotos.current.get(message.pending) : undefined
+    if (file && message.pending) {
+      pendingPhotos.current.delete(message.pending)
+      void sendPhoto(file, message.body)
+    } else {
+      sendMessage(message.body)
+    }
   }
 
   if (matches.isPending || (!cached && single.isPending && matches.isSuccess)) {
@@ -195,7 +232,12 @@ export function ChatPage() {
           onUnsend={(message) => unsend.mutate(message)}
           onIcebreaker={sendMessage}
         />
-        <Composer matchId={matchId} onSend={sendMessage} name={other.name} />
+        <Composer
+          matchId={matchId}
+          onSend={sendMessage}
+          onSendPhoto={(file, caption) => void sendPhoto(file, caption)}
+          name={other.name}
+        />
       </div>
 
       <AnimatePresence>
@@ -252,16 +294,19 @@ function MessageList({
 }) {
   const queryClient = useQueryClient()
   const [pickerFor, setPickerFor] = useState<number | null>(null)
+  const [viewing, setViewing] = useState<string | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [reachedStart, setReachedStart] = useState(false)
   const stickToBottom = useRef(true)
   const list = messages ?? []
 
-  useLayoutEffect(() => {
+  const keepAtBottom = () => {
     const el = scroller.current
     if (el && stickToBottom.current) el.scrollTop = el.scrollHeight
-  }, [list.length, typing])
+  }
+  // Photos change height when they finish loading, so they call keepAtBottom too.
+  useLayoutEffect(keepAtBottom, [list.length, typing])
 
   const loadOlder = async () => {
     const first = list.find((m) => !m.pending)
@@ -351,7 +396,8 @@ function MessageList({
                       <div
                         onDoubleClick={() => !message.pending && onReact(message, '❤️')}
                         className={clsx(
-                          'min-w-0 px-4 py-2.5 text-[15px] leading-relaxed break-words whitespace-pre-wrap',
+                          'min-w-0 text-[15px] leading-relaxed break-words whitespace-pre-wrap',
+                          message.image_url ? 'p-1.5' : 'px-4 py-2.5',
                           mine
                             ? 'rounded-[1.4rem] rounded-br-md bg-gradient-brand text-ink'
                             : 'rounded-[1.4rem] rounded-bl-md border border-line bg-raised',
@@ -361,7 +407,27 @@ function MessageList({
                           message.failed && 'opacity-60 ring-2 ring-danger',
                         )}
                       >
-                        {message.body}
+                        {message.image_url ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setViewing(message.image_url!)}
+                              className="block overflow-hidden rounded-[1.1rem]"
+                              aria-label="Open photo"
+                            >
+                              <img
+                                src={message.image_url}
+                                alt={message.body || 'Photo'}
+                                loading="lazy"
+                                onLoad={keepAtBottom}
+                                className="max-h-80 w-full max-w-72 object-cover"
+                              />
+                            </button>
+                            {message.body && <p className="px-2.5 pt-1.5 pb-1">{message.body}</p>}
+                          </>
+                        ) : (
+                          message.body
+                        )}
                       </div>
                     )}
                     {!message.pending && !message.deleted_at && (
@@ -407,6 +473,8 @@ function MessageList({
               </Fragment>
             )
           })}
+
+          <Lightbox src={viewing} alt="Photo" onClose={() => setViewing(null)} />
 
           <AnimatePresence>
             {typing && (
@@ -470,12 +538,30 @@ function MatchedBanner({
   )
 }
 
-function Composer({ matchId, name, onSend }: { matchId: number; name: string; onSend: (body: string) => void }) {
+function Composer({
+  matchId,
+  name,
+  onSend,
+  onSendPhoto,
+}: {
+  matchId: number
+  name: string
+  onSend: (body: string) => void
+  onSendPhoto: (file: File, caption: string) => void
+}) {
   const send = useRealtimeSend()
   const [text, setText] = useState('')
+  const [photo, setPhoto] = useState<File | null>(null)
+  const [problem, setProblem] = useState<string | null>(null)
+  const preview = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo])
   const typingRef = useRef(false)
   const idleTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const textarea = useRef<HTMLTextAreaElement>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
+
+  useEffect(() => () => {
+    if (preview) URL.revokeObjectURL(preview)
+  }, [preview])
 
   const setTyping = (isTyping: boolean) => {
     if (typingRef.current === isTyping) return
@@ -498,11 +584,21 @@ function Composer({ matchId, name, onSend }: { matchId: number; name: string; on
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`
   }, [text])
 
+  const pick = (file: File | undefined) => {
+    if (!file) return
+    const issue = photoProblem(file)
+    setProblem(issue)
+    setPhoto(issue ? null : file)
+    textarea.current?.focus()
+  }
+
   const submit = () => {
     const body = text.trim()
-    if (!body) return
-    onSend(body)
+    if (photo) onSendPhoto(photo, body)
+    else if (body) onSend(body)
+    else return
     setText('')
+    setPhoto(null)
     clearTimeout(idleTimer.current)
     setTyping(false)
   }
@@ -515,12 +611,52 @@ function Composer({ matchId, name, onSend }: { matchId: number; name: string; on
       }}
       className="border-t border-line px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6"
     >
-      <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-[1.6rem] border border-line bg-raised/70 p-1.5 pl-5 transition focus-within:border-coral/50">
+      {(preview || problem) && (
+        <div className="mx-auto mb-2 flex max-w-3xl items-center gap-3">
+          {preview && (
+            <div className="relative">
+              <img src={preview} alt="Photo to send" className="size-16 rounded-2xl object-cover" />
+              <button
+                type="button"
+                onClick={() => setPhoto(null)}
+                className="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full border border-line-strong bg-raised text-muted hover:text-cream"
+                aria-label="Remove photo"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          )}
+          <p className={clsx('text-xs', problem ? 'text-danger' : 'text-faint')}>
+            {problem ?? 'Add a caption, or just hit send.'}
+          </p>
+        </div>
+      )}
+      <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-[1.6rem] border border-line bg-raised/70 p-1.5 pl-2 transition focus-within:border-coral/50">
+        <button
+          type="button"
+          onClick={() => fileInput.current?.click()}
+          className="grid size-11 shrink-0 place-items-center rounded-full text-muted transition hover:bg-surface hover:text-cream"
+          aria-label="Attach a photo"
+          title="Attach a photo"
+        >
+          <ImagePlus className="size-5" />
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/heic"
+          className="hidden"
+          aria-label="Photo to send"
+          onChange={(e) => {
+            pick(e.target.files?.[0])
+            e.target.value = ''
+          }}
+        />
         <textarea
           ref={textarea}
           value={text}
           rows={1}
-          maxLength={2000}
+          maxLength={photo ? 500 : 2000}
           onChange={(e) => {
             setText(e.target.value)
             setTyping(e.target.value.trim().length > 0)
@@ -528,19 +664,26 @@ function Composer({ matchId, name, onSend }: { matchId: number; name: string; on
             idleTimer.current = setTimeout(() => setTyping(false), TYPING_IDLE_MS)
           }}
           onBlur={() => setTyping(false)}
+          onPaste={(e) => {
+            const file = [...e.clipboardData.files].find((f) => f.type.startsWith('image/'))
+            if (file) {
+              e.preventDefault()
+              pick(file)
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault()
               submit()
             }
           }}
-          placeholder={`Message ${name}…`}
+          placeholder={photo ? 'Add a caption…' : `Message ${name}…`}
           aria-label={`Message ${name}`}
           className="max-h-40 flex-1 resize-none bg-transparent py-2.5 text-[15px] text-cream outline-none placeholder:text-faint"
         />
         <button
           type="submit"
-          disabled={!text.trim()}
+          disabled={!text.trim() && !photo}
           className="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-brand text-ink shadow-glow transition hover:brightness-110 disabled:bg-none disabled:bg-surface disabled:text-faint disabled:shadow-none"
           aria-label="Send"
         >
