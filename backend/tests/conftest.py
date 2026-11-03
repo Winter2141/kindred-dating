@@ -1,3 +1,5 @@
+import asyncio
+import os
 from collections.abc import Callable, Iterator
 from datetime import date, timedelta
 from pathlib import Path
@@ -5,16 +7,35 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.config import Settings
 from app.main import create_app
 from app.services.matching import years_before
 
+# CI also runs the suite against Postgres by setting this to a postgresql+asyncpg:// URL.
+TEST_DATABASE_URL = os.environ.get("KINDRED_TEST_DATABASE_URL")
+
+
+async def _reset_postgres(url: str) -> None:
+    engine = create_async_engine(url)
+    async with engine.begin() as connection:
+        await connection.exec_driver_sql("DROP SCHEMA public CASCADE")
+        await connection.exec_driver_sql("CREATE SCHEMA public")
+    await engine.dispose()
+
+
+def _database_url(tmp_path: Path) -> str:
+    if TEST_DATABASE_URL:
+        asyncio.run(_reset_postgres(TEST_DATABASE_URL))  # every test starts from an empty schema
+        return TEST_DATABASE_URL
+    return f"sqlite+aiosqlite:///{(tmp_path / 'test.db').as_posix()}"
+
 
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
     return Settings(
-        database_url=f"sqlite+aiosqlite:///{(tmp_path / 'test.db').as_posix()}",
+        database_url=_database_url(tmp_path),
         secret_key="test-secret-that-is-long-enough-for-hs256",
         media_dir=tmp_path / "media",
         seed_on_startup=False,
