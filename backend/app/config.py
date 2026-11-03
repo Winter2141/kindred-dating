@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # Per-process sliding-window limits on login, sign-up, swipes, messages and uploads.
     rate_limit_enabled: bool = True
 
+    # Set to fan real-time events out through Redis so several API workers can run.
+    redis_url: str | None = None
+
     # Demo mode makes the seeded personas feel alive: they like you back and reply in chat.
     demo_mode: bool = True
     seed_on_startup: bool = True

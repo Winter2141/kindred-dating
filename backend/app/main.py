@@ -6,9 +6,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.broker import RedisBroker
 from app.config import Settings, get_settings
 from app.db import Database
-from app.realtime import Hub
+from app.realtime import ConnectionManager, Hub
 from app.routers import (
     account,
     admin,
@@ -34,9 +35,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await db.migrate()
         if settings.seed_on_startup:
             await seed_demo_data(db)
-        app.state.hub = Hub(settings=settings, db=db)
+        broker = RedisBroker.from_url(settings.redis_url) if settings.redis_url else None
+        app.state.hub = hub = Hub(settings=settings, db=db, manager=ConnectionManager(broker))
+        await hub.manager.start()
         yield
-        await app.state.hub.shutdown()
+        await hub.shutdown()
+        await hub.manager.stop()
         await db.dispose()
 
     app = FastAPI(
