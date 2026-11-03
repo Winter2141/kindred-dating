@@ -8,8 +8,16 @@ from app.deps import CurrentUser, HubDep, SessionDep, SettingsDep
 from app.limits import MESSAGES, PHOTOS, VOICE_NOTES
 from app.models import Match, Message
 from app.ratelimit import per_user
-from app.schemas import MatchOut, MessageEdit, MessageIn, MessageOut, ReactionIn
-from app.services import chat
+from app.schemas import (
+    ChatSettingsIn,
+    ChatSettingsOut,
+    MatchOut,
+    MessageEdit,
+    MessageIn,
+    MessageOut,
+    ReactionIn,
+)
+from app.services import chat, chat_settings
 from app.services.audio import MAX_VOICE_MS, MIN_VOICE_MS, clean_waveform, save_voice
 from app.services.images import CHAT_PHOTO_SIDE, save_upload
 from app.services.personas import icebreakers
@@ -40,6 +48,7 @@ async def list_matches(user: CurrentUser, session: SessionDep, hub: HubDep) -> l
             online=hub.manager.is_online(s.match.other_id(user.id)),
             last_message=s.last_message,
             unread_count=s.unread_count,
+            filing=s.filing,
         )
         for s in summaries
     ]
@@ -50,7 +59,34 @@ async def read_match(
     match_id: int, user: CurrentUser, session: SessionDep, hub: HubDep
 ) -> MatchOut:
     match = await _match_or_404(session, match_id, user.id)
-    return MatchOut.build(match, user.id, online=hub.manager.is_online(match.other_id(user.id)))
+    setting = await chat_settings.setting_for(session, user.id, match.id)
+    return MatchOut.build(
+        match,
+        user.id,
+        online=hub.manager.is_online(match.other_id(user.id)),
+        filing=chat_settings.describe(setting),
+    )
+
+
+@router.patch("/{match_id}/settings")
+async def update_chat_settings(
+    match_id: int, data: ChatSettingsIn, user: CurrentUser, session: SessionDep, hub: HubDep
+) -> ChatSettingsOut:
+    """Pin (up to three), archive, or mute this chat for you. The other person can't tell."""
+    match = await _match_or_404(session, match_id, user.id)
+    try:
+        setting = await chat_settings.update(
+            session,
+            hub,
+            user.id,
+            match,
+            pinned=data.pinned,
+            archived=data.archived,
+            mute=data.mute,
+        )
+    except chat_settings.TooManyPinned as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+    return ChatSettingsOut(match_id=match.id, **chat_settings.describe(setting))
 
 
 @router.delete("/{match_id}", status_code=status.HTTP_204_NO_CONTENT)

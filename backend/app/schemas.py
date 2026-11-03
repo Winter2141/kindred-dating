@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Annotated, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import (
     AfterValidator,
@@ -28,6 +28,7 @@ from app.models import (
     SwipeAction,
     User,
 )
+from app.services.chat_settings import MuteFor
 from app.services.matching import age_on, display_distance
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
@@ -333,6 +334,11 @@ class MatchOut(BaseModel):
     last_activity_at: datetime
     last_message: MessageOut | None = None
     unread_count: int = 0
+    # How the viewer has filed this chat (see app.services.chat_settings).
+    pinned: bool = False
+    archived: bool = False
+    muted: bool = False
+    muted_until: datetime | None = None
 
     @classmethod
     def build(
@@ -343,6 +349,7 @@ class MatchOut(BaseModel):
         online: bool = False,
         last_message: Message | None = None,
         unread_count: int = 0,
+        filing: dict[str, Any] | None = None,
     ) -> Self:
         return cls(
             id=match.id,
@@ -351,7 +358,22 @@ class MatchOut(BaseModel):
             last_activity_at=match.last_activity_at,
             last_message=MessageOut.model_validate(last_message) if last_message else None,
             unread_count=unread_count,
+            **(filing or {}),
         )
+
+
+class ChatSettingsIn(BaseModel):
+    pinned: bool | None = None
+    archived: bool | None = None
+    mute: MuteFor | None = Field(default=None, description="1h, 8h, 1w, always, or off")
+
+
+class ChatSettingsOut(BaseModel):
+    match_id: int
+    pinned: bool
+    archived: bool
+    muted: bool
+    muted_until: datetime | None
 
 
 class SearchHit(BaseModel):

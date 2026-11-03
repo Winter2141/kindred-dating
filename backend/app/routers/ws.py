@@ -10,7 +10,7 @@ Client -> server events:
 
 Server -> client events:
     hello, message.new, message.edited, message.deleted, typing, read, reaction, presence,
-    match.new,
+    match.new, match.settings,
     match.removed, notification.new, date.updated, pong, error
 """
 

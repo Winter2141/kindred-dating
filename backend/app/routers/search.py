@@ -32,6 +32,7 @@ async def search(
             online=online(s.match.other_id(user.id)),
             last_message=s.last_message,
             unread_count=s.unread_count,
+            filing=s.filing,
         )
         for s in summaries
         if needle in s.match.other_user(user.id).name.lower()

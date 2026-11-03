@@ -277,3 +277,19 @@ class DateProposal(Base):
     status: Mapped[str] = mapped_column(String(16), default=DateStatus.PROPOSED)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     responded_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+
+
+class ChatSetting(Base):
+    """How one person files a conversation: pinned to the top, muted, or archived."""
+
+    __tablename__ = "chat_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    match_id: Mapped[int] = mapped_column(ForeignKey("matches.id", ondelete="CASCADE"), index=True)
+    pinned_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    # Muted "until I turn it back on" is stored as a date far in the future.
+    muted_until: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    archived_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+
+    __table_args__ = (UniqueConstraint("user_id", "match_id", name="uq_chat_settings_user_match"),)

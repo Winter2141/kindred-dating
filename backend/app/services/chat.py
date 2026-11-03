@@ -9,9 +9,10 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import utcnow
-from app.models import Match, Message, NotificationKind, Reaction, User
+from app.models import ChatSetting, Match, Message, NotificationKind, Reaction, User
 from app.realtime import Hub
 from app.schemas import MatchOut, MessageOut
+from app.services import chat_settings
 from app.services.images import delete_local
 from app.services.notifications import notify
 from app.services.personas import compose_reply
@@ -34,6 +35,11 @@ class MatchSummary:
     match: Match
     last_message: Message | None
     unread_count: int
+    setting: ChatSetting | None = None
+
+    @property
+    def filing(self) -> dict[str, object]:
+        return chat_settings.describe(self.setting)
 
 
 async def list_matches(session: AsyncSession, user_id: int) -> list[MatchSummary]:
@@ -70,7 +76,17 @@ async def list_matches(session: AsyncSession, user_id: int) -> list[MatchSummary
         .group_by(Message.match_id)
     )
     unread = {match_id: count for match_id, count in unread_rows}
-    return [MatchSummary(m, last_messages.get(m.id), unread.get(m.id, 0)) for m in matches]
+    settings = await chat_settings.settings_for(session, user_id, ids)
+    summaries = [
+        MatchSummary(m, last_messages.get(m.id), unread.get(m.id, 0), settings.get(m.id))
+        for m in matches
+    ]
+    # Pinned chats first, in the order they were pinned; the rest stay most recent first.
+    pinned = sorted(
+        (s for s in summaries if s.setting and s.setting.pinned_at),
+        key=lambda s: s.setting.pinned_at,
+    )
+    return pinned + [s for s in summaries if s not in pinned]
 
 
 async def create_match(session: AsyncSession, hub: Hub, first: User, second: User) -> Match:
@@ -150,7 +166,8 @@ async def send_message(
     }
     await hub.manager.send_many([match.user_a_id, match.user_b_id], payload)
 
-    if not hub.manager.is_online(recipient.id) and not recipient.is_persona:
+    muted = await chat_settings.on_incoming_message(session, hub, recipient.id, match.id)
+    if not hub.manager.is_online(recipient.id) and not recipient.is_persona and not muted:
         preview = body or ("Sent a voice note" if audio else "Sent a photo")
         await notify(
             session,
