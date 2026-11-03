@@ -84,7 +84,9 @@ async function request<T>(path: string, init: { method?: string; body?: Body } =
     const payload = await response.json().catch(() => ({}))
     throw new ApiError(response.status, describeError(payload.detail))
   }
-  return (response.status === 204 ? undefined : await response.json()) as T
+  // Some endpoints answer with no body at all (204, and 202 for forgot-password).
+  const text = await response.text()
+  return (text ? JSON.parse(text) : undefined) as T
 }
 
 export interface RegisterInput {
