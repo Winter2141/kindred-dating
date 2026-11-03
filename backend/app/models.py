@@ -179,8 +179,11 @@ class Message(Base):
     reactions: Mapped[list["Reaction"]] = relationship(
         cascade="all, delete-orphan", passive_deletes=True, lazy="selectin", order_by="Reaction.id"
     )
-    # Self-referential eager loads stop after one level, so a quote never loads its own quote.
-    reply_to: Mapped["Message | None"] = relationship(remote_side=[id], lazy="selectin")
+    # Eager loaders skip self-references unless given a depth; one level is the quote itself,
+    # so a quote never loads its own quote.
+    reply_to: Mapped["Message | None"] = relationship(
+        remote_side=[id], lazy="selectin", join_depth=1
+    )
 
     __table_args__ = (Index("ix_messages_match_id_id", "match_id", "id"),)
 

@@ -130,3 +130,34 @@ def test_photo_replies(client: TestClient, make_user, tmp_path) -> None:
         headers=me.headers,
     )
     assert gone.status_code == 422
+
+
+def test_quotes_load_when_the_original_is_on_an_earlier_page(client: TestClient, make_user) -> None:
+    """The original isn't among the loaded rows, so its quote needs its own query."""
+    me, her, match_id = _chat(client, make_user)
+    question = _send(client, her, match_id, "Mountains or the sea?").json()
+    reply = _send(client, me, match_id, "Mountains", reply_to_id=question["id"]).json()
+
+    page = client.get(
+        f"/api/matches/{match_id}/messages",
+        params={"before": reply["id"] + 1, "limit": 1},
+        headers=me.headers,
+    )
+    assert page.status_code == 200
+    assert page.json()[0]["reply_to"]["body"] == "Mountains or the sea?"
+
+    edited = client.patch(
+        f"/api/matches/{match_id}/messages/{reply['id']}",
+        json={"body": "Mountains, obviously"},
+        headers=me.headers,
+    )
+    assert edited.status_code == 200
+    assert edited.json()["reply_to"]["id"] == question["id"]
+
+    reacted = client.put(
+        f"/api/matches/{match_id}/messages/{reply['id']}/reaction",
+        json={"emoji": "🔥"},
+        headers=her.headers,
+    )
+    assert reacted.status_code == 200
+    assert reacted.json()["reply_to"]["id"] == question["id"]
