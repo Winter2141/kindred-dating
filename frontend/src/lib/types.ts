@@ -29,6 +29,7 @@ export interface Me extends PublicProfile {
   age_min: number
   age_max: number
   is_paused: boolean
+  is_admin: boolean
 }
 
 export interface Candidate extends PublicProfile {
@@ -67,6 +68,26 @@ export interface Like {
   user: PublicProfile
   action: SwipeAction
   created_at: string
+}
+
+export type ReportStatus = 'open' | 'dismissed' | 'actioned'
+
+export interface AdminReport {
+  id: number
+  reason: ReportReason
+  details: string
+  status: ReportStatus
+  created_at: string
+  resolved_at: string | null
+  reporter: PublicProfile
+  reported: PublicProfile & { email: string; banned: boolean; open_reports: number }
+}
+
+export interface ModerationStats {
+  open_reports: number
+  resolved_this_week: number
+  banned_users: number
+  total_users: number
 }
 
 export interface Meta {

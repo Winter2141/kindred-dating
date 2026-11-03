@@ -11,6 +11,8 @@ export const keys = {
   messages: (id: number) => ['messages', id] as const,
   icebreakers: (id: number) => ['icebreakers', id] as const,
   blocks: ['blocks'] as const,
+  reports: (status: string) => ['reports', status] as const,
+  moderationStats: ['moderation-stats'] as const,
 }
 
 /** Insert or replace a message, swapping out the optimistic copy that has the same client id. */

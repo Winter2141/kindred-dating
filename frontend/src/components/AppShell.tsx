@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Heart, LogOut, MessageCircle, Settings, Sparkles, UserRound } from 'lucide-react'
+import { Gavel, Heart, LogOut, MessageCircle, Settings, Sparkles, UserRound } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { api } from '@/lib/api'
@@ -127,6 +127,21 @@ export function AppShell() {
               )}
             </NavLink>
           ))}
+          {user?.is_admin && (
+            <NavLink
+              to="/app/moderation"
+              className={({ isActive }) =>
+                clsx(
+                  'mt-4 flex items-center gap-3.5 rounded-2xl border border-dashed px-3.5 py-3 text-[15px] font-semibold transition',
+                  isActive
+                    ? 'border-coral/50 bg-raised text-cream'
+                    : 'border-line-strong text-muted hover:bg-raised/60 hover:text-cream',
+                )
+              }
+            >
+              <Gavel className="size-5" /> Moderation
+            </NavLink>
+          )}
         </nav>
 
         <div className="mt-auto space-y-4">

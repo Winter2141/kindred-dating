@@ -1,14 +1,17 @@
 import { useAuth } from '@/store/auth'
 import type {
+  AdminReport,
   Candidate,
   Like,
   Match,
   Me,
   Message,
   Meta,
+  ModerationStats,
   Prompt,
   PublicProfile,
   ReportReason,
+  ReportStatus,
   Session,
   SwipeAction,
   SwipeResult,
@@ -135,4 +138,10 @@ export const api = {
   blocks: () => request<PublicProfile[]>('/api/blocks'),
   report: (data: { user_id: number; reason: ReportReason; details: string; block: boolean }) =>
     request<{ id: number }>('/api/reports', { method: 'POST', body: data }),
+
+  reports: (status: ReportStatus) => request<AdminReport[]>(`/api/admin/reports?status=${status}`),
+  resolveReport: (id: number, action: 'dismiss' | 'ban') =>
+    request<AdminReport>(`/api/admin/reports/${id}/resolve`, { method: 'POST', body: { action } }),
+  unban: (userId: number) => request<void>(`/api/admin/users/${userId}/unban`, { method: 'POST' }),
+  moderationStats: () => request<ModerationStats>('/api/admin/stats'),
 }

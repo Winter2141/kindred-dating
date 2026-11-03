@@ -10,6 +10,7 @@ import { LandingPage } from '@/pages/Landing'
 import { LikesPage } from '@/pages/Likes'
 import { LoginPage, SignupPage } from '@/pages/Auth'
 import { MatchesLayout, NoChatSelected } from '@/pages/Matches'
+import { ModerationPage } from '@/pages/Moderation'
 import { ProfilePage } from '@/pages/Profile'
 import { SettingsPage } from '@/pages/Settings'
 import { RealtimeProvider } from '@/realtime/RealtimeProvider'
@@ -49,6 +50,7 @@ export function App() {
         </Route>
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="moderation" element={<ModerationPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

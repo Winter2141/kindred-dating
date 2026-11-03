@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Ban, EyeOff, KeyRound, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
+import { Ban, EyeOff, Gavel, KeyRound, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
+import { Link } from 'react-router'
 import { BlockedList } from '@/components/Safety'
 import { Spinner, Switch } from '@/components/ui'
 import { api } from '@/lib/api'
@@ -17,6 +18,11 @@ export function SettingsPage() {
       <header className="mb-8">
         <h1 className="font-display text-5xl leading-none">Settings</h1>
         <p className="mt-2 text-sm text-muted">Signed in as {user.email}</p>
+        {user.is_admin && (
+          <Link to="/app/moderation" className="btn-secondary mt-5">
+            <Gavel className="size-4" /> Open the moderation queue
+          </Link>
+        )}
       </header>
       <div className="space-y-6">
         <VisibilitySection user={user} />
