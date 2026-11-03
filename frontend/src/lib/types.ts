@@ -47,6 +47,15 @@ export interface Reaction {
   emoji: string
 }
 
+export interface TopPick extends Candidate {
+  reason: string
+}
+
+export interface TopPicks {
+  picks: TopPick[]
+  refreshes_at: string
+}
+
 export interface Message {
   id: number
   match_id: number

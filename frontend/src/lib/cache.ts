@@ -5,6 +5,7 @@ export const keys = {
   me: ['me'] as const,
   meta: ['meta'] as const,
   discover: ['discover'] as const,
+  topPicks: ['top-picks'] as const,
   likes: ['likes'] as const,
   matches: ['matches'] as const,
   match: (id: number) => ['matches', id] as const,

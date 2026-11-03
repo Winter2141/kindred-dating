@@ -23,6 +23,15 @@ export function lastSeen(iso: string, online: boolean, now: Date = new Date()): 
   return `Active ${Math.floor(diff / DAY)}d ago`
 }
 
+/** Time left until `iso`, coarsely: "7h 12m", "25m", "a moment". */
+export function timeUntil(iso: string, now: Date = new Date()): string {
+  const diff = new Date(iso).getTime() - now.getTime()
+  if (diff < MINUTE) return 'a moment'
+  const hours = Math.floor(diff / HOUR)
+  const minutes = Math.floor((diff % HOUR) / MINUTE)
+  return hours ? `${hours}h ${minutes}m` : `${minutes}m`
+}
+
 export function clockTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 }

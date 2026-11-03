@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { describeError } from './api'
-import { ageFromBirthdate, dayLabel, lastSeen, shortAgo } from './time'
+import { ageFromBirthdate, dayLabel, lastSeen, shortAgo, timeUntil } from './time'
 
 const now = new Date(2026, 9, 28, 12, 0, 0)
 const ago = (ms: number) => new Date(now.getTime() - ms).toISOString()
@@ -51,5 +51,14 @@ describe('describeError', () => {
       ]),
     ).toBe('birthdate: you must be at least 18 to join')
     expect(describeError(undefined)).toBe('Something went wrong')
+  })
+})
+
+describe('timeUntil', () => {
+  it('counts down coarsely', () => {
+    const later = (ms: number) => new Date(now.getTime() + ms).toISOString()
+    expect(timeUntil(later(30_000), now)).toBe('a moment')
+    expect(timeUntil(later(25 * MINUTE), now)).toBe('25m')
+    expect(timeUntil(later(7 * 60 * MINUTE + 12 * MINUTE), now)).toBe('7h 12m')
   })
 })

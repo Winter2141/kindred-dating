@@ -7,10 +7,11 @@ import { Link } from 'react-router'
 import { MatchCelebration } from '@/components/MatchCelebration'
 import { ProfileDetails } from '@/components/ProfileDetails'
 import { SwipeCard } from '@/components/SwipeCard'
+import { TopPicksButton } from '@/components/TopPicks'
 import { EmptyState, Spinner } from '@/components/ui'
 import { api, ApiError } from '@/lib/api'
 import { keys } from '@/lib/cache'
-import type { Candidate, Match, SwipeAction } from '@/lib/types'
+import type { Candidate, Match, SwipeAction, SwipeResult } from '@/lib/types'
 import { useAuth } from '@/store/auth'
 import { useToasts } from '@/store/live'
 
@@ -43,11 +44,22 @@ export function DiscoverPage() {
         setMatch(result.match)
         void queryClient.invalidateQueries({ queryKey: keys.matches })
       }
+      void queryClient.invalidateQueries({ queryKey: keys.topPicks })
     },
     onError: (error) => {
       useToasts.getState().push({ title: 'Swipe failed', body: (error as Error).message })
     },
   })
+
+  // A swipe made from Top picks takes that person out of the deck as well.
+  const onPickSwiped = (candidate: Candidate, action: SwipeAction, result: SwipeResult) => {
+    setGone((g) => ({ ...g, [candidate.id]: action }))
+    setRestored((r) => r.filter((c) => c.id !== candidate.id))
+    if (result.matched && result.match) {
+      setMatch(result.match)
+      void queryClient.invalidateQueries({ queryKey: keys.matches })
+    }
+  }
 
   const undo = useMutation({
     mutationFn: api.undoSwipe,
@@ -116,6 +128,7 @@ export function DiscoverPage() {
               Picked for you{user?.city ? ` around ${user.city}` : ''} · best fit first
             </p>
           </div>
+          <TopPicksButton onSwiped={onPickSwiped} />
         </header>
 
         <div className="relative h-[calc(100dvh-22.5rem)] max-h-[640px] min-h-[400px] w-full max-w-[440px] sm:aspect-[3/4.25] sm:h-auto sm:max-h-none">

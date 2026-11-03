@@ -17,6 +17,7 @@ import type {
   Session,
   SwipeAction,
   SwipeResult,
+  TopPicks,
 } from './types'
 
 export class ApiError extends Error {
@@ -125,6 +126,7 @@ export const api = {
     request<void>('/api/me', { method: 'DELETE', body: { password } }),
 
   discover: () => request<Candidate[]>('/api/discover'),
+  topPicks: () => request<TopPicks>('/api/discover/top-picks'),
   swipe: (targetId: number, action: SwipeAction) =>
     request<SwipeResult>('/api/swipes', { method: 'POST', body: { target_id: targetId, action } }),
   undoSwipe: () => request<PublicProfile>('/api/swipes/undo', { method: 'POST' }),
