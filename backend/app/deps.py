@@ -32,8 +32,8 @@ async def user_from_token(session: AsyncSession, token: str, secret: str) -> Use
     except InvalidToken:
         return None
     user = await session.get(User, user_id)
-    if user is None or user.token_version != version:
-        return None  # deleted, or signed out everywhere since this token was issued
+    if user is None or user.token_version != version or user.banned_at is not None:
+        return None  # deleted, banned, or signed out everywhere since this token was issued
     return user
 
 
@@ -54,7 +54,14 @@ async def get_current_user(
     return user
 
 
+async def get_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
+    if not user.is_admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Moderators only")
+    return user
+
+
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
+AdminUser = Annotated[User, Depends(get_admin)]
 HubDep = Annotated[Hub, Depends(get_hub)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]

@@ -23,6 +23,9 @@ def test_demo_data_gives_a_full_first_session(settings: Settings) -> None:
         assert len(matches) == 5
         assert sum(m["unread_count"] for m in matches) == 2
         assert len(client.get("/api/likes", headers=headers).json()) == 6
+        assert login.json()["user"]["is_admin"] is True
+        queue = client.get("/api/admin/reports", headers=headers).json()
+        assert [r["reported"]["name"] for r in queue] == ["Ryan", "Ryan", "Owen", "Henrik"]
 
         second = client.post(
             "/api/auth/login", json={"email": SECOND_DEMO_EMAIL, "password": DEMO_PASSWORD}

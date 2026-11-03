@@ -40,6 +40,7 @@ async def discover(
         select(User).where(
             User.id != user.id,
             User.is_paused.is_(False),
+            User.banned_at.is_(None),
             User.id.not_in(swiped_by_me),
             User.id.not_in(passed_on_me),
             User.id.not_in(hidden_ids(user.id)),
@@ -140,6 +141,7 @@ async def likes_you(user: CurrentUser, session: SessionDep, hub: HubDep) -> list
         .join(User, User.id == Swipe.swiper_id)
         .where(
             Swipe.target_id == user.id,
+            User.banned_at.is_(None),
             Swipe.action != SwipeAction.PASS,
             Swipe.swiper_id.not_in(swiped_by_me),
             Swipe.swiper_id.not_in(hidden_ids(user.id)),

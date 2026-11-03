@@ -77,6 +77,9 @@ class User(Base):
     is_paused: Mapped[bool] = mapped_column(default=False, server_default=false())
     # Bumped to revoke every token issued so far (password change, sign out everywhere).
     token_version: Mapped[int] = mapped_column(default=0, server_default=text("0"))
+    is_admin: Mapped[bool] = mapped_column(default=False, server_default=false())
+    # Banned accounts can't sign in and are hidden from everyone.
+    banned_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     last_active_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
@@ -169,3 +172,10 @@ class Report(Base):
     details: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(16), default=ReportStatus.OPEN, index=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    resolved_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    resolved_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+
+    reporter: Mapped[User] = relationship(foreign_keys=[reporter_id], lazy="joined")
+    reported: Mapped[User] = relationship(foreign_keys=[reported_id], lazy="joined")

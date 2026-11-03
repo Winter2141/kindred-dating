@@ -12,7 +12,16 @@ from pydantic import (
 )
 
 from app.catalog import INTERESTS, MAX_INTERESTS, MAX_PROMPTS, PROMPT_QUESTIONS
-from app.models import Gender, Match, Message, ReportReason, SwipeAction, User
+from app.models import (
+    Gender,
+    Match,
+    Message,
+    Report,
+    ReportReason,
+    ReportStatus,
+    SwipeAction,
+    User,
+)
 from app.services.matching import age_on
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
@@ -179,6 +188,7 @@ class MeOut(PublicProfile):
     age_min: int
     age_max: int
     is_paused: bool
+    is_admin: bool
 
     @classmethod
     def build(cls, user: User, *, online: bool = True) -> Self:
@@ -191,6 +201,7 @@ class MeOut(PublicProfile):
             age_min=user.age_min,
             age_max=user.age_max,
             is_paused=user.is_paused,
+            is_admin=user.is_admin,
         )
 
 
@@ -288,3 +299,50 @@ class ReportIn(BaseModel):
     reason: ReportReason
     details: Annotated[str, StringConstraints(strip_whitespace=True, max_length=1000)] = ""
     block: bool = Field(default=True, description="Also block them (recommended)")
+
+
+class ReportedPerson(PublicProfile):
+    email: EmailStr
+    banned: bool
+    open_reports: int
+
+
+class ReportOut(BaseModel):
+    id: int
+    reason: ReportReason
+    details: str
+    status: ReportStatus
+    created_at: datetime
+    resolved_at: datetime | None
+    reporter: PublicProfile
+    reported: ReportedPerson
+
+    @classmethod
+    def build(cls, report: Report, open_reports: int) -> Self:
+        reported = report.reported
+        return cls(
+            id=report.id,
+            reason=ReportReason(report.reason),
+            details=report.details,
+            status=ReportStatus(report.status),
+            created_at=report.created_at,
+            resolved_at=report.resolved_at,
+            reporter=PublicProfile.build(report.reporter),
+            reported=ReportedPerson(
+                **PublicProfile.build(reported).model_dump(),
+                email=reported.email,
+                banned=reported.banned_at is not None,
+                open_reports=open_reports,
+            ),
+        )
+
+
+class ResolveIn(BaseModel):
+    action: Literal["dismiss", "ban"]
+
+
+class ModerationStats(BaseModel):
+    open_reports: int
+    resolved_this_week: int
+    banned_users: int
+    total_users: int

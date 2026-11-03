@@ -12,7 +12,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import select
 
 from app.db import Base, Database, utcnow
-from app.models import Match, Message, Swipe, SwipeAction, User
+from app.models import Match, Message, Report, ReportReason, Swipe, SwipeAction, User
 from app.security import hash_password
 from app.seed_data import DEMO_EMAIL, DEMO_PASSWORD, PERSONAS, SECOND_DEMO_EMAIL, unsplash
 from app.services.matching import years_before
@@ -68,6 +68,23 @@ LIKED_ALEX = {
     "Talia": SwipeAction.LIKE,
     "Harper": SwipeAction.LIKE,
 }
+# Open reports so the moderation queue has something in it: (reporter, reported, reason, details)
+REPORTS = [
+    (
+        "Elena",
+        "Ryan",
+        ReportReason.SPAM,
+        "Asked me to move to WhatsApp after two messages, then pitched a crypto course.",
+    ),
+    ("Grace", "Ryan", ReportReason.SPAM, "Same copy-pasted investment pitch."),
+    ("Ivy", "Owen", ReportReason.FAKE_PROFILE, "The photos look like a model's portfolio."),
+    (
+        "Nadia",
+        "Henrik",
+        ReportReason.HARASSMENT,
+        "Kept messaging after I said I wasn't interested.",
+    ),
+]
 
 
 def _birthdate(age: int, today: date, rng: random.Random) -> date:
@@ -79,6 +96,7 @@ def _build_alex(password_hash: str, now: datetime, rng: random.Random) -> User:
         email=DEMO_EMAIL,
         password_hash=password_hash,
         name="Alex",
+        is_admin=True,  # so the demo can show the moderation queue
         birthdate=_birthdate(30, now.date(), rng),
         gender="man",
         interested_in=["woman"],
@@ -194,6 +212,16 @@ async def seed_demo_data(db: Database) -> bool:
                     target_id=alex.id,
                     action=action,
                     created_at=now - timedelta(hours=rng.randint(1, 30)),
+                )
+            )
+        for hours_ago, (reporter, reported, reason, details) in enumerate(REPORTS, start=3):
+            session.add(
+                Report(
+                    reporter_id=people[reporter].id,
+                    reported_id=people[reported].id,
+                    reason=reason,
+                    details=details,
+                    created_at=now - timedelta(hours=hours_ago * 5),
                 )
             )
         await session.commit()

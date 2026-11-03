@@ -48,4 +48,8 @@ async def login(data: LoginIn, session: SessionDep, settings: SettingsDep) -> To
     user = await session.scalar(select(User).where(User.email == data.email.lower()))
     if user is None or not verify_password(data.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wrong email or password")
+    if user.banned_at is not None:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "This account was suspended for breaking our guidelines"
+        )
     return token_for(user, settings)
