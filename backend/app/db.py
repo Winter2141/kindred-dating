@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
+from pathlib import Path
 
-from sqlalchemy import DateTime, event
-from sqlalchemy.engine import Dialect
+from sqlalchemy import DateTime, event, inspect
+from sqlalchemy.engine import Connection, Dialect
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -10,6 +11,10 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.types import TypeDecorator
+
+MIGRATIONS_DIR = Path(__file__).with_name("migrations")
+# The schema the app had before it used migrations; such databases are stamped with it.
+BASELINE_REVISION = "0001"
 
 
 def utcnow() -> datetime:
@@ -56,14 +61,26 @@ class Database:
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
 
-    async def create_all(self) -> None:
-        from app import models  # noqa: F401  (registers the tables)
-
+    async def migrate(self) -> None:
+        """Bring the schema up to date with the latest migration."""
         async with self.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(run_migrations)
 
     def session(self) -> AsyncSession:
         return self.sessionmaker()
 
     async def dispose(self) -> None:
         await self.engine.dispose()
+
+
+def run_migrations(connection: Connection) -> None:
+    from alembic import command
+    from alembic.config import Config
+
+    config = Config()
+    config.set_main_option("script_location", str(MIGRATIONS_DIR))
+    config.attributes["connection"] = connection
+    tables = inspect(connection).get_table_names()
+    if "users" in tables and "alembic_version" not in tables:
+        command.stamp(config, BASELINE_REVISION)
+    command.upgrade(config, "head")

@@ -20,7 +20,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         db = Database(settings.database_url)
-        await db.create_all()
+        await db.migrate()
         if settings.seed_on_startup:
             await seed_demo_data(db)
         app.state.hub = Hub(settings=settings, db=db)

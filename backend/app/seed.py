@@ -209,7 +209,8 @@ async def _main(reset: bool) -> None:
 
         async with db.engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
-    await db.create_all()
+            await conn.exec_driver_sql("DROP TABLE IF EXISTS alembic_version")
+    await db.migrate()
     seeded = await seed_demo_data(db)
     await db.dispose()
     print("Seeded demo data." if seeded else "Database already has data; use --reset to reseed.")
