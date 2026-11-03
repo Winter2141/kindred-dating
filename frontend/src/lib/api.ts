@@ -144,10 +144,11 @@ export const api = {
   messages: (id: number, before?: number) =>
     request<Message[]>(`/api/matches/${id}/messages${before ? `?before=${before}` : ''}`),
   icebreakers: (id: number) => request<string[]>(`/api/matches/${id}/icebreakers`),
-  sendPhoto: (matchId: number, file: File, caption: string) => {
+  sendPhoto: (matchId: number, file: File, caption: string, replyToId?: number | null) => {
     const form = new FormData()
     form.append('file', file)
     form.append('caption', caption)
+    if (replyToId) form.append('reply_to_id', String(replyToId))
     return request<Message>(`/api/matches/${matchId}/photos`, { method: 'POST', body: form })
   },
   unsend: (matchId: number, messageId: number) =>

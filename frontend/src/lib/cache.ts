@@ -70,9 +70,15 @@ export function applyReaction(
   })
 }
 
-/** Blank out an unsent message, in a conversation and in the chat list preview. */
+/** Blank out an unsent message (and quotes of it), in a conversation and in the chat list preview. */
 export function applyUnsend(list: Message[] | undefined, messageId: number, deletedAt: string): Message[] | undefined {
-  return list?.map((m) => (m.id === messageId ? { ...m, body: '', deleted_at: deletedAt, reactions: [] } : m))
+  return list?.map((m) => {
+    if (m.id === messageId) return { ...m, body: '', image_url: null, deleted_at: deletedAt, reactions: [] }
+    if (m.reply_to?.id === messageId) {
+      return { ...m, reply_to: { ...m.reply_to, body: '', image_url: null, deleted_at: deletedAt } }
+    }
+    return m
+  })
 }
 
 export function applyUnsendToMatches(

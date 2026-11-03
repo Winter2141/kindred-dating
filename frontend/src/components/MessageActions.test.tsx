@@ -42,6 +42,15 @@ describe('MessageMenu', () => {
     expect(onUnsend).toHaveBeenCalledWith(recent)
   })
 
+  it('starts a reply', async () => {
+    const onReply = vi.fn()
+    const user = userEvent.setup()
+    render(<MessageMenu message={message()} meId={8} onUnsend={vi.fn()} onReply={onReply} align="left" />)
+    await user.click(screen.getByRole('button', { name: 'Message options' }))
+    await user.click(screen.getByRole('menuitem', { name: /reply/i }))
+    expect(onReply).toHaveBeenCalledWith(message())
+  })
+
   it("doesn't offer to unsend someone else's message", async () => {
     const user = userEvent.setup()
     render(<MessageMenu message={message()} meId={8} onUnsend={vi.fn()} align="left" />)

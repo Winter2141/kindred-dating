@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Copy, MoreHorizontal, Undo2 } from 'lucide-react'
+import { Copy, CornerUpLeft, MoreHorizontal, Undo2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import type { Message } from '@/lib/types'
@@ -20,11 +20,13 @@ export function MessageMenu({
   message,
   meId,
   onUnsend,
+  onReply,
   align,
 }: {
   message: Message
   meId: number
   onUnsend: (message: Message) => void
+  onReply?: (message: Message) => void
   align: 'left' | 'right'
 }) {
   const [open, setOpen] = useState(false)
@@ -77,6 +79,19 @@ export function MessageMenu({
               align === 'right' ? 'right-0' : 'left-0',
             )}
           >
+            {onReply && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false)
+                  onReply(message)
+                }}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold hover:bg-raised"
+              >
+                <CornerUpLeft className="size-4" /> Reply
+              </button>
+            )}
             <button
               type="button"
               role="menuitem"

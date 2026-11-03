@@ -2,13 +2,21 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
 import { ArrowLeft, Check, CheckCheck, ImagePlus, Info, SendHorizontal, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ProfileDetails } from '@/components/ProfileDetails'
 import { DateBar, PlanDateButton } from '@/components/DatePlanner'
 import { Lightbox } from '@/components/Lightbox'
 import { MessageMenu } from '@/components/MessageActions'
 import { ReactionChips, ReactionPicker } from '@/components/Reactions'
+import {
+  QuoteBlock,
+  ReplyBanner,
+  ReplyButton,
+  SWIPE_TO_REPLY_PX,
+  jumpToMessage,
+  quoteOf,
+} from '@/components/Replies'
 import { SafetyMenu } from '@/components/Safety'
 import { Avatar, Photo, Spinner, TypingDots } from '@/components/ui'
 import { api } from '@/lib/api'
@@ -21,7 +29,7 @@ import {
   markPendingFailed,
   upsertMessage,
 } from '@/lib/cache'
-import type { Match, Message } from '@/lib/types'
+import type { Match, Message, QuotedMessage } from '@/lib/types'
 import { photoProblem } from '@/lib/photos'
 import { clockTime, dayLabel, isSameDay, lastSeen, shortAgo } from '@/lib/time'
 import { useRealtimeSend } from '@/realtime/RealtimeProvider'
@@ -39,6 +47,13 @@ export function ChatPage() {
   const me = useAuth((s) => s.user)
   const send = useRealtimeSend()
   const [showProfile, setShowProfile] = useState(false)
+  const [replyingTo, setReplyingTo] = useState<QuotedMessage | null>(null)
+  // A reply in progress belongs to its conversation; switching chats drops it.
+  const [replyMatchId, setReplyMatchId] = useState(matchId)
+  if (replyMatchId !== matchId) {
+    setReplyMatchId(matchId)
+    setReplyingTo(null)
+  }
 
   const matches = useQuery({ queryKey: keys.matches, queryFn: api.matches })
   const cached = matches.data?.find((m) => m.id === matchId)
@@ -81,7 +96,7 @@ export function ChatPage() {
     },
   })
 
-  const sendMessage = (body: string) => {
+  const sendMessage = (body: string, replyTo: QuotedMessage | null = null) => {
     if (!me) return
     const clientId = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
     const optimistic: Message = {
@@ -89,12 +104,13 @@ export function ChatPage() {
       match_id: matchId,
       sender_id: me.id,
       body,
+      reply_to: replyTo,
       created_at: new Date().toISOString(),
       read_at: null,
       pending: clientId,
     }
     queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => [...(list ?? []), optimistic])
-    send({ type: 'message.send', match_id: matchId, body, client_id: clientId })
+    send({ type: 'message.send', match_id: matchId, body, client_id: clientId, reply_to_id: replyTo?.id ?? null })
     setTimeout(() => {
       queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) =>
         list?.some((m) => m.pending === clientId) ? markPendingFailed(list, clientId) : list,
@@ -125,7 +141,7 @@ export function ChatPage() {
   // Files for photos still uploading (or failed), so "Tap to retry" can send them again.
   const pendingPhotos = useRef(new Map<string, File>())
 
-  const sendPhoto = async (file: File, caption: string) => {
+  const sendPhoto = async (file: File, caption: string, replyTo: QuotedMessage | null = null) => {
     if (!me) return
     const clientId = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
     pendingPhotos.current.set(clientId, file)
@@ -135,13 +151,14 @@ export function ChatPage() {
       sender_id: me.id,
       body: caption,
       image_url: URL.createObjectURL(file),
+      reply_to: replyTo,
       created_at: new Date().toISOString(),
       read_at: null,
       pending: clientId,
     }
     queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => [...(list ?? []), optimistic])
     try {
-      const sent = await api.sendPhoto(matchId, file, caption)
+      const sent = await api.sendPhoto(matchId, file, caption, replyTo?.id)
       queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => upsertMessage(list, sent, clientId))
       pendingPhotos.current.delete(clientId)
       URL.revokeObjectURL(optimistic.image_url!)
@@ -158,9 +175,15 @@ export function ChatPage() {
     const file = message.pending ? pendingPhotos.current.get(message.pending) : undefined
     if (file && message.pending) {
       pendingPhotos.current.delete(message.pending)
-      void sendPhoto(file, message.body)
+      void sendPhoto(file, message.body, message.reply_to ?? null)
     } else {
-      sendMessage(message.body)
+      sendMessage(message.body, message.reply_to ?? null)
+    }
+  }
+
+  const jump = (messageId: number) => {
+    if (!jumpToMessage(messageId)) {
+      useToasts.getState().push({ title: 'That message is further back', body: 'Load earlier messages to see it.' })
     }
   }
 
@@ -233,13 +256,32 @@ export function ChatPage() {
           onRetry={retry}
           onReact={react}
           onUnsend={(message) => unsend.mutate(message)}
-          onIcebreaker={sendMessage}
+          onReply={(message) => setReplyingTo(quoteOf(message))}
+          onJump={jump}
+          onIcebreaker={(text) => sendMessage(text)}
         />
         <Composer
           matchId={matchId}
-          onSend={sendMessage}
-          onSendPhoto={(file, caption) => void sendPhoto(file, caption)}
+          onSend={(body) => {
+            sendMessage(body, replyingTo)
+            setReplyingTo(null)
+          }}
+          onSendPhoto={(file, caption) => {
+            void sendPhoto(file, caption, replyingTo)
+            setReplyingTo(null)
+          }}
           name={other.name}
+          reply={
+            replyingTo && (
+              <ReplyBanner
+                quote={replyingTo}
+                meId={me?.id ?? -1}
+                otherName={other.name}
+                onCancel={() => setReplyingTo(null)}
+              />
+            )
+          }
+          onCancelReply={replyingTo ? () => setReplyingTo(null) : undefined}
         />
       </div>
 
@@ -283,6 +325,8 @@ function MessageList({
   onRetry,
   onReact,
   onUnsend,
+  onReply,
+  onJump,
   onIcebreaker,
 }: {
   match: Match
@@ -293,8 +337,12 @@ function MessageList({
   onRetry: (message: Message) => void
   onReact: (message: Message, emoji: string) => void
   onUnsend: (message: Message) => void
+  onReply: (message: Message) => void
+  onJump: (messageId: number) => void
   onIcebreaker: (text: string) => void
 }) {
+  // Swiping a bubble sideways starts a reply, on touch screens only so mouse users can select text.
+  const [touch] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches)
   const queryClient = useQueryClient()
   const [pickerFor, setPickerFor] = useState<number | null>(null)
   const [viewing, setViewing] = useState<string | null>(null)
@@ -376,9 +424,16 @@ function MessageList({
                   </div>
                 )}
                 <motion.div
+                  id={message.pending ? undefined : `message-${message.id}`}
                   initial={{ opacity: 0, y: 8, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ duration: 0.18 }}
+                  drag={touch && !message.pending && !message.deleted_at ? 'x' : false}
+                  dragDirectionLock
+                  dragSnapToOrigin
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={{ left: 0, right: 0.35 }}
+                  onDragEnd={(_, info) => info.offset.x > SWIPE_TO_REPLY_PX && onReply(message)}
                   className={clsx(
                     'flex flex-col',
                     mine ? 'items-end' : 'items-start',
@@ -410,6 +465,15 @@ function MessageList({
                           message.failed && 'opacity-60 ring-2 ring-danger',
                         )}
                       >
+                        {message.reply_to && (
+                          <QuoteBlock
+                            quote={message.reply_to}
+                            meId={meId}
+                            otherName={match.user.name}
+                            mine={mine}
+                            onJump={onJump}
+                          />
+                        )}
                         {message.image_url ? (
                           <>
                             <button
@@ -441,7 +505,14 @@ function MessageList({
                           onPick={(emoji) => onReact(message, emoji)}
                           align={mine ? 'right' : 'left'}
                         />
-                        <MessageMenu message={message} meId={meId} onUnsend={onUnsend} align={mine ? 'right' : 'left'} />
+                        <ReplyButton onReply={() => onReply(message)} />
+                        <MessageMenu
+                          message={message}
+                          meId={meId}
+                          onUnsend={onUnsend}
+                          onReply={onReply}
+                          align={mine ? 'right' : 'left'}
+                        />
                       </>
                     )}
                   </div>
@@ -546,11 +617,16 @@ function Composer({
   name,
   onSend,
   onSendPhoto,
+  reply,
+  onCancelReply,
 }: {
   matchId: number
   name: string
   onSend: (body: string) => void
   onSendPhoto: (file: File, caption: string) => void
+  /** The quote of the message being answered, shown above the input. */
+  reply?: ReactNode
+  onCancelReply?: () => void
 }) {
   const send = useRealtimeSend()
   const [text, setText] = useState('')
@@ -587,6 +663,11 @@ function Composer({
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`
   }, [text])
 
+  const replying = Boolean(reply)
+  useEffect(() => {
+    if (replying) textarea.current?.focus()
+  }, [replying])
+
   const pick = (file: File | undefined) => {
     if (!file) return
     const issue = photoProblem(file)
@@ -614,6 +695,7 @@ function Composer({
       }}
       className="border-t border-line px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6"
     >
+      {reply}
       {(preview || problem) && (
         <div className="mx-auto mb-2 flex max-w-3xl items-center gap-3">
           {preview && (
@@ -678,6 +760,9 @@ function Composer({
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault()
               submit()
+            } else if (e.key === 'Escape' && onCancelReply) {
+              e.preventDefault()
+              onCancelReply()
             }
           }}
           placeholder={photo ? 'Add a caption…' : `Message ${name}…`}

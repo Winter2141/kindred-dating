@@ -122,6 +122,21 @@
   @apply rounded-[var(--radius-card)] border border-line bg-surface;
 }
 
+/* A message you jumped to from a quote glows briefly. */
+.flash-highlight {
+  animation: flash-highlight 1.5s ease-out;
+  border-radius: 1.4rem;
+}
+@keyframes flash-highlight {
+  0%,
+  35% {
+    background: rgb(255 138 91 / 0.22);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
 /* Soft ambient light behind the whole app. */
 .ambient::before,
 .ambient::after {

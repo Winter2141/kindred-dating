@@ -74,12 +74,22 @@ export interface UpcomingDate extends DateProposal {
   with_user: PublicProfile
 }
 
+/** The message a reply answers, as quoted above the reply. */
+export interface QuotedMessage {
+  id: number
+  sender_id: number
+  body: string
+  image_url: string | null
+  deleted_at: string | null
+}
+
 export interface Message {
   id: number
   match_id: number
   sender_id: number
   body: string
   image_url?: string | null
+  reply_to?: QuotedMessage | null
   created_at: string
   read_at: string | null
   deleted_at?: string | null
@@ -208,7 +218,7 @@ export type ServerEvent =
   | { type: 'error'; detail: string; match_id?: number; client_id?: string | null }
 
 export type ClientEvent =
-  | { type: 'message.send'; match_id: number; body: string; client_id: string }
+  | { type: 'message.send'; match_id: number; body: string; client_id: string; reply_to_id?: number | null }
   | { type: 'typing'; match_id: number; is_typing: boolean }
   | { type: 'read'; match_id: number }
   | { type: 'react'; match_id: number; message_id: number; emoji: string | null }
