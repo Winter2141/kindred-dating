@@ -5,16 +5,18 @@ from sqlalchemy import select
 
 from app.deps import CurrentUser, HubDep, SessionDep
 from app.models import Match, NotificationKind, Swipe, SwipeAction, User
-from app.schemas import Candidate, LikeOut, MatchOut, PublicProfile, SwipeIn, SwipeOut
-from app.services import chat
-from app.services.matching import (
-    birthdate_bounds,
-    bounding_box,
-    compatibility,
-    distance_between,
-    is_mutual_fit,
-    location,
+from app.schemas import (
+    Candidate,
+    LikeOut,
+    MatchOut,
+    PublicProfile,
+    SwipeIn,
+    SwipeOut,
+    TopPicksOut,
 )
+from app.services import chat
+from app.services.discovery import find_candidates, next_refresh, top_picks
+from app.services.matching import distance_between
 from app.services.notifications import notify
 from app.services.personas import likes_back
 from app.services.safety import hidden_ids, is_hidden
@@ -34,63 +36,18 @@ async def discover(
     Excludes anyone you've already swiped on and anyone who passed on you. People who
     super-liked you jump to the front of the queue.
     """
-    now = datetime.now(UTC)
-    today = now.date()
-    swiped_by_me = select(Swipe.target_id).where(Swipe.swiper_id == user.id)
-    passed_on_me = select(Swipe.swiper_id).where(
-        Swipe.target_id == user.id, Swipe.action == SwipeAction.PASS
-    )
-    earliest, latest = birthdate_bounds(user.age_min, user.age_max, today)
-
-    # SQL narrows by the cheap columns; JSON list membership and exact distances are checked
-    # in Python so the query stays portable between SQLite and Postgres.
-    query = select(User)
-    if (here := location(user)) is not None:
-        min_lat, max_lat, min_lng, max_lng = bounding_box(here, user.max_distance_km)
-        query = query.where(
-            User.latitude.is_(None)
-            | (User.latitude.between(min_lat, max_lat) & User.longitude.between(min_lng, max_lng))
-        )
-    rows = await session.scalars(
-        query.where(
-            User.id != user.id,
-            User.is_paused.is_(False),
-            User.banned_at.is_(None),
-            User.id.not_in(swiped_by_me),
-            User.id.not_in(passed_on_me),
-            User.id.not_in(hidden_ids(user.id)),
-            User.gender.in_(user.interested_in),
-            User.birthdate.between(earliest, latest),
-        )
-    )
-    super_likers = set(
-        await session.scalars(
-            select(Swipe.swiper_id).where(
-                Swipe.target_id == user.id, Swipe.action == SwipeAction.SUPER
-            )
-        )
-    )
-
-    candidates = []
-    for other in rows:
-        if not is_mutual_fit(user, other, today):
-            continue
-        fit = compatibility(user, other, now)
-        base = PublicProfile.build(
-            other,
-            online=hub.manager.is_online(other.id),
-            distance_km=distance_between(user, other),
-        )
-        candidates.append(
-            Candidate(
-                **base.model_dump(),
-                compatibility=fit.score,
-                shared_interests=fit.shared_interests,
-                super_liked_you=other.id in super_likers,
-            )
-        )
-    candidates.sort(key=lambda c: (c.super_liked_you, c.compatibility), reverse=True)
+    candidates = await find_candidates(session, hub, user, datetime.now(UTC))
     return candidates[:limit]
+
+
+@router.get("/discover/top-picks")
+async def daily_top_picks(user: CurrentUser, session: SessionDep, hub: HubDep) -> TopPicksOut:
+    """A few standout profiles chosen for you each day, with why they were picked."""
+    now = datetime.now(UTC)
+    candidates = await find_candidates(session, hub, user, now)
+    return TopPicksOut(
+        picks=top_picks(user.id, now.date(), candidates), refreshes_at=next_refresh(now)
+    )
 
 
 @router.post("/swipes")

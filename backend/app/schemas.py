@@ -239,6 +239,15 @@ class Candidate(PublicProfile):
     super_liked_you: bool = False
 
 
+class TopPick(Candidate):
+    reason: str
+
+
+class TopPicksOut(BaseModel):
+    picks: list[TopPick]
+    refreshes_at: datetime
+
+
 class SwipeIn(BaseModel):
     target_id: int
     action: SwipeAction
