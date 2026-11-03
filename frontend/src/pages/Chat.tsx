@@ -18,6 +18,7 @@ import {
   quoteOf,
 } from '@/components/Replies'
 import { SafetyMenu } from '@/components/Safety'
+import { RecordButton, RecordingBar, VoicePlayer } from '@/components/VoiceNotes'
 import { Avatar, Photo, Spinner, TypingDots } from '@/components/ui'
 import { api } from '@/lib/api'
 import {
@@ -33,12 +34,18 @@ import {
 } from '@/lib/cache'
 import type { Match, Message, QuotedMessage } from '@/lib/types'
 import { photoProblem } from '@/lib/photos'
+import { useVoiceRecorder, type Recording } from '@/lib/voice'
 import { clockTime, dayLabel, isSameDay, lastSeen, shortAgo } from '@/lib/time'
 import { useRealtimeSend } from '@/realtime/RealtimeProvider'
 import { useAuth } from '@/store/auth'
 import { useLive, useToasts } from '@/store/live'
 
 const PAGE_SIZE = 50
+
+/** A temporary id for a message until the server confirms it. */
+function newClientId(prefix: string): string {
+  return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+}
 const SEND_TIMEOUT_MS = 10_000
 const TYPING_IDLE_MS = 3000
 
@@ -102,7 +109,7 @@ export function ChatPage() {
 
   const sendMessage = (body: string, replyTo: QuotedMessage | null = null) => {
     if (!me) return
-    const clientId = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+    const clientId = newClientId('c')
     const optimistic: Message = {
       id: Number.MAX_SAFE_INTEGER,
       match_id: matchId,
@@ -164,13 +171,13 @@ export function ChatPage() {
     setEditing(message)
   }
 
-  // Files for photos still uploading (or failed), so "Tap to retry" can send them again.
-  const pendingPhotos = useRef(new Map<string, File>())
+  // Uploads still in flight (or failed), so "Tap to retry" can send them again.
+  const pendingUploads = useRef(new Map<string, () => void>())
 
   const sendPhoto = async (file: File, caption: string, replyTo: QuotedMessage | null = null) => {
     if (!me) return
-    const clientId = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
-    pendingPhotos.current.set(clientId, file)
+    const clientId = newClientId('p')
+    pendingUploads.current.set(clientId, () => void sendPhoto(file, caption, replyTo))
     const optimistic: Message = {
       id: Number.MAX_SAFE_INTEGER,
       match_id: matchId,
@@ -186,7 +193,7 @@ export function ChatPage() {
     try {
       const sent = await api.sendPhoto(matchId, file, caption, replyTo?.id)
       queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => upsertMessage(list, sent, clientId))
-      pendingPhotos.current.delete(clientId)
+      pendingUploads.current.delete(clientId)
       URL.revokeObjectURL(optimistic.image_url!)
     } catch (error) {
       queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => markPendingFailed(list, clientId))
@@ -194,14 +201,43 @@ export function ChatPage() {
     }
   }
 
+  const sendVoice = async (recording: Recording, replyTo: QuotedMessage | null = null) => {
+    if (!me) return
+    const clientId = newClientId('v')
+    pendingUploads.current.set(clientId, () => void sendVoice(recording, replyTo))
+    const optimistic: Message = {
+      id: Number.MAX_SAFE_INTEGER,
+      match_id: matchId,
+      sender_id: me.id,
+      body: '',
+      audio_url: URL.createObjectURL(recording.blob),
+      audio_ms: recording.durationMs,
+      waveform: recording.waveform,
+      reply_to: replyTo,
+      created_at: new Date().toISOString(),
+      read_at: null,
+      pending: clientId,
+    }
+    queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => [...(list ?? []), optimistic])
+    try {
+      const sent = await api.sendVoice(matchId, recording.blob, recording.durationMs, recording.waveform, replyTo?.id)
+      queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => upsertMessage(list, sent, clientId))
+      pendingUploads.current.delete(clientId)
+      URL.revokeObjectURL(optimistic.audio_url!)
+    } catch (error) {
+      queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => markPendingFailed(list, clientId))
+      useToasts.getState().push({ title: "Voice note didn't send", body: (error as Error).message })
+    }
+  }
+
   const retry = (message: Message) => {
     queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) =>
       list?.filter((m) => m.pending !== message.pending),
     )
-    const file = message.pending ? pendingPhotos.current.get(message.pending) : undefined
-    if (file && message.pending) {
-      pendingPhotos.current.delete(message.pending)
-      void sendPhoto(file, message.body, message.reply_to ?? null)
+    const again = message.pending ? pendingUploads.current.get(message.pending) : undefined
+    if (again && message.pending) {
+      pendingUploads.current.delete(message.pending)
+      again()
     } else {
       sendMessage(message.body, message.reply_to ?? null)
     }
@@ -298,6 +334,10 @@ export function ChatPage() {
           }}
           onSendPhoto={(file, caption) => {
             void sendPhoto(file, caption, replyingTo)
+            setReplyingTo(null)
+          }}
+          onSendVoice={(recording) => {
+            void sendVoice(recording, replyingTo)
             setReplyingTo(null)
           }}
           name={other.name}
@@ -497,7 +537,7 @@ function MessageList({
                         onDoubleClick={() => !message.pending && onReact(message, '❤️')}
                         className={clsx(
                           'min-w-0 text-[15px] leading-relaxed break-words whitespace-pre-wrap',
-                          message.image_url ? 'p-1.5' : 'px-4 py-2.5',
+                          message.image_url ? 'p-1.5' : message.audio_url ? 'px-3 py-2' : 'px-4 py-2.5',
                           mine
                             ? 'rounded-[1.4rem] rounded-br-md bg-gradient-brand text-ink'
                             : 'rounded-[1.4rem] rounded-bl-md border border-line bg-raised',
@@ -516,7 +556,14 @@ function MessageList({
                             onJump={onJump}
                           />
                         )}
-                        {message.image_url ? (
+                        {message.audio_url ? (
+                          <VoicePlayer
+                            src={message.audio_url}
+                            durationMs={message.audio_ms ?? 0}
+                            waveform={message.waveform}
+                            mine={mine}
+                          />
+                        ) : message.image_url ? (
                           <>
                             <button
                               type="button"
@@ -672,6 +719,7 @@ function Composer({
   name,
   onSend,
   onSendPhoto,
+  onSendVoice,
   reply,
   onCancelReply,
   editing,
@@ -683,6 +731,7 @@ function Composer({
   name: string
   onSend: (body: string) => void
   onSendPhoto: (file: File, caption: string) => void
+  onSendVoice: (recording: Recording) => void
   /** The quote of the message being answered, shown above the input. */
   reply?: ReactNode
   onCancelReply?: () => void
@@ -702,6 +751,23 @@ function Composer({
   const idleTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const textarea = useRef<HTMLTextAreaElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  const recorder = useVoiceRecorder(onSendVoice)
+  const recording = recorder.state === 'recording'
+
+  useEffect(() => {
+    if (recorder.state === 'unavailable') {
+      useToasts.getState().push({
+        title: "Can't record",
+        body: 'Allow microphone access for Kindred in your browser to send voice notes.',
+      })
+    }
+  }, [recorder.state])
+
+  const sendRecording = async () => {
+    const result = await recorder.stop()
+    if (result) onSendVoice(result)
+    else useToasts.getState().push({ title: 'Too short', body: 'Hold on a little longer to record a voice note.' })
+  }
 
   // Load the message's text when editing starts, and clear it when editing ends.
   const editingId = editing?.id ?? null
@@ -795,6 +861,14 @@ function Composer({
           </p>
         </div>
       )}
+      {recording ? (
+        <RecordingBar
+          elapsedMs={recorder.elapsedMs}
+          levels={recorder.levels}
+          onCancel={recorder.cancel}
+          onSend={() => void sendRecording()}
+        />
+      ) : (
       <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-[1.6rem] border border-line bg-raised/70 p-1.5 pl-2 transition focus-within:border-coral/50">
         <button
           type="button"
@@ -855,15 +929,20 @@ function Composer({
           aria-label={`Message ${name}`}
           className="max-h-40 flex-1 resize-none bg-transparent py-2.5 text-[15px] text-cream outline-none placeholder:text-faint"
         />
-        <button
-          type="submit"
-          disabled={editing ? !text.trim() && !editing.image_url : !text.trim() && !photo}
-          className="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-brand text-ink shadow-glow transition hover:brightness-110 disabled:bg-none disabled:bg-surface disabled:text-faint disabled:shadow-none"
-          aria-label={editing ? 'Save edit' : 'Send'}
-        >
-          {editing ? <Check className="size-5" /> : <SendHorizontal className="size-5" />}
-        </button>
+        {!text.trim() && !photo && !editing ? (
+          <RecordButton onStart={() => void recorder.start()} disabled={recorder.state === 'starting'} />
+        ) : (
+          <button
+            type="submit"
+            disabled={editing ? !text.trim() && !editing.image_url : !text.trim() && !photo}
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-brand text-ink shadow-glow transition hover:brightness-110 disabled:bg-none disabled:bg-surface disabled:text-faint disabled:shadow-none"
+            aria-label={editing ? 'Save edit' : 'Send'}
+          >
+            {editing ? <Check className="size-5" /> : <SendHorizontal className="size-5" />}
+          </button>
+        )}
       </div>
+      )}
     </form>
   )
 }

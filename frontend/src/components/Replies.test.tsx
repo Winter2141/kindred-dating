@@ -20,6 +20,7 @@ const quote = (overrides: Partial<QuotedMessage> = {}): QuotedMessage => ({
   sender_id: 7,
   body: 'Mountains or the sea?',
   image_url: null,
+  audio_url: null,
   deleted_at: null,
   ...overrides,
 })

@@ -80,6 +80,7 @@ export interface QuotedMessage {
   sender_id: number
   body: string
   image_url: string | null
+  audio_url?: string | null
   deleted_at: string | null
 }
 
@@ -89,6 +90,10 @@ export interface Message {
   sender_id: number
   body: string
   image_url?: string | null
+  /** Voice notes: the recording, its length and 48 bars of 0-100 to draw. */
+  audio_url?: string | null
+  audio_ms?: number | null
+  waveform?: number[] | null
   reply_to?: QuotedMessage | null
   created_at: string
   read_at: string | null

@@ -151,6 +151,15 @@ export const api = {
     if (replyToId) form.append('reply_to_id', String(replyToId))
     return request<Message>(`/api/matches/${matchId}/photos`, { method: 'POST', body: form })
   },
+  sendVoice: (matchId: number, recording: Blob, durationMs: number, waveform: number[], replyToId?: number | null) => {
+    const form = new FormData()
+    const extension = recording.type.includes('mp4') ? 'm4a' : recording.type.includes('ogg') ? 'ogg' : 'webm'
+    form.append('file', recording, `voice-note.${extension}`)
+    form.append('duration_ms', String(Math.round(durationMs)))
+    form.append('waveform', JSON.stringify(waveform))
+    if (replyToId) form.append('reply_to_id', String(replyToId))
+    return request<Message>(`/api/matches/${matchId}/voice`, { method: 'POST', body: form })
+  },
   editMessage: (matchId: number, messageId: number, body: string) =>
     request<Message>(`/api/matches/${matchId}/messages/${messageId}`, { method: 'PATCH', body: { body } }),
   unsend: (matchId: number, messageId: number) =>

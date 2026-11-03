@@ -14,6 +14,7 @@ export function quoteOf(message: Message): QuotedMessage {
     sender_id: message.sender_id,
     body: trimQuote(message.body),
     image_url: message.image_url ?? null,
+    audio_url: message.audio_url ?? null,
     deleted_at: message.deleted_at ?? null,
   }
 }
@@ -21,6 +22,7 @@ export function quoteOf(message: Message): QuotedMessage {
 /** One line describing what a quote contains. */
 export function quoteText(quote: QuotedMessage): string {
   if (quote.deleted_at) return 'Message unsent'
+  if (quote.audio_url) return '🎤 Voice note'
   if (quote.image_url) return quote.body ? `📷 ${quote.body}` : '📷 Photo'
   return quote.body
 }

@@ -16,9 +16,9 @@ export function canUnsend(message: Message, meId: number, now = Date.now()): boo
   )
 }
 
-/** Same window as unsend; a photo can always lose or change its caption. */
+/** Same window as unsend; a photo can always lose or change its caption. Voice notes are final. */
 export function canEdit(message: Message, meId: number, now = Date.now()): boolean {
-  return canUnsend(message, meId, now)
+  return canUnsend(message, meId, now) && !message.audio_url
 }
 
 /** The latest message of mine that can still be edited, for the ↑ shortcut. */
@@ -129,14 +129,16 @@ export function MessageMenu({
                 <CornerUpLeft className="size-4" /> Reply
               </button>
             )}
-            <button
-              type="button"
-              role="menuitem"
-              onClick={copy}
-              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold hover:bg-raised"
-            >
-              <Copy className="size-4" /> {copied ? 'Copied' : 'Copy text'}
-            </button>
+            {message.body && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={copy}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold hover:bg-raised"
+              >
+                <Copy className="size-4" /> {copied ? 'Copied' : 'Copy text'}
+              </button>
+            )}
             {onEdit && canEdit(message, meId) && (
               <button
                 type="button"
