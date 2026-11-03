@@ -134,6 +134,10 @@ class Swipe(Base):
     swiper_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     target_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     action: Mapped[str] = mapped_column(String(8))
+    # A like can point at something on their profile ("photo:2", "prompt:My ideal Sunday")
+    # and carry a comment about it, which also opens the chat if it becomes a match.
+    liked_item: Mapped[str | None] = mapped_column(String(140), default=None)
+    comment: Mapped[str | None] = mapped_column(Text, default=None)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
     __table_args__ = (UniqueConstraint("swiper_id", "target_id", name="uq_swipes_pair"),)

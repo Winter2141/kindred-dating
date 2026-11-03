@@ -10,6 +10,7 @@ from app.models import Match, NotificationKind, Swipe, SwipeAction, User
 from app.ratelimit import per_user
 from app.schemas import (
     Candidate,
+    LikedItem,
     LikeOut,
     MatchOut,
     PublicProfile,
@@ -84,7 +85,19 @@ async def swipe(data: SwipeIn, user: CurrentUser, session: SessionDep, hub: HubD
     if existing is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "You've already swiped on this person")
 
-    session.add(Swipe(swiper_id=user.id, target_id=target.id, action=data.action))
+    if data.liked_item is not None and resolve_item(target, data.liked_item) is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "That photo or prompt isn't on their profile"
+        )
+    session.add(
+        Swipe(
+            swiper_id=user.id,
+            target_id=target.id,
+            action=data.action,
+            liked_item=data.liked_item,
+            comment=data.comment,
+        )
+    )
     await session.commit()
     if not data.action.is_positive:
         return SwipeOut(matched=False)
@@ -105,14 +118,44 @@ async def swipe(data: SwipeIn, user: CurrentUser, session: SessionDep, hub: HubD
                 if data.action is SwipeAction.SUPER
                 else NotificationKind.LIKE
             )
-            await notify(session, hub, target.id, kind, actor_id=user.id)
+            await notify(session, hub, target.id, kind, actor_id=user.id, body=data.comment or "")
         return SwipeOut(matched=False)
 
     match = await chat.create_match(session, hub, user, target)
+    await open_with_comments(session, hub, match)
     return SwipeOut(
         matched=True,
         match=MatchOut.build(match, user.id, online=hub.manager.is_online(target.id)),
     )
+
+
+def resolve_item(person: User, item: str) -> LikedItem | None:
+    """Turn "photo:1" or "prompt:<question>" into what it points at, if it's still there."""
+    kind, _, value = item.partition(":")
+    if kind == "photo" and value.isdigit() and int(value) < len(person.photos):
+        return LikedItem(kind="photo", photo=person.photos[int(value)])
+    if kind == "prompt":
+        for prompt in person.prompts:
+            if prompt["question"] == value:
+                return LikedItem(kind="prompt", question=value, answer=prompt["answer"])
+    return None
+
+
+async def open_with_comments(session: SessionDep, hub: HubDep, match: Match) -> None:
+    """A comment sent with a like becomes the first message once you match."""
+    swipes = (
+        await session.scalars(
+            select(Swipe)
+            .where(
+                ((Swipe.swiper_id == match.user_a_id) & (Swipe.target_id == match.user_b_id))
+                | ((Swipe.swiper_id == match.user_b_id) & (Swipe.target_id == match.user_a_id)),
+                Swipe.comment.is_not(None),
+            )
+            .order_by(Swipe.created_at)
+        )
+    ).all()
+    for swipe in swipes:
+        await chat.send_message(session, hub, match, swipe.swiper_id, swipe.comment or "")
 
 
 @router.post("/swipes/undo")
@@ -161,6 +204,8 @@ async def likes_you(user: CurrentUser, session: SessionDep, hub: HubDep) -> list
             ),
             action=SwipeAction(swipe.action),
             created_at=swipe.created_at,
+            comment=swipe.comment,
+            liked_item=resolve_item(user, swipe.liked_item) if swipe.liked_item else None,
         )
         for swipe, liker in rows
     ]

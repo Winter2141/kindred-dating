@@ -371,6 +371,27 @@ class TopPicksOut(BaseModel):
 class SwipeIn(BaseModel):
     target_id: int
     action: SwipeAction
+    liked_item: Annotated[str, StringConstraints(max_length=140)] | None = Field(
+        default=None, description='What the like is about: "photo:<index>" or "prompt:<question>"'
+    )
+    comment: Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)] | None = None
+
+    @model_validator(mode="after")
+    def comments_go_with_likes(self) -> Self:
+        if self.action is SwipeAction.PASS and (self.comment or self.liked_item):
+            raise ValueError("only likes can carry a comment")
+        if self.comment == "":
+            self.comment = None
+        return self
+
+
+class LikedItem(BaseModel):
+    """What someone liked on your profile, ready to show next to their comment."""
+
+    kind: Literal["photo", "prompt"]
+    photo: str | None = None
+    question: str | None = None
+    answer: str | None = None
 
 
 class ReactionOut(BaseModel):
@@ -515,6 +536,8 @@ class LikeOut(BaseModel):
     user: PublicProfile
     action: SwipeAction
     created_at: datetime
+    comment: str | None = None
+    liked_item: LikedItem | None = None
 
 
 class Interest(BaseModel):
