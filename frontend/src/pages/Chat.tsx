@@ -908,79 +908,79 @@ function Composer({
           onSend={() => void sendRecording()}
         />
       ) : (
-      <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-[1.6rem] border border-line bg-raised/70 p-1.5 pl-2 transition focus-within:border-coral/50">
-        <button
-          type="button"
-          onClick={() => fileInput.current?.click()}
-          disabled={Boolean(editing)}
-          className="grid size-11 shrink-0 place-items-center rounded-full text-muted transition hover:bg-surface hover:text-cream disabled:opacity-40"
-          aria-label="Attach a photo"
-          title="Attach a photo"
-        >
-          <ImagePlus className="size-5" />
-        </button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/heic"
-          className="hidden"
-          aria-label="Photo to send"
-          onChange={(e) => {
-            pick(e.target.files?.[0])
-            e.target.value = ''
-          }}
-        />
-        <textarea
-          ref={textarea}
-          value={text}
-          rows={1}
-          maxLength={photo ? 500 : 2000}
-          onChange={(e) => {
-            setText(e.target.value)
-            setTyping(e.target.value.trim().length > 0)
-            clearTimeout(idleTimer.current)
-            idleTimer.current = setTimeout(() => setTyping(false), TYPING_IDLE_MS)
-          }}
-          onBlur={() => setTyping(false)}
-          onPaste={(e) => {
-            const file = [...e.clipboardData.files].find((f) => f.type.startsWith('image/'))
-            if (file) {
-              e.preventDefault()
-              pick(file)
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-              e.preventDefault()
-              submit()
-            } else if (e.key === 'Escape' && editing && onCancelEdit) {
-              e.preventDefault()
-              onCancelEdit()
-            } else if (e.key === 'Escape' && onCancelReply) {
-              e.preventDefault()
-              onCancelReply()
-            } else if (e.key === 'ArrowUp' && !text && !photo && !editing && onEditLast) {
-              e.preventDefault()
-              onEditLast()
-            }
-          }}
-          placeholder={editing ? 'Edit your message…' : photo ? 'Add a caption…' : `Message ${name}…`}
-          aria-label={`Message ${name}`}
-          className="max-h-40 flex-1 resize-none bg-transparent py-2.5 text-[15px] text-cream outline-none placeholder:text-faint"
-        />
-        {!text.trim() && !photo && !editing ? (
-          <RecordButton onStart={() => void recorder.start()} disabled={recorder.state === 'starting'} />
-        ) : (
+        <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-[1.6rem] border border-line bg-raised/70 p-1.5 pl-2 transition focus-within:border-coral/50">
           <button
-            type="submit"
-            disabled={editing ? !text.trim() && !editing.image_url : !text.trim() && !photo}
-            className="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-brand text-ink shadow-glow transition hover:brightness-110 disabled:bg-none disabled:bg-surface disabled:text-faint disabled:shadow-none"
-            aria-label={editing ? 'Save edit' : 'Send'}
+            type="button"
+            onClick={() => fileInput.current?.click()}
+            disabled={Boolean(editing)}
+            className="grid size-11 shrink-0 place-items-center rounded-full text-muted transition hover:bg-surface hover:text-cream disabled:opacity-40"
+            aria-label="Attach a photo"
+            title="Attach a photo"
           >
-            {editing ? <Check className="size-5" /> : <SendHorizontal className="size-5" />}
+            <ImagePlus className="size-5" />
           </button>
-        )}
-      </div>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/heic"
+            className="hidden"
+            aria-label="Photo to send"
+            onChange={(e) => {
+              pick(e.target.files?.[0])
+              e.target.value = ''
+            }}
+          />
+          <textarea
+            ref={textarea}
+            value={text}
+            rows={1}
+            maxLength={photo ? 500 : 2000}
+            onChange={(e) => {
+              setText(e.target.value)
+              setTyping(e.target.value.trim().length > 0)
+              clearTimeout(idleTimer.current)
+              idleTimer.current = setTimeout(() => setTyping(false), TYPING_IDLE_MS)
+            }}
+            onBlur={() => setTyping(false)}
+            onPaste={(e) => {
+              const file = [...e.clipboardData.files].find((f) => f.type.startsWith('image/'))
+              if (file) {
+                e.preventDefault()
+                pick(file)
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault()
+                submit()
+              } else if (e.key === 'Escape' && editing && onCancelEdit) {
+                e.preventDefault()
+                onCancelEdit()
+              } else if (e.key === 'Escape' && onCancelReply) {
+                e.preventDefault()
+                onCancelReply()
+              } else if (e.key === 'ArrowUp' && !text && !photo && !editing && onEditLast) {
+                e.preventDefault()
+                onEditLast()
+              }
+            }}
+            placeholder={editing ? 'Edit your message…' : photo ? 'Add a caption…' : `Message ${name}…`}
+            aria-label={`Message ${name}`}
+            className="max-h-40 flex-1 resize-none bg-transparent py-2.5 text-[15px] text-cream outline-none placeholder:text-faint"
+          />
+          {!text.trim() && !photo && !editing ? (
+            <RecordButton onStart={() => void recorder.start()} disabled={recorder.state === 'starting'} />
+          ) : (
+            <button
+              type="submit"
+              disabled={editing ? !text.trim() && !editing.image_url : !text.trim() && !photo}
+              className="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-brand text-ink shadow-glow transition hover:brightness-110 disabled:bg-none disabled:bg-surface disabled:text-faint disabled:shadow-none"
+              aria-label={editing ? 'Save edit' : 'Send'}
+            >
+              {editing ? <Check className="size-5" /> : <SendHorizontal className="size-5" />}
+            </button>
+          )}
+        </div>
       )}
     </form>
   )

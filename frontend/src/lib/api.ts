@@ -2,6 +2,7 @@ import { useAuth } from '@/store/auth'
 import type {
   AdminReport,
   AppNotification,
+  ChatSettings,
   DateProposal,
   Insights,
   Candidate,
@@ -103,6 +104,12 @@ export type ProfileUpdate = Partial<
   >
 > & { latitude?: number; longitude?: number }
 
+export interface ChatSettingsChange {
+  pinned?: boolean
+  archived?: boolean
+  mute?: '1h' | '8h' | '1w' | 'always' | 'off'
+}
+
 export const api = {
   meta: () => request<Meta>('/api/meta'),
   login: (email: string, password: string) =>
@@ -143,6 +150,11 @@ export const api = {
   search: (query: string) => request<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`),
   match: (id: number) => request<Match>(`/api/matches/${id}`),
   unmatch: (id: number) => request<void>(`/api/matches/${id}`, { method: 'DELETE' }),
+  chatSettings: (id: number, changes: ChatSettingsChange) =>
+    request<ChatSettings & { match_id: number }>(`/api/matches/${id}/settings`, {
+      method: 'PATCH',
+      body: { ...changes },
+    }),
   messages: (id: number, before?: number) =>
     request<Message[]>(`/api/matches/${id}/messages${before ? `?before=${before}` : ''}`),
   icebreakers: (id: number) => request<string[]>(`/api/matches/${id}/icebreakers`),

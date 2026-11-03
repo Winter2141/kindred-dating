@@ -112,6 +112,18 @@ export interface Match {
   last_activity_at: string
   last_message: Message | null
   unread_count: number
+  /** How I've filed this chat; nobody else sees these. */
+  pinned?: boolean
+  archived?: boolean
+  muted?: boolean
+  muted_until?: string | null
+}
+
+export interface ChatSettings {
+  pinned: boolean
+  archived: boolean
+  muted: boolean
+  muted_until: string | null
 }
 
 export interface SearchHit {
@@ -231,6 +243,7 @@ export type ServerEvent =
   | { type: 'presence'; user_id: number; online: boolean; last_active_at: string }
   | { type: 'match.new'; match: Match }
   | { type: 'match.removed'; match_id: number }
+  | ({ type: 'match.settings'; match_id: number } & ChatSettings)
   | { type: 'notification.new'; notification: AppNotification }
   | { type: 'date.updated'; date: DateProposal }
   | { type: 'pong' }

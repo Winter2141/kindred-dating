@@ -4,6 +4,7 @@ import { useLocation } from 'react-router'
 import {
   applyEdit,
   applyEditToMatches,
+  applyChatSettings,
   applyMessageToMatches,
   applyReaction,
   applyReadReceipt,
@@ -109,6 +110,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       const match = queryClient
         .getQueryData<Match[]>(keys.matches)
         ?.find((m) => m.id === message.match_id)
+      if (match?.muted) return
       if (match) {
         // Even the open chat is "unseen" while the tab is in the background.
         notifyDesktop(
@@ -249,6 +251,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
               href: `/app/matches/${match.id}`,
             })
           }
+          break
+        }
+        case 'match.settings': {
+          const { match_id: matchId, pinned, archived, muted, muted_until: mutedUntil } = event
+          queryClient.setQueryData<Match[]>(keys.matches, (matches) =>
+            applyChatSettings(matches, matchId, { pinned, archived, muted, muted_until: mutedUntil }),
+          )
           break
         }
         case 'match.removed':

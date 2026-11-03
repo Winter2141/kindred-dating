@@ -1,6 +1,6 @@
 /** Pure helpers that fold real-time events into the React Query caches. */
 import { trimQuote } from './quotes'
-import type { Match, Message } from './types'
+import type { ChatSettings, Match, Message } from './types'
 
 export const keys = {
   me: ['me'] as const,
@@ -131,7 +131,37 @@ export function applyMessageToMatches(
     last_activity_at: message.created_at,
     unread_count: counts ? match.unread_count + 1 : match.unread_count,
   }
-  return [updated, ...matches.slice(0, index), ...matches.slice(index + 1)]
+  return pinnedFirst([updated, ...matches.slice(0, index), ...matches.slice(index + 1)])
+}
+
+/** Keep pinned chats on top (in their order) without reshuffling the rest. */
+export function pinnedFirst(matches: Match[]): Match[] {
+  return [...matches.filter((m) => m.pinned), ...matches.filter((m) => !m.pinned)]
+}
+
+/** Fold a chat's new pin/mute/archive state into the list. A newly pinned chat goes last among pins. */
+export function applyChatSettings(
+  matches: Match[] | undefined,
+  matchId: number,
+  settings: Partial<ChatSettings>,
+): Match[] | undefined {
+  if (!matches) return matches
+  const current = matches.find((m) => m.id === matchId)
+  if (!current) return matches
+  const updated = { ...current, ...settings }
+  const others = matches.filter((m) => m.id !== matchId)
+  if (updated.pinned && !current.pinned) {
+    const pins = others.filter((m) => m.pinned)
+    return [...pins, updated, ...others.filter((m) => !m.pinned)]
+  }
+  if (!updated.pinned && current.pinned) {
+    // Unpinned: back among the rest, by recent activity.
+    const rest = [...others.filter((m) => !m.pinned), updated].sort(
+      (a, b) => Date.parse(b.last_activity_at) - Date.parse(a.last_activity_at),
+    )
+    return [...others.filter((m) => m.pinned), ...rest]
+  }
+  return matches.map((m) => (m.id === matchId ? updated : m))
 }
 
 export function clearUnread(matches: Match[] | undefined, matchId: number): Match[] | undefined {
@@ -154,6 +184,7 @@ export function setPresence(
   )
 }
 
+/** Chats with unread messages, not counting muted ones. */
 export function totalUnread(matches: Match[] | undefined): number {
-  return (matches ?? []).reduce((sum, m) => sum + (m.unread_count > 0 ? 1 : 0), 0)
+  return (matches ?? []).reduce((sum, m) => sum + (m.unread_count > 0 && !m.muted ? 1 : 0), 0)
 }

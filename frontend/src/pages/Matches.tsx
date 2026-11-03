@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { CalendarCheck, MessageCircleHeart, Search } from 'lucide-react'
+import { Archive, BellOff, CalendarCheck, ChevronDown, MessageCircleHeart, Pin, Search } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
+import { ChatMenu, muteLabel } from '@/components/ChatMenu'
 import { MIN_SEARCH_LENGTH, MessageResults } from '@/components/ChatSearch'
 import { Avatar, EmptyState, Spinner, TypingDots } from '@/components/ui'
 import { api } from '@/lib/api'
@@ -50,6 +51,7 @@ function MatchList() {
   const online = useLive((s) => s.online)
   const typing = useLive((s) => s.typing)
   const [filter, setFilter] = useState('')
+  const [showArchived, setShowArchived] = useState(false)
   const upcoming = useQuery({ queryKey: keys.upcomingDates, queryFn: api.upcomingDates })
 
   if (matches.isPending) {
@@ -62,9 +64,13 @@ function MatchList() {
   const all = matches.data ?? []
   const searching = filter.trim().length >= MIN_SEARCH_LENGTH
   const fresh = all.filter((m) => !m.last_message)
-  const conversations = all
+  const named = all
     .filter((m) => m.last_message)
     .filter((m) => m.user.name.toLowerCase().includes(filter.trim().toLowerCase()))
+  // Searching looks through archived chats too.
+  const conversations = filter.trim() ? named : named.filter((m) => !m.archived)
+  const archived = named.filter((m) => m.archived)
+  const archivedUnread = archived.filter((m) => m.unread_count > 0).length
 
   if (all.length === 0) {
     return (
@@ -163,7 +169,34 @@ function MatchList() {
             />
           </li>
         ))}
-        {conversations.length === 0 && !searching && (
+        {!filter.trim() && archived.length > 0 && (
+          <li className="pt-2">
+            <button
+              type="button"
+              onClick={() => setShowArchived((v) => !v)}
+              aria-expanded={showArchived}
+              className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-muted transition hover:bg-raised/50 hover:text-cream"
+            >
+              <Archive className="size-4" />
+              Archived ({archived.length})
+              {archivedUnread > 0 && <span className="size-2 rounded-full bg-coral" aria-label="Unread messages" />}
+              <ChevronDown className={clsx('ml-auto size-4 transition', showArchived && 'rotate-180')} />
+            </button>
+          </li>
+        )}
+        {showArchived &&
+          !filter.trim() &&
+          archived.map((match) => (
+            <li key={match.id}>
+              <ConversationRow
+                match={match}
+                meId={me?.id}
+                online={online[match.user.id] ?? match.user.is_online}
+                typing={typing[match.id] !== undefined}
+              />
+            </li>
+          ))}
+        {conversations.length === 0 && archived.length === 0 && !searching && (
           <li className="px-3 py-8 text-center text-sm text-muted">
             {filter ? 'No conversations match that name.' : 'Say hi to a new match to start chatting.'}
           </li>
@@ -192,45 +225,59 @@ function ConversationRow({
   const last = match.last_message
   const unread = match.unread_count > 0
   return (
-    <NavLink
-      to={`/app/matches/${match.id}`}
-      className={({ isActive }) =>
-        clsx(
-          'flex items-center gap-3.5 rounded-2xl px-3 py-3 transition',
-          isActive ? 'bg-raised' : 'hover:bg-raised/50',
-        )
-      }
-    >
-      <Avatar src={match.user.photos[0]} name={match.user.name} size={52} online={online} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className={clsx('truncate text-[15px]', unread ? 'font-bold' : 'font-semibold')}>
-            {match.user.name}
-          </p>
-          {last && (
-            <span className={clsx('shrink-0 text-xs', unread ? 'text-coral' : 'text-faint')}>
-              {shortAgo(last.created_at)}
-            </span>
-          )}
-        </div>
-        <div className="mt-0.5 flex items-center justify-between gap-2">
-          {typing ? (
-            <span className="flex items-center gap-2 text-sm text-coral">
-              <TypingDots /> typing
-            </span>
-          ) : (
-            <p className={clsx('truncate text-sm', unread ? 'text-cream' : 'text-muted')}>
-              {last?.sender_id === meId && <span className="text-faint">You: </span>}
-              {last?.deleted_at ? <span className="italic">Message unsent</span> : last && previewText(last)}
+    <div className="group relative">
+      <NavLink
+        to={`/app/matches/${match.id}`}
+        className={({ isActive }) =>
+          clsx(
+            'flex items-center gap-3.5 rounded-2xl py-3 pr-12 pl-3 transition lg:pr-3',
+            isActive ? 'bg-raised' : 'hover:bg-raised/50',
+          )
+        }
+      >
+        <Avatar src={match.user.photos[0]} name={match.user.name} size={52} online={online} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className={clsx('flex min-w-0 items-center gap-1.5 text-[15px]', unread ? 'font-bold' : 'font-semibold')}>
+              <span className="truncate">{match.user.name}</span>
+              {match.pinned && <Pin className="size-3.5 shrink-0 text-apricot" aria-label="Pinned" />}
+              {match.muted && (
+                <BellOff className="size-3.5 shrink-0 text-faint" aria-label={muteLabel(match.muted_until)} />
+              )}
             </p>
-          )}
-          {unread && (
-            <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-gradient-brand px-1.5 text-[11px] font-bold text-ink">
-              {match.unread_count}
-            </span>
-          )}
+            {last && (
+              <span className={clsx('shrink-0 text-xs', unread ? 'text-coral' : 'text-faint')}>
+                {shortAgo(last.created_at)}
+              </span>
+            )}
+          </div>
+          <div className="mt-0.5 flex items-center justify-between gap-2">
+            {typing ? (
+              <span className="flex items-center gap-2 text-sm text-coral">
+                <TypingDots /> typing
+              </span>
+            ) : (
+              <p className={clsx('truncate text-sm', unread ? 'text-cream' : 'text-muted')}>
+                {last?.sender_id === meId && <span className="text-faint">You: </span>}
+                {last?.deleted_at ? <span className="italic">Message unsent</span> : last && previewText(last)}
+              </p>
+            )}
+            {unread && (
+              <span
+                className={clsx(
+                  'grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1.5 text-[11px] font-bold',
+                  match.muted ? 'bg-line-strong text-cream' : 'bg-gradient-brand text-ink',
+                )}
+              >
+                {match.unread_count}
+              </span>
+            )}
+          </div>
         </div>
+      </NavLink>
+      <div className="absolute top-1/2 right-2 -translate-y-1/2">
+        <ChatMenu match={match} />
       </div>
-    </NavLink>
+    </div>
   )
 }
