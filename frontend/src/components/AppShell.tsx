@@ -189,8 +189,9 @@ export function AppShell() {
         </nav>
 
         <div className="mt-auto space-y-4">
-          <div className="px-3">
+          <div className="flex items-center justify-between pl-3">
             <ConnectionDot />
+            <ShortcutsButton onClick={() => setHelpOpen(true)} />
           </div>
           {user && (
             <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface/70 p-3">
@@ -199,7 +200,6 @@ export function AppShell() {
                 <p className="truncate text-sm font-semibold">{user.name}</p>
                 <p className="truncate text-xs text-muted">{user.email}</p>
               </div>
-              <ShortcutsButton onClick={() => setHelpOpen(true)} />
               <Link
                 to="/app/settings"
                 className="grid size-9 place-items-center rounded-xl text-muted transition hover:bg-raised hover:text-cream"
