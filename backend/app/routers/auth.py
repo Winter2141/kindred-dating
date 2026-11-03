@@ -9,8 +9,10 @@ from app.security import create_access_token, hash_password, verify_password
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-def _token_for(user: User, settings: SettingsDep) -> TokenOut:
-    token = create_access_token(user.id, settings.secret_key, settings.access_token_ttl_minutes)
+def token_for(user: User, settings: SettingsDep) -> TokenOut:
+    token = create_access_token(
+        user.id, settings.secret_key, settings.access_token_ttl_minutes, user.token_version
+    )
     return TokenOut(access_token=token, user=MeOut.build(user))
 
 
@@ -38,7 +40,7 @@ async def register(data: RegisterIn, session: SessionDep, settings: SettingsDep)
     )
     session.add(user)
     await session.commit()
-    return _token_for(user, settings)
+    return token_for(user, settings)
 
 
 @router.post("/login")
@@ -46,4 +48,4 @@ async def login(data: LoginIn, session: SessionDep, settings: SettingsDep) -> To
     user = await session.scalar(select(User).where(User.email == data.email.lower()))
     if user is None or not verify_password(data.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wrong email or password")
-    return _token_for(user, settings)
+    return token_for(user, settings)

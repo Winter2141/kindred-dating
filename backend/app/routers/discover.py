@@ -38,6 +38,7 @@ async def discover(
     rows = await session.scalars(
         select(User).where(
             User.id != user.id,
+            User.is_paused.is_(False),
             User.id.not_in(swiped_by_me),
             User.id.not_in(passed_on_me),
             User.gender.in_(user.interested_in),

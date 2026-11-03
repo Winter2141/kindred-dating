@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import Settings, get_settings
 from app.db import Database
 from app.realtime import Hub
-from app.routers import auth, discover, matches, users, ws
+from app.routers import account, auth, discover, matches, users, ws
 from app.seed import seed_demo_data
 
 
@@ -41,7 +41,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    for module in (auth, users, discover, matches, ws):
+    for module in (auth, users, account, discover, matches, ws):
         app.include_router(module.router)
     app.mount(settings.media_url, StaticFiles(directory=settings.media_dir), name="media")
 

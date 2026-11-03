@@ -28,10 +28,13 @@ async def get_session(hub: Annotated[Hub, Depends(get_hub)]) -> AsyncIterator[As
 
 async def user_from_token(session: AsyncSession, token: str, secret: str) -> User | None:
     try:
-        user_id = decode_access_token(token, secret)
+        user_id, version = decode_access_token(token, secret)
     except InvalidToken:
         return None
-    return await session.get(User, user_id)
+    user = await session.get(User, user_id)
+    if user is None or user.token_version != version:
+        return None  # deleted, or signed out everywhere since this token was issued
+    return user
 
 
 async def get_current_user(

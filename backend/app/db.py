@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, event, inspect
 from sqlalchemy.engine import Connection, Dialect
@@ -11,6 +12,9 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.types import TypeDecorator
+
+if TYPE_CHECKING:
+    from alembic.config import Config
 
 MIGRATIONS_DIR = Path(__file__).with_name("migrations")
 # The schema the app had before it used migrations; such databases are stamped with it.
@@ -73,13 +77,19 @@ class Database:
         await self.engine.dispose()
 
 
-def run_migrations(connection: Connection) -> None:
-    from alembic import command
+def alembic_config(connection: Connection) -> "Config":
     from alembic.config import Config
 
     config = Config()
     config.set_main_option("script_location", str(MIGRATIONS_DIR))
     config.attributes["connection"] = connection
+    return config
+
+
+def run_migrations(connection: Connection) -> None:
+    from alembic import command
+
+    config = alembic_config(connection)
     tables = inspect(connection).get_table_names()
     if "users" in tables and "alembic_version" not in tables:
         command.stamp(config, BASELINE_REVISION)

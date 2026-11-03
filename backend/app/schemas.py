@@ -22,6 +22,7 @@ MessageBody = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)
 ]
 Age = Annotated[int, Field(ge=18, le=99)]
+Password = Annotated[str, Field(min_length=8, max_length=128)]
 
 
 class Prompt(BaseModel):
@@ -75,7 +76,7 @@ class ProfileFields(BaseModel):
 
 class RegisterIn(ProfileFields):
     email: EmailStr
-    password: Annotated[str, Field(min_length=8, max_length=128)]
+    password: Password
     name: Name
     birthdate: date
     gender: Gender
@@ -102,6 +103,15 @@ class LoginIn(BaseModel):
     password: str
 
 
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: Password
+
+
+class AccountDelete(BaseModel):
+    password: str
+
+
 class ProfileUpdate(BaseModel):
     name: Name | None = None
     bio: Bio | None = None
@@ -112,6 +122,7 @@ class ProfileUpdate(BaseModel):
     interested_in: Annotated[list[Gender], Field(min_length=1)] | None = None
     age_min: Age | None = None
     age_max: Age | None = None
+    is_paused: bool | None = None
     photos: list[str] | None = Field(
         default=None, description="Reorder or remove existing photos; new ones are uploaded."
     )
@@ -167,6 +178,7 @@ class MeOut(PublicProfile):
     interested_in: list[Gender]
     age_min: int
     age_max: int
+    is_paused: bool
 
     @classmethod
     def build(cls, user: User, *, online: bool = True) -> Self:
@@ -178,6 +190,7 @@ class MeOut(PublicProfile):
             interested_in=[Gender(g) for g in user.interested_in],
             age_min=user.age_min,
             age_max=user.age_max,
+            is_paused=user.is_paused,
         )
 
 

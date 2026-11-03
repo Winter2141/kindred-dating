@@ -68,7 +68,7 @@ def _process_photo(raw: bytes, destination: Path) -> None:
         raise ValueError("not an image") from exc
 
 
-def _local_photo_path(url: str, settings: Settings) -> Path | None:
+def local_photo_path(url: str, settings: Settings) -> Path | None:
     prefix = settings.media_url.rstrip("/") + "/"
     if not url.startswith(prefix):
         return None
@@ -111,7 +111,7 @@ async def delete_photo(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Photo not found")
     user.photos = [p for p in user.photos if p != url]
     await session.commit()
-    if (path := _local_photo_path(url, settings)) is not None:
+    if (path := local_photo_path(url, settings)) is not None:
         path.unlink(missing_ok=True)
     return MeOut.build(user)
 

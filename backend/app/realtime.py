@@ -57,6 +57,14 @@ class ConnectionManager:
                 log.debug("dropping dead socket for user %s", user_id)
                 self.disconnect(user_id, websocket)
 
+    async def close_all(self, user_id: int, code: int) -> None:
+        """Close every socket a user has open, e.g. after they sign out everywhere."""
+        for websocket in list(self._sockets.pop(user_id, ())):
+            try:
+                await websocket.close(code=code)
+            except Exception:
+                log.debug("socket for user %s was already closed", user_id)
+
     async def send_many(self, user_ids: Iterable[int], payload: dict[str, Any]) -> None:
         await asyncio.gather(*(self.send(uid, payload) for uid in set(user_ids)))
 

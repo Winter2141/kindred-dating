@@ -11,6 +11,8 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    false,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -56,6 +58,10 @@ class User(Base):
     prompts: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
 
     is_persona: Mapped[bool] = mapped_column(default=False)
+    # Paused profiles keep their matches and chats but don't appear in anyone's deck.
+    is_paused: Mapped[bool] = mapped_column(default=False, server_default=false())
+    # Bumped to revoke every token issued so far (password change, sign out everywhere).
+    token_version: Mapped[int] = mapped_column(default=0, server_default=text("0"))
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     last_active_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
