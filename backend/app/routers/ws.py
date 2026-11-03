@@ -204,6 +204,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = "") -> None:
 
     await websocket.accept()
     if hub.manager.connect(user.id, websocket):
+        await hub.manager.announce(user.id, online=True)
         async with hub.db.session() as session:
             user = await session.get(User, user.id) or user
             user.last_active_at = utcnow()
@@ -254,7 +255,8 @@ async def websocket_endpoint(websocket: WebSocket, token: str = "") -> None:
 
 
 async def _went_offline(hub: Hub, user_id: int) -> None:
-    if hub.manager.is_online(user_id):  # reconnected in the meantime
+    await hub.manager.announce(user_id, online=False)
+    if hub.manager.is_online(user_id):  # reconnected in the meantime, maybe elsewhere
         return
     for call in calls.registry(hub).for_user(user_id):
         await calls.end(hub, call, ended_by=user_id, reason="ended")
