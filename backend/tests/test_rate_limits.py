@@ -110,3 +110,28 @@ def _register(client: TestClient, email: str, gender: str, interested_in: list[s
     )
     assert response.status_code == 201, response.text
     return _Account(response.json())
+
+
+async def test_redis_limits_are_shared_between_workers() -> None:
+    from fakeredis import FakeServer
+    from fakeredis.aioredis import FakeRedis
+
+    from app.limits import RedisRateLimiter
+
+    clock = FakeClock()
+    server = FakeServer()
+    worker_a = RedisRateLimiter(FakeRedis(server=server), clock)
+    worker_b = RedisRateLimiter(FakeRedis(server=server), clock)
+    limit = Limit("demo", 3, 10)
+
+    assert await worker_a.check("ip", limit) is None
+    assert await worker_b.check("ip", limit) is None
+    assert await worker_a.check("ip", limit) is None
+    # The fourth hit is refused on either worker: they count the same window.
+    assert await worker_b.check("ip", limit) == 10
+    assert await worker_a.check("other", limit) is None
+
+    clock.now += 4
+    assert await worker_a.check("ip", limit) == 6  # refused hits don't extend the window
+    clock.now += 6
+    assert await worker_b.check("ip", limit) is None

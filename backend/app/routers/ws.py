@@ -228,7 +228,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = "") -> None:
             if (
                 isinstance(event, SendMessage)
                 and hub.settings.rate_limit_enabled
-                and hub.limiter.hit(str(user.id), MESSAGES) is not None
+                and await hub.limiter.check(str(user.id), MESSAGES) is not None
             ):
                 await websocket.send_json(
                     {

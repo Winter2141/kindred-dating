@@ -24,7 +24,7 @@ def per_ip(limit: Limit) -> object:
         if not hub.settings.rate_limit_enabled:
             return
         address = request.client.host if request.client else "unknown"
-        if (wait := hub.limiter.hit(address, limit)) is not None:
+        if (wait := await hub.limiter.check(address, limit)) is not None:
             raise _too_many(wait)
 
     return Depends(check)
@@ -36,7 +36,7 @@ def per_user(limit: Limit) -> object:
     async def check(user: CurrentUser, hub: HubDep) -> None:
         if not hub.settings.rate_limit_enabled:
             return
-        if (wait := hub.limiter.hit(str(user.id), limit)) is not None:
+        if (wait := await hub.limiter.check(str(user.id), limit)) is not None:
             raise _too_many(wait)
 
     return Depends(check)

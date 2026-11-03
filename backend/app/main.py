@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.broker import RedisBroker
 from app.config import Settings, get_settings
 from app.db import Database
+from app.limits import RateLimiter, RedisRateLimiter
 from app.observability import Metrics, RequestContextMiddleware, configure_logging
 from app.realtime import ConnectionManager, Hub
 from app.routers import (
@@ -44,7 +45,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if settings.seed_on_startup:
             await seed_demo_data(db)
         broker = RedisBroker.from_url(settings.redis_url) if settings.redis_url else None
-        app.state.hub = hub = Hub(settings=settings, db=db, manager=ConnectionManager(broker))
+        # With Redis, rate limits are counted across every worker, not per process.
+        limiter = (
+            RedisRateLimiter.from_url(settings.redis_url) if settings.redis_url else RateLimiter()
+        )
+        app.state.hub = hub = Hub(
+            settings=settings, db=db, manager=ConnectionManager(broker), limiter=limiter
+        )
         await hub.manager.start()
         yield
         await hub.shutdown()

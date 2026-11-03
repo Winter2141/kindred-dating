@@ -25,7 +25,7 @@ from fastapi.encoders import jsonable_encoder
 from app.broker import Broker, LocalBroker
 from app.config import Settings
 from app.db import Database
-from app.limits import RateLimiter
+from app.limits import Limiter, RateLimiter
 
 log = logging.getLogger(__name__)
 
@@ -200,7 +200,7 @@ class Hub:
     settings: Settings
     db: Database
     manager: ConnectionManager = field(default_factory=ConnectionManager)
-    limiter: RateLimiter = field(default_factory=RateLimiter)
+    limiter: Limiter = field(default_factory=RateLimiter)
     # Matches with a persona reply in flight; later messages are folded into that reply.
     pending_replies: set[int] = field(default_factory=set)
     _tasks: set[asyncio.Task[Any]] = field(default_factory=set)
