@@ -20,6 +20,8 @@ export interface PublicProfile {
   prompts: Prompt[]
   last_active_at: string
   is_online: boolean
+  /** Rounded kilometres from you, when both of you have a location. */
+  distance_km?: number | null
 }
 
 export interface Me extends PublicProfile {
@@ -28,6 +30,8 @@ export interface Me extends PublicProfile {
   interested_in: Gender[]
   age_min: number
   age_max: number
+  max_distance_km: number
+  has_location: boolean
   is_paused: boolean
   is_admin: boolean
 }

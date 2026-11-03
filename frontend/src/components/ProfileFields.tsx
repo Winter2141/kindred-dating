@@ -1,5 +1,10 @@
+import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
 import { Plus, Trash2 } from 'lucide-react'
+import { useDeferredValue, useId } from 'react'
+import { api } from '@/lib/api'
+import { keys } from '@/lib/cache'
+import { DISTANCE_MAX, DISTANCE_MIN, snapDistance } from '@/lib/distance'
 import type { Gender, Prompt } from '@/lib/types'
 import { useMeta } from './ui'
 
@@ -203,5 +208,58 @@ export function AgeRange({
         />
       </div>
     </div>
+  )
+}
+
+export function DistanceSlider({ value, onChange }: { value: number; onChange: (km: number) => void }) {
+  const percent = ((value - DISTANCE_MIN) / (DISTANCE_MAX - DISTANCE_MIN)) * 100
+  return (
+    <label className="block">
+      <span className="mb-2 flex items-baseline justify-between">
+        <span className="label mb-0">Maximum distance</span>
+        <span className="text-sm font-semibold text-apricot">{value >= DISTANCE_MAX ? `${DISTANCE_MAX}+ km` : `${value} km`}</span>
+      </span>
+      <input
+        type="range"
+        min={DISTANCE_MIN}
+        max={DISTANCE_MAX}
+        step={5}
+        value={value}
+        onChange={(e) => onChange(snapDistance(e.target.valueAsNumber))}
+        className="h-2 w-full cursor-pointer appearance-none rounded-full accent-[var(--color-coral)]"
+        style={{
+          background: `linear-gradient(90deg, var(--color-rose), var(--color-apricot) ${percent}%, var(--color-raised) ${percent}%)`,
+        }}
+      />
+      <span className="mt-1.5 block text-xs text-faint">Both of you have to be within each other's distance to show up.</span>
+    </label>
+  )
+}
+
+/** A text field that suggests places the server knows how to measure distance from. */
+export function CityInput({ value, onChange }: { value: string; onChange: (city: string) => void }) {
+  const listId = useId()
+  const query = useDeferredValue(value.trim())
+  const places = useQuery({
+    queryKey: keys.places(query),
+    queryFn: () => api.places(query),
+    enabled: query.length >= 2,
+    staleTime: Infinity,
+  })
+  return (
+    <>
+      <input
+        className="field"
+        value={value}
+        maxLength={80}
+        placeholder="Brooklyn, NY"
+        list={listId}
+        autoComplete="off"
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <datalist id={listId}>
+        {places.data?.map((place) => <option key={place} value={place} />)}
+      </datalist>
+    </>
   )
 }

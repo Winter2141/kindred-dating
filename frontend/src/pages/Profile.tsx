@@ -1,12 +1,21 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Camera, Check, EyeOff, ImagePlus, Settings, Star, X } from 'lucide-react'
+import { Camera, Check, EyeOff, ImagePlus, LocateFixed, Settings, Star, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { AgeRange, GENDER_LABELS, InterestPicker, PromptEditor, Segmented } from '@/components/ProfileFields'
+import {
+  AgeRange,
+  CityInput,
+  DistanceSlider,
+  GENDER_LABELS,
+  InterestPicker,
+  PromptEditor,
+  Segmented,
+} from '@/components/ProfileFields'
 import { Photo, Spinner, useMeta } from '@/components/ui'
 import { api, type ProfileUpdate } from '@/lib/api'
 import { keys } from '@/lib/cache'
+import { currentPosition } from '@/lib/distance'
 import type { Gender, Me } from '@/lib/types'
 import { useAuth } from '@/store/auth'
 import { useToasts } from '@/store/live'
@@ -22,6 +31,7 @@ function formFrom(user: Me) {
     interested_in: user.interested_in,
     age_min: user.age_min,
     age_max: user.age_max,
+    max_distance_km: user.max_distance_km,
   }
 }
 
@@ -102,10 +112,13 @@ function ProfileEditor({ user }: { user: Me }) {
                 <span className="label">Work</span>
                 <input className="field" value={form.job_title} maxLength={80} placeholder="What do you do?" onChange={(e) => set('job_title', e.target.value)} />
               </label>
-              <label className="block sm:col-span-2">
-                <span className="label">Neighbourhood</span>
-                <input className="field" value={form.city} maxLength={80} placeholder="Brooklyn, NY" onChange={(e) => set('city', e.target.value)} />
-              </label>
+              <div className="sm:col-span-2">
+                <label className="block">
+                  <span className="label">Neighbourhood</span>
+                  <CityInput value={form.city} onChange={(v) => set('city', v)} />
+                </label>
+                <LocationHint user={user} onSaved={onSaved} />
+              </div>
               <label className="block sm:col-span-2">
                 <span className="mb-2 flex justify-between">
                   <span className="label mb-0">Bio</span>
@@ -139,6 +152,7 @@ function ProfileEditor({ user }: { user: Me }) {
               max={form.age_max}
               onChange={(min, max) => setForm((f) => ({ ...f, age_min: min, age_max: max }))}
             />
+            <DistanceSlider value={form.max_distance_km} onChange={(v) => set('max_distance_km', v)} />
           </section>
 
           <div
@@ -159,6 +173,36 @@ function ProfileEditor({ user }: { user: Me }) {
           </div>
         </form>
       </div>
+    </div>
+  )
+}
+
+function LocationHint({ user, onSaved }: { user: Me; onSaved: (me: Me) => void }) {
+  const locate = useMutation({
+    mutationFn: async () => api.updateMe(await currentPosition()),
+    onSuccess: (me) => {
+      onSaved(me)
+      useToasts.getState().push({ title: 'Location updated', body: 'Distances now start from where you are.' })
+    },
+  })
+  return (
+    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <span className={user.has_location ? 'text-faint' : 'text-apricot'}>
+        {locate.isError
+          ? locate.error.message
+          : user.has_location
+            ? 'Distances are measured from here. Only the distance is shown, never where you are.'
+            : "We don't know where that is yet. Pick a suggested place or share your location."}
+      </span>
+      <button
+        type="button"
+        onClick={() => locate.mutate()}
+        disabled={locate.isPending}
+        className="inline-flex items-center gap-1.5 font-semibold text-coral hover:underline"
+      >
+        {locate.isPending ? <Spinner className="size-3.5" /> : <LocateFixed className="size-3.5" />}
+        Use my current location
+      </button>
     </div>
   )
 }

@@ -91,8 +91,9 @@ export type ProfileUpdate = Partial<
     | 'age_max'
     | 'photos'
     | 'is_paused'
+    | 'max_distance_km'
   >
->
+> & { latitude?: number; longitude?: number }
 
 export const api = {
   meta: () => request<Meta>('/api/meta'),
@@ -111,6 +112,7 @@ export const api = {
   deletePhoto: (url: string) =>
     request<Me>(`/api/me/photos?url=${encodeURIComponent(url)}`, { method: 'DELETE' }),
   user: (id: number) => request<PublicProfile>(`/api/users/${id}`),
+  places: (query: string) => request<string[]>(`/api/places?q=${encodeURIComponent(query)}`),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<Session>('/api/me/password', {
       method: 'POST',

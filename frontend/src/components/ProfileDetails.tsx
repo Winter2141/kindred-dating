@@ -1,4 +1,5 @@
 import { Briefcase, MapPin, Quote } from 'lucide-react'
+import { formatDistance } from '@/lib/distance'
 import type { PublicProfile } from '@/lib/types'
 import { lastSeen } from '@/lib/time'
 import { InterestChip, useInterestEmoji } from './ui'
@@ -31,9 +32,10 @@ export function ProfileDetails({
               <Briefcase className="size-4 text-coral" /> {profile.job_title}
             </span>
           )}
-          {profile.city && (
+          {(profile.city || profile.distance_km != null) && (
             <span className="inline-flex items-center gap-2">
-              <MapPin className="size-4 text-coral" /> {profile.city}
+              <MapPin className="size-4 text-coral" />
+              {[profile.city, formatDistance(profile.distance_km)].filter(Boolean).join(' · ')}
             </span>
           )}
         </div>

@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Heart } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { AgeRange, GENDER_LABELS, GENDER_SELF, InterestPicker, PromptEditor, Segmented } from '@/components/ProfileFields'
+import { AgeRange, CityInput, GENDER_LABELS, GENDER_SELF, InterestPicker, PromptEditor, Segmented } from '@/components/ProfileFields'
 import { Logo, Photo, Spinner } from '@/components/ui'
 import { api, type RegisterInput } from '@/lib/api'
 import type { Gender } from '@/lib/types'
@@ -246,7 +246,7 @@ export function SignupPage() {
                 <div className="grid gap-5 sm:grid-cols-2">
                   <label className="block">
                     <span className="label">Neighbourhood</span>
-                    <input className="field" placeholder="Brooklyn, NY" value={form.city} onChange={(e) => set('city', e.target.value)} />
+                    <CityInput value={form.city} onChange={(v) => set('city', v)} />
                   </label>
                   <label className="block">
                     <span className="label">Work</span>

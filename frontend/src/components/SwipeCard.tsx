@@ -126,6 +126,11 @@ export function SwipeCard({
               )}
               <p className="flex items-center gap-2 truncate">
                 <MapPin className="size-4 shrink-0" /> {candidate.city || 'Nearby'}
+                {candidate.distance_km != null && (
+                  <span className="rounded-full bg-cream/15 px-2 py-0.5 text-xs font-semibold">
+                    {candidate.distance_km} km
+                  </span>
+                )}
                 <span className="text-cream/40">·</span>
                 <span className={clsx(candidate.is_online && 'text-mint')}>
                   {lastSeen(candidate.last_active_at, candidate.is_online)}
