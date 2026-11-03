@@ -124,7 +124,7 @@ export function ReactionChips({
           aria-label={`${group.emoji} ${group.count}${group.mine ? ', including you' : ''}`}
           className={clsx(
             'inline-flex h-6 items-center gap-1 rounded-full border px-1.5 text-sm leading-none shadow-sm',
-            group.mine ? 'border-coral/60 bg-[#3a2420]' : 'border-line-strong bg-raised',
+            group.mine ? 'border-coral/60 bg-raised-hover' : 'border-line-strong bg-raised',
           )}
         >
           {group.emoji}

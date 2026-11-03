@@ -9,13 +9,16 @@ import {
   KeyRound,
   LogOut,
   MonitorSmartphone,
+  Palette,
   ShieldCheck,
   Trash2,
 } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { BlockedList } from '@/components/Safety'
+import { Segmented } from '@/components/ProfileFields'
 import { TwoFactorSettings } from '@/components/TwoFactor'
+import type { ThemeChoice } from '@/lib/theme'
 import { VerificationFlow } from '@/components/Verification'
 import { Spinner, Switch } from '@/components/ui'
 import { api } from '@/lib/api'
@@ -42,6 +45,7 @@ export function SettingsPage() {
       </header>
       <div className="space-y-6">
         <VisibilitySection user={user} />
+        <AppearanceSection />
         <Section
           icon={<BadgeCheck className="size-5" />}
           title="Verify your photos"
@@ -111,6 +115,22 @@ function Section({
         </div>
       </div>
     </section>
+  )
+}
+
+const THEMES: { value: ThemeChoice; label: string }[] = [
+  { value: 'dark', label: 'Dark' },
+  { value: 'light', label: 'Light' },
+  { value: 'system', label: 'Match my device' },
+]
+
+export function AppearanceSection() {
+  const theme = usePrefs((s) => s.theme)
+  const setTheme = usePrefs((s) => s.setTheme)
+  return (
+    <Section icon={<Palette className="size-5" />} title="Appearance" description="Kindred looks its best in the dark, but it's your call. Saved on this device.">
+      <Segmented label="Theme" value={[theme]} onChange={([value]) => setTheme(value)} options={THEMES} />
+    </Section>
   )
 }
 

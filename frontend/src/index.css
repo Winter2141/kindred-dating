@@ -20,6 +20,9 @@
   --color-sky: #7cc4ff;
   --color-danger: #ff6b6b;
 
+  --color-raised-hover: #2f2321;
+  --color-glass: rgb(28 21 20 / 0.62);
+
   --radius-card: 1.75rem;
   --shadow-card: 0 30px 80px -30px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(255 236 226 / 0.06);
   --shadow-glow: 0 12px 40px -10px rgb(255 92 122 / 0.55);
@@ -44,6 +47,28 @@
       box-shadow: 0 0 0 8px rgb(94 227 181 / 0);
     }
   }
+}
+
+/*
+ * The light palette swaps the same tokens, so every utility built on them follows. Names
+ * keep their role rather than their colour: "ink" is the page, "cream" is the text.
+ */
+[data-theme='light'] {
+  --color-ink: #faf6f3;
+  --color-surface: #ffffff;
+  --color-raised: #f4ece7;
+  --color-raised-hover: #ebe0d9;
+  --color-line: rgb(74 40 28 / 0.1);
+  --color-line-strong: rgb(74 40 28 / 0.18);
+  --color-cream: #2b1d19;
+  --color-muted: #6e5d56;
+  --color-faint: #9b8a83;
+  --color-glass: rgb(255 255 255 / 0.72);
+  --color-coral: #e86a3c;
+  --color-apricot: #c77a12;
+  --color-mint: #1c9a6f;
+  --color-sky: #2f7fc0;
+  --shadow-card: 0 24px 60px -30px rgb(74 40 28 / 0.35), 0 0 0 1px rgb(74 40 28 / 0.06);
 }
 
 @layer base {
@@ -82,7 +107,7 @@
 }
 
 @utility glass {
-  background: rgb(28 21 20 / 0.62);
+  background: var(--color-glass);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
 }
@@ -101,7 +126,7 @@
   @apply btn bg-gradient-brand text-ink shadow-glow hover:brightness-110 active:scale-[0.98];
 }
 @utility btn-secondary {
-  @apply btn border border-line-strong bg-raised text-cream hover:border-cream/30 hover:bg-[#2f2321];
+  @apply btn border border-line-strong bg-raised text-cream hover:border-cream/30 hover:bg-raised-hover;
 }
 @utility btn-ghost {
   @apply btn text-muted hover:bg-raised hover:text-cream;

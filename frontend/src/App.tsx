@@ -16,7 +16,9 @@ import { ModerationPage } from '@/pages/Moderation'
 import { ProfilePage } from '@/pages/Profile'
 import { SettingsPage } from '@/pages/Settings'
 import { RealtimeProvider } from '@/realtime/RealtimeProvider'
+import { watchTheme } from '@/lib/theme'
 import { useAuth } from '@/store/auth'
+import { usePrefs } from '@/store/prefs'
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const token = useAuth((s) => s.token)
@@ -37,6 +39,8 @@ function GuestOnly({ children }: { children: ReactNode }) {
 }
 
 export function App() {
+  const theme = usePrefs((s) => s.theme)
+  useEffect(() => watchTheme(theme), [theme])
   return (
     <Routes>
       <Route path="/" element={<GuestOnly><LandingPage /></GuestOnly>} />
