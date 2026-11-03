@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
 from app.db import utcnow
 from app.deps import user_from_token
+from app.limits import MESSAGES
 from app.models import User
 from app.realtime import Hub
 from app.schemas import MessageBody, ReactionEmoji
@@ -141,6 +142,20 @@ async def websocket_endpoint(websocket: WebSocket, token: str = "") -> None:
             except ValidationError as exc:
                 await websocket.send_json(
                     {"type": "error", "detail": exc.errors(include_url=False)[0]["msg"]}
+                )
+                continue
+            if (
+                isinstance(event, SendMessage)
+                and hub.settings.rate_limit_enabled
+                and hub.limiter.hit(str(user.id), MESSAGES) is not None
+            ):
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "detail": "You're sending messages too fast. Take a breath.",
+                        "match_id": event.match_id,
+                        "client_id": event.client_id,
+                    }
                 )
                 continue
             reply = await _handle(hub, user.id, event)

@@ -4,7 +4,9 @@ from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy import select
 
 from app.deps import CurrentUser, HubDep, SessionDep
+from app.limits import REPORTS
 from app.models import Block, Match, Report, User
+from app.ratelimit import per_user
 from app.schemas import BlockIn, PublicProfile, ReportIn
 
 router = APIRouter(prefix="/api", tags=["safety"])
@@ -70,7 +72,7 @@ async def unblock(user_id: int, user: CurrentUser, session: SessionDep) -> Respo
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/reports", status_code=status.HTTP_201_CREATED)
+@router.post("/reports", status_code=status.HTTP_201_CREATED, dependencies=[per_user(REPORTS)])
 async def report(
     data: ReportIn, user: CurrentUser, session: SessionDep, hub: HubDep
 ) -> dict[str, int]:

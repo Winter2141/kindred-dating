@@ -2,8 +2,10 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 
 from app.deps import SessionDep, SettingsDep
+from app.limits import LOGIN, REGISTER
 from app.models import User
 from app.places import geocode
+from app.ratelimit import per_ip
 from app.schemas import LoginIn, MeOut, RegisterIn, TokenOut
 from app.security import create_access_token, hash_password, verify_password
 
@@ -17,7 +19,7 @@ def token_for(user: User, settings: SettingsDep) -> TokenOut:
     return TokenOut(access_token=token, user=MeOut.build(user))
 
 
-@router.post("/register", status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED, dependencies=[per_ip(REGISTER)])
 async def register(data: RegisterIn, session: SessionDep, settings: SettingsDep) -> TokenOut:
     email = data.email.lower()
     if await session.scalar(select(User.id).where(User.email == email)):
@@ -47,7 +49,7 @@ async def register(data: RegisterIn, session: SessionDep, settings: SettingsDep)
     return token_for(user, settings)
 
 
-@router.post("/login")
+@router.post("/login", dependencies=[per_ip(LOGIN)])
 async def login(data: LoginIn, session: SessionDep, settings: SettingsDep) -> TokenOut:
     user = await session.scalar(select(User).where(User.email == data.email.lower()))
     if user is None or not verify_password(data.password, user.password_hash):

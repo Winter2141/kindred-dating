@@ -8,6 +8,7 @@ import {
   applyUnsend,
   applyUnsendToMatches,
   keys,
+  markPendingFailed,
   setPresence,
   upsertMessage,
 } from '@/lib/cache'
@@ -220,6 +221,16 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             matches?.filter((m) => m.id !== event.match_id),
           )
           queryClient.removeQueries({ queryKey: keys.messages(event.match_id) })
+          break
+        case 'error':
+          // A message the server refused (e.g. sending too fast): fail it now instead of
+          // leaving it "Sending…" until the timeout.
+          if (event.client_id && event.match_id) {
+            queryClient.setQueryData<Message[]>(keys.messages(event.match_id), (list) =>
+              markPendingFailed(list, event.client_id!),
+            )
+            useToasts.getState().push({ title: "Message didn't send", body: event.detail })
+          }
           break
         default:
           break

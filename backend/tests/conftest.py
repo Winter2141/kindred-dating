@@ -21,6 +21,7 @@ def settings(tmp_path: Path) -> Settings:
         demo_mode=False,
         persona_read_delay=(0, 0),
         persona_typing_delay=(0, 0),
+        rate_limit_enabled=False,  # test_rate_limits switches it back on
     )
 
 

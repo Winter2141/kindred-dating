@@ -205,7 +205,7 @@ export type ServerEvent =
   | { type: 'notification.new'; notification: AppNotification }
   | { type: 'date.updated'; date: DateProposal }
   | { type: 'pong' }
-  | { type: 'error'; detail: string; match_id?: number }
+  | { type: 'error'; detail: string; match_id?: number; client_id?: string | null }
 
 export type ClientEvent =
   | { type: 'message.send'; match_id: number; body: string; client_id: string }

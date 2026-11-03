@@ -4,7 +4,9 @@ from fastapi import APIRouter, Form, HTTPException, Query, Response, UploadFile,
 from sqlalchemy import select
 
 from app.deps import CurrentUser, HubDep, SessionDep, SettingsDep
+from app.limits import MESSAGES, PHOTOS
 from app.models import Match, Message
+from app.ratelimit import per_user
 from app.schemas import MatchOut, MessageIn, MessageOut, ReactionIn
 from app.services import chat
 from app.services.images import CHAT_PHOTO_SIDE, save_upload
@@ -72,7 +74,11 @@ async def list_messages(
     return [MessageOut.model_validate(m) for m in reversed(newest_first)]
 
 
-@router.post("/{match_id}/messages", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{match_id}/messages",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[per_user(MESSAGES)],
+)
 async def post_message(
     match_id: int, data: MessageIn, user: CurrentUser, session: SessionDep, hub: HubDep
 ) -> MessageOut:
@@ -82,7 +88,9 @@ async def post_message(
     return MessageOut.model_validate(message)
 
 
-@router.post("/{match_id}/photos", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{match_id}/photos", status_code=status.HTTP_201_CREATED, dependencies=[per_user(PHOTOS)]
+)
 async def post_photo(
     match_id: int,
     file: UploadFile,

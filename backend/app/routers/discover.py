@@ -4,7 +4,9 @@ from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
 
 from app.deps import CurrentUser, HubDep, SessionDep
+from app.limits import SWIPES
 from app.models import Match, NotificationKind, Swipe, SwipeAction, User
+from app.ratelimit import per_user
 from app.schemas import (
     Candidate,
     LikeOut,
@@ -50,7 +52,7 @@ async def daily_top_picks(user: CurrentUser, session: SessionDep, hub: HubDep) -
     )
 
 
-@router.post("/swipes")
+@router.post("/swipes", dependencies=[per_user(SWIPES)])
 async def swipe(data: SwipeIn, user: CurrentUser, session: SessionDep, hub: HubDep) -> SwipeOut:
     if data.target_id == user.id:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "You can't swipe on yourself")

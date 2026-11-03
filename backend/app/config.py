@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     max_photo_bytes: int = 8 * 1024 * 1024
     max_photos: int = 6
 
+    # Per-process sliding-window limits on login, sign-up, swipes, messages and uploads.
+    rate_limit_enabled: bool = True
+
     # Demo mode makes the seeded personas feel alive: they like you back and reply in chat.
     demo_mode: bool = True
     seed_on_startup: bool = True

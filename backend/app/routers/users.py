@@ -4,9 +4,11 @@ from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 
 from app.catalog import INTERESTS, PROMPT_QUESTIONS
 from app.deps import CurrentUser, HubDep, SessionDep, SettingsDep
+from app.limits import PHOTOS
 from app.models import Gender, User
 from app.places import geocode
 from app.places import search as search_places
+from app.ratelimit import per_user
 from app.schemas import (
     ActivityDay,
     InsightsOut,
@@ -118,7 +120,7 @@ async def update_me(data: ProfileUpdate, user: CurrentUser, session: SessionDep)
     return MeOut.build(user)
 
 
-@router.post("/me/photos", status_code=status.HTTP_201_CREATED)
+@router.post("/me/photos", status_code=status.HTTP_201_CREATED, dependencies=[per_user(PHOTOS)])
 async def upload_photo(
     file: UploadFile, user: CurrentUser, session: SessionDep, settings: SettingsDep
 ) -> MeOut:
