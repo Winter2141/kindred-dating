@@ -67,8 +67,11 @@ class Database:
 
     async def migrate(self) -> None:
         """Bring the schema up to date with the latest migration."""
-        async with self.engine.begin() as conn:
+        async with self.engine.connect() as conn:
             await conn.run_sync(run_migrations)
+            await conn.commit()
+            # On SQLite this connection had foreign keys switched off; don't pool it.
+            await conn.invalidate()
 
     def session(self) -> AsyncSession:
         return self.sessionmaker()
@@ -89,6 +92,11 @@ def alembic_config(connection: Connection) -> "Config":
 def run_migrations(connection: Connection) -> None:
     from alembic import command
 
+    if connection.dialect.name == "sqlite":
+        # SQLite alters a table by copying it and dropping the original. With foreign keys
+        # on, that drop would cascade-delete every row pointing at the table. The pragma only
+        # takes effect outside a transaction, so it has to come before any write.
+        connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
     config = alembic_config(connection)
     tables = inspect(connection).get_table_names()
     if "users" in tables and "alembic_version" not in tables:
