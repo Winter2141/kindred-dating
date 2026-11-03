@@ -6,6 +6,7 @@ import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { CallScreen } from '@/components/CallScreen'
 import { EmailBanner } from '@/components/EmailBanner'
+import { ShortcutsButton, ShortcutsDialog, useGlobalShortcuts } from '@/components/Shortcuts'
 import { api } from '@/lib/api'
 import { keys, totalUnread } from '@/lib/cache'
 import { NAVIGATE_EVENT, titleWithCount } from '@/lib/desktop'
@@ -118,6 +119,7 @@ export function AppShell() {
   useAttention(badges.unread)
   const location = useLocation()
   const inChat = /^\/app\/matches\/\d+/.test(location.pathname)
+  const { helpOpen, setHelpOpen } = useGlobalShortcuts()
 
   return (
     <div className="ambient relative flex min-h-dvh">
@@ -197,6 +199,7 @@ export function AppShell() {
                 <p className="truncate text-sm font-semibold">{user.name}</p>
                 <p className="truncate text-xs text-muted">{user.email}</p>
               </div>
+              <ShortcutsButton onClick={() => setHelpOpen(true)} />
               <Link
                 to="/app/settings"
                 className="grid size-9 place-items-center rounded-xl text-muted transition hover:bg-raised hover:text-cream"
@@ -263,6 +266,7 @@ export function AppShell() {
       )}
       <Toaster />
       <CallScreen />
+      <ShortcutsDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   )
 }

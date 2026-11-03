@@ -154,6 +154,7 @@ function MatchList() {
             onKeyDown={(e) => e.key === 'Escape' && setFilter('')}
             placeholder="Search people and messages"
             aria-label="Search people and messages"
+            data-shortcut="search"
             className="field rounded-full py-2.5 pl-11 text-sm"
           />
         </label>
