@@ -5,6 +5,8 @@ import {
   applyMessageToMatches,
   applyReaction,
   applyReadReceipt,
+  applyUnsend,
+  applyUnsendToMatches,
   keys,
   setPresence,
   upsertMessage,
@@ -110,6 +112,14 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           break
         case 'message.new':
           onMessage(event.message, event.client_id)
+          break
+        case 'message.deleted':
+          queryClient.setQueryData<Message[]>(keys.messages(event.match_id), (list) =>
+            applyUnsend(list, event.message_id, event.deleted_at),
+          )
+          queryClient.setQueryData<Match[]>(keys.matches, (matches) =>
+            applyUnsendToMatches(matches, event.message_id, event.deleted_at),
+          )
           break
         case 'typing':
           setTyping(event.match_id, event.is_typing ? event.user_id : undefined)

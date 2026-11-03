@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyMessageToMatches,
+  applyUnsend,
+  applyUnsendToMatches,
   applyReaction,
   applyReadReceipt,
   clearUnread,
@@ -138,5 +140,31 @@ describe('applyReaction', () => {
   it('copes with messages that have no reactions yet and missing caches', () => {
     expect(applyReaction(base, 2, 1, '👍')?.[1].reactions).toEqual([{ user_id: 1, emoji: '👍' }])
     expect(applyReaction(undefined, 1, 1, '👍')).toBeUndefined()
+  })
+})
+
+describe('applyUnsend', () => {
+  const message = {
+    id: 5,
+    match_id: 1,
+    sender_id: 1,
+    body: 'secret',
+    created_at: '',
+    read_at: null,
+    reactions: [{ user_id: 2, emoji: '❤️' }],
+  }
+
+  it('blanks the text and reactions of that message only', () => {
+    const other = { ...message, id: 6, body: 'keep me' }
+    const [unsent, kept] = applyUnsend([message, other], 5, '2026-11-02T10:00:00Z') ?? []
+    expect(unsent).toMatchObject({ body: '', deleted_at: '2026-11-02T10:00:00Z', reactions: [] })
+    expect(kept).toBe(other)
+  })
+
+  it('updates the chat list preview when the last message is unsent', () => {
+    const match = { id: 1, last_message: message } as unknown as Match
+    const [updated] = applyUnsendToMatches([match], 5, 'now') ?? []
+    expect(updated.last_message).toMatchObject({ body: '', deleted_at: 'now' })
+    expect(applyUnsendToMatches([match], 99, 'now')?.[0]).toBe(match)
   })
 })

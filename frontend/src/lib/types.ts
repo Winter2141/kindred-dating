@@ -54,6 +54,7 @@ export interface Message {
   body: string
   created_at: string
   read_at: string | null
+  deleted_at?: string | null
   reactions?: Reaction[]
   /** Set on optimistic messages that the server hasn't confirmed yet. */
   pending?: string
@@ -119,6 +120,7 @@ export interface Session {
 export type ServerEvent =
   | { type: 'hello'; user_id: number; online: number[] }
   | { type: 'message.new'; message: Message; client_id: string | null }
+  | { type: 'message.deleted'; match_id: number; message_id: number; deleted_at: string }
   | { type: 'typing'; match_id: number; user_id: number; is_typing: boolean }
   | { type: 'read'; match_id: number; reader_id: number; read_at: string }
   | { type: 'reaction'; match_id: number; message_id: number; user_id: number; emoji: string | null }

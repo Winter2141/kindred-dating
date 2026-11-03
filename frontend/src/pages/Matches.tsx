@@ -183,7 +183,7 @@ function ConversationRow({
           ) : (
             <p className={clsx('truncate text-sm', unread ? 'text-cream' : 'text-muted')}>
               {last?.sender_id === meId && <span className="text-faint">You: </span>}
-              {last?.body}
+              {last?.deleted_at ? <span className="italic">Message unsent</span> : last?.body}
             </p>
           )}
           {unread && (

@@ -63,6 +63,23 @@ export function applyReaction(
   })
 }
 
+/** Blank out an unsent message, in a conversation and in the chat list preview. */
+export function applyUnsend(list: Message[] | undefined, messageId: number, deletedAt: string): Message[] | undefined {
+  return list?.map((m) => (m.id === messageId ? { ...m, body: '', deleted_at: deletedAt, reactions: [] } : m))
+}
+
+export function applyUnsendToMatches(
+  matches: Match[] | undefined,
+  messageId: number,
+  deletedAt: string,
+): Match[] | undefined {
+  return matches?.map((m) =>
+    m.last_message?.id === messageId
+      ? { ...m, last_message: { ...m.last_message, body: '', deleted_at: deletedAt } }
+      : m,
+  )
+}
+
 export function applyMessageToMatches(
   matches: Match[] | undefined,
   message: Message,

@@ -5,16 +5,25 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ProfileDetails } from '@/components/ProfileDetails'
+import { MessageMenu } from '@/components/MessageActions'
 import { ReactionChips, ReactionPicker } from '@/components/Reactions'
 import { SafetyMenu } from '@/components/Safety'
 import { Avatar, Photo, Spinner, TypingDots } from '@/components/ui'
 import { api } from '@/lib/api'
-import { applyReaction, clearUnread, keys, markPendingFailed, upsertMessage } from '@/lib/cache'
+import {
+  applyReaction,
+  applyUnsend,
+  applyUnsendToMatches,
+  clearUnread,
+  keys,
+  markPendingFailed,
+  upsertMessage,
+} from '@/lib/cache'
 import type { Match, Message } from '@/lib/types'
 import { clockTime, dayLabel, isSameDay, lastSeen, shortAgo } from '@/lib/time'
 import { useRealtimeSend } from '@/realtime/RealtimeProvider'
 import { useAuth } from '@/store/auth'
-import { useLive } from '@/store/live'
+import { useLive, useToasts } from '@/store/live'
 
 const PAGE_SIZE = 50
 const SEND_TIMEOUT_MS = 10_000
@@ -100,6 +109,16 @@ export function ChatPage() {
     send({ type: 'react', match_id: matchId, message_id: message.id, emoji: next })
   }
 
+  const unsend = useMutation({
+    mutationFn: (message: Message) => api.unsend(matchId, message.id),
+    onSuccess: (message) => {
+      const deletedAt = message.deleted_at ?? new Date().toISOString()
+      queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => applyUnsend(list, message.id, deletedAt))
+      queryClient.setQueryData<Match[]>(keys.matches, (list) => applyUnsendToMatches(list, message.id, deletedAt))
+    },
+    onError: (error) => useToasts.getState().push({ title: "Couldn't unsend", body: error.message }),
+  })
+
   const retry = (message: Message) => {
     queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) =>
       list?.filter((m) => m.pending !== message.pending),
@@ -173,6 +192,7 @@ export function ChatPage() {
           typing={typingUser !== undefined}
           onRetry={retry}
           onReact={react}
+          onUnsend={(message) => unsend.mutate(message)}
           onIcebreaker={sendMessage}
         />
         <Composer matchId={matchId} onSend={sendMessage} name={other.name} />
@@ -217,6 +237,7 @@ function MessageList({
   typing,
   onRetry,
   onReact,
+  onUnsend,
   onIcebreaker,
 }: {
   match: Match
@@ -226,6 +247,7 @@ function MessageList({
   typing: boolean
   onRetry: (message: Message) => void
   onReact: (message: Message, emoji: string) => void
+  onUnsend: (message: Message) => void
   onIcebreaker: (text: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -321,28 +343,37 @@ function MessageList({
                       mine && 'flex-row-reverse',
                     )}
                   >
-                    <div
-                      onDoubleClick={() => !message.pending && onReact(message, '❤️')}
-                      className={clsx(
-                        'min-w-0 px-4 py-2.5 text-[15px] leading-relaxed break-words whitespace-pre-wrap',
-                        mine
-                          ? 'rounded-[1.4rem] rounded-br-md bg-gradient-brand text-ink'
-                          : 'rounded-[1.4rem] rounded-bl-md border border-line bg-raised',
-                        mine && groupedWithPrevious && 'rounded-tr-md',
-                        !mine && groupedWithPrevious && 'rounded-tl-md',
-                        message.pending && !message.failed && 'opacity-70',
-                        message.failed && 'opacity-60 ring-2 ring-danger',
-                      )}
-                    >
-                      {message.body}
-                    </div>
-                    {!message.pending && (
-                      <ReactionPicker
-                        open={pickerFor === message.id}
-                        onOpenChange={(open) => setPickerFor(open ? message.id : null)}
-                        onPick={(emoji) => onReact(message, emoji)}
-                        align={mine ? 'right' : 'left'}
-                      />
+                    {message.deleted_at ? (
+                      <div className="rounded-[1.4rem] border border-dashed border-line-strong px-4 py-2.5 text-sm text-faint italic">
+                        {mine ? 'You unsent a message' : 'Message unsent'}
+                      </div>
+                    ) : (
+                      <div
+                        onDoubleClick={() => !message.pending && onReact(message, '❤️')}
+                        className={clsx(
+                          'min-w-0 px-4 py-2.5 text-[15px] leading-relaxed break-words whitespace-pre-wrap',
+                          mine
+                            ? 'rounded-[1.4rem] rounded-br-md bg-gradient-brand text-ink'
+                            : 'rounded-[1.4rem] rounded-bl-md border border-line bg-raised',
+                          mine && groupedWithPrevious && 'rounded-tr-md',
+                          !mine && groupedWithPrevious && 'rounded-tl-md',
+                          message.pending && !message.failed && 'opacity-70',
+                          message.failed && 'opacity-60 ring-2 ring-danger',
+                        )}
+                      >
+                        {message.body}
+                      </div>
+                    )}
+                    {!message.pending && !message.deleted_at && (
+                      <>
+                        <ReactionPicker
+                          open={pickerFor === message.id}
+                          onOpenChange={(open) => setPickerFor(open ? message.id : null)}
+                          onPick={(emoji) => onReact(message, emoji)}
+                          align={mine ? 'right' : 'left'}
+                        />
+                        <MessageMenu message={message} meId={meId} onUnsend={onUnsend} align={mine ? 'right' : 'left'} />
+                      </>
                     )}
                   </div>
                   <ReactionChips

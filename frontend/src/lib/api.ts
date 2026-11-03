@@ -134,6 +134,8 @@ export const api = {
   messages: (id: number, before?: number) =>
     request<Message[]>(`/api/matches/${id}/messages${before ? `?before=${before}` : ''}`),
   icebreakers: (id: number) => request<string[]>(`/api/matches/${id}/icebreakers`),
+  unsend: (matchId: number, messageId: number) =>
+    request<Message>(`/api/matches/${matchId}/messages/${messageId}`, { method: 'DELETE' }),
 
   block: (userId: number) => request<void>('/api/blocks', { method: 'POST', body: { user_id: userId } }),
   unblock: (userId: number) => request<void>(`/api/blocks/${userId}`, { method: 'DELETE' }),
