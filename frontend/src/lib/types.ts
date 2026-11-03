@@ -129,6 +129,11 @@ export interface ModerationStats {
   total_users: number
 }
 
+export interface ProfileStrength {
+  score: number
+  tips: { key: string; text: string; points: number }[]
+}
+
 export interface Meta {
   interests: { name: string; emoji: string }[]
   prompt_questions: string[]

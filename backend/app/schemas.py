@@ -466,3 +466,14 @@ class UpcomingDate(DateOut):
     def build(cls, proposal: DateProposal, other: User) -> Self:
         base = DateOut.model_validate(proposal).model_dump()
         return cls(**base, with_user=PublicProfile.build(other))
+
+
+class TipOut(BaseModel):
+    key: str
+    text: str
+    points: int
+
+
+class StrengthOut(BaseModel):
+    score: int = Field(ge=0, le=100)
+    tips: list[TipOut]

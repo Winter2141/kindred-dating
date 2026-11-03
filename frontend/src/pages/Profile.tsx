@@ -12,6 +12,7 @@ import {
   PromptEditor,
   Segmented,
 } from '@/components/ProfileFields'
+import { ProfileStrength } from '@/components/ProfileStrength'
 import { Photo, Spinner, useMeta } from '@/components/ui'
 import { api, type ProfileUpdate } from '@/lib/api'
 import { keys } from '@/lib/cache'
@@ -51,6 +52,7 @@ function ProfileEditor({ user }: { user: Me }) {
     setUser(me)
     queryClient.setQueryData(keys.me, me)
     void queryClient.invalidateQueries({ queryKey: keys.discover })
+    void queryClient.invalidateQueries({ queryKey: keys.strength })
   }
 
   const save = useMutation({
@@ -311,6 +313,7 @@ function PhotoManager({ user, onChange }: { user: Me; onChange: (me: Me) => void
       <p className={clsx('mt-4 text-sm', error ? 'text-danger' : 'text-faint')}>
         {error ?? 'Lead with a clear photo of your face. Uploads are resized and converted to WebP on the server.'}
       </p>
+      <ProfileStrength />
     </section>
   )
 }

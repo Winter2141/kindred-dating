@@ -3,6 +3,7 @@ import type { Match, Message } from './types'
 
 export const keys = {
   me: ['me'] as const,
+  strength: ['strength'] as const,
   meta: ['meta'] as const,
   discover: ['discover'] as const,
   topPicks: ['top-picks'] as const,

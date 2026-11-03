@@ -11,6 +11,7 @@ import type {
   Meta,
   ModerationStats,
   NotificationList,
+  ProfileStrength,
   Prompt,
   PublicProfile,
   ReportReason,
@@ -108,6 +109,7 @@ export const api = {
     request<Session>('/api/auth/register', { method: 'POST', body: { ...data } }),
 
   me: () => request<Me>('/api/me'),
+  strength: () => request<ProfileStrength>('/api/me/strength'),
   updateMe: (data: ProfileUpdate) => request<Me>('/api/me', { method: 'PATCH', body: data }),
   uploadPhoto: (file: File) => {
     const form = new FormData()

@@ -5,9 +5,10 @@ from app.deps import CurrentUser, HubDep, SessionDep, SettingsDep
 from app.models import Gender, User
 from app.places import geocode
 from app.places import search as search_places
-from app.schemas import Interest, MeOut, MetaOut, ProfileUpdate, PublicProfile
+from app.schemas import Interest, MeOut, MetaOut, ProfileUpdate, PublicProfile, StrengthOut, TipOut
 from app.services.images import PROFILE_PHOTO_SIDE, delete_local, save_upload
 from app.services.matching import distance_between
+from app.services.profile_strength import profile_strength
 from app.services.safety import is_hidden
 
 router = APIRouter(prefix="/api", tags=["profile"])
@@ -32,6 +33,16 @@ async def places(q: str = Query(min_length=1, max_length=80)) -> list[str]:
 @router.get("/me")
 async def read_me(user: CurrentUser) -> MeOut:
     return MeOut.build(user)
+
+
+@router.get("/me/strength")
+async def read_strength(user: CurrentUser) -> StrengthOut:
+    """How complete your profile is, with the tips worth the most points first."""
+    strength = profile_strength(user)
+    return StrengthOut(
+        score=strength.score,
+        tips=[TipOut(key=t.key, text=t.text, points=t.points) for t in strength.tips],
+    )
 
 
 @router.patch("/me")
