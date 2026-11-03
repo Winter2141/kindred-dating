@@ -10,6 +10,7 @@ import secrets
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import Base, Database, utcnow
 from app.models import (
@@ -17,6 +18,7 @@ from app.models import (
     Message,
     Notification,
     NotificationKind,
+    QuestionAnswer,
     Report,
     ReportReason,
     Swipe,
@@ -24,6 +26,7 @@ from app.models import (
     User,
 )
 from app.places import geocode
+from app.questions import QUESTIONS
 from app.security import hash_password
 from app.seed_data import DEMO_EMAIL, DEMO_PASSWORD, PERSONAS, SECOND_DEMO_EMAIL, unsplash
 from app.services.matching import years_before
@@ -262,8 +265,32 @@ async def seed_demo_data(db: Database) -> bool:
                     created_at=now - timedelta(hours=hours_ago * 5),
                 )
             )
+        _seed_answers([alex, *people.values()], session)
         await session.commit()
     return True
+
+
+def _seed_answers(users: list[User], session: AsyncSession) -> None:
+    """Everyone answers a dozen questions, so agreement scores show up in the demo."""
+    rng = random.Random(11)  # separate from the main seed so the rest of the data is unchanged
+    for user in users:
+        for question in rng.sample(QUESTIONS, k=12):
+            answer = rng.randrange(len(question.options))
+            # Most people are fine with their own answer and one either side of it.
+            acceptable = sorted(
+                {answer, *(i for i in (answer - 1, answer + 1) if 0 <= i < len(question.options))}
+            )
+            if rng.random() < 0.3:
+                acceptable = [answer]
+            session.add(
+                QuestionAnswer(
+                    user_id=user.id,
+                    question_id=question.id,
+                    answer=answer,
+                    acceptable=acceptable,
+                    importance=rng.choice([0, 1, 1, 2]),
+                )
+            )
 
 
 async def _main(reset: bool) -> None:

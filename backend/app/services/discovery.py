@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Swipe, SwipeAction, User
 from app.realtime import Hub
 from app.schemas import Candidate, PublicProfile, TopPick
+from app.services.agreement import agreement, answers_for
 from app.services.matching import (
     birthdate_bounds,
     bounding_box,
@@ -69,10 +70,11 @@ async def find_candidates(
         )
     )
 
+    fits = [other for other in rows if is_mutual_fit(user, other, today)]
+    answers = await answers_for(session, [user.id, *(other.id for other in fits)])
+
     candidates = []
-    for other in rows:
-        if not is_mutual_fit(user, other, today):
-            continue
+    for other in fits:
         fit = compatibility(user, other, now)
         base = PublicProfile.build(
             other,
@@ -85,6 +87,7 @@ async def find_candidates(
                 compatibility=fit.score,
                 shared_interests=fit.shared_interests,
                 super_liked_you=other.id in super_likers,
+                agreement=agreement(answers[user.id], answers[other.id]).percent,
             )
         )
     candidates.sort(key=lambda c: (c.super_liked_you, c.compatibility), reverse=True)

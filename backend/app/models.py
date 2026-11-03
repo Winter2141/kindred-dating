@@ -293,3 +293,23 @@ class ChatSetting(Base):
     archived_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
 
     __table_args__ = (UniqueConstraint("user_id", "match_id", name="uq_chat_settings_user_match"),)
+
+
+class QuestionAnswer(Base):
+    """One person's answer to a compatibility question (see app.questions)."""
+
+    __tablename__ = "question_answers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    question_id: Mapped[str] = mapped_column(String(40))
+    # Indexes into the question's options: mine, and the ones I'd accept from a partner.
+    answer: Mapped[int] = mapped_column()
+    acceptable: Mapped[list[int]] = mapped_column(JSON, default=list)
+    # 0 = a little, 1 = somewhat, 2 = very
+    importance: Mapped[int] = mapped_column(default=1)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "question_id", name="uq_question_answers_user_question"),
+    )

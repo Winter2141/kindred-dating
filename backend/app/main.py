@@ -18,6 +18,7 @@ from app.routers import (
     discover,
     matches,
     notifications,
+    questions,
     safety,
     search,
     users,
@@ -60,6 +61,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for module in (
         auth,
         users,
+        questions,
         account,
         discover,
         matches,

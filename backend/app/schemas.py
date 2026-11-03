@@ -241,6 +241,46 @@ class Candidate(PublicProfile):
     compatibility: int = Field(ge=0, le=100)
     shared_interests: list[str]
     super_liked_you: bool = False
+    agreement: int | None = Field(
+        default=None, description="Question agreement 0-100, once you share enough answers"
+    )
+
+
+class QuestionOut(BaseModel):
+    id: str
+    text: str
+    options: list[str]
+    topic: str
+
+
+class AnswerIn(BaseModel):
+    answer: int
+    acceptable: list[int] = Field(default=[], description="Answers you'd accept; empty = any")
+    importance: int = Field(default=1, ge=0, le=2)
+
+
+class AnswerOut(BaseModel):
+    answer: int
+    acceptable: list[int]
+    importance: int
+
+
+class QuestionsOut(BaseModel):
+    questions: list[QuestionOut]
+    importance_labels: list[str]
+    min_common: int
+    answers: dict[str, AnswerOut]
+
+
+class SharedAnswer(BaseModel):
+    question: str
+    answer: str
+
+
+class AgreementOut(BaseModel):
+    percent: int | None
+    common: int
+    same: list[SharedAnswer]
 
 
 class TopPick(Candidate):
