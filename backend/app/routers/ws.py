@@ -9,7 +9,8 @@ Client -> server events:
     {"type": "ping"}
 
 Server -> client events:
-    hello, message.new, message.deleted, typing, read, reaction, presence, match.new,
+    hello, message.new, message.edited, message.deleted, typing, read, reaction, presence,
+    match.new,
     match.removed, notification.new, date.updated, pong, error
 """
 

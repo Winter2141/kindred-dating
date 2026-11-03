@@ -173,6 +173,7 @@ class Message(Base):
     read_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
     # Unsent messages keep their place in the conversation but lose their text.
     deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    edited_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
 
     match: Mapped[Match] = relationship(back_populates="messages")
     reactions: Mapped[list["Reaction"]] = relationship(

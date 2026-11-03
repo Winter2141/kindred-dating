@@ -16,8 +16,11 @@ from app.services.images import delete_local
 from app.services.notifications import notify
 from app.services.personas import compose_reply
 
-# How long after sending a message its sender can still unsend it.
+# How long after sending a message its sender can still unsend or edit it.
 UNSEND_WINDOW = timedelta(minutes=15)
+EDIT_WINDOW = UNSEND_WINDOW
+# Photo captions are shorter than text messages, as when they're sent.
+MAX_CAPTION = 500
 
 
 async def get_match(session: AsyncSession, match_id: int, user_id: int) -> Match | None:
@@ -184,6 +187,10 @@ class CannotUnsend(Exception):
     pass
 
 
+class CannotEdit(Exception):
+    pass
+
+
 async def unsend(
     session: AsyncSession, hub: Hub, match: Match, message_id: int, user_id: int
 ) -> Message:
@@ -210,6 +217,39 @@ async def unsend(
             "match_id": match.id,
             "message_id": message.id,
             "deleted_at": message.deleted_at,
+        },
+    )
+    return message
+
+
+async def edit(
+    session: AsyncSession, hub: Hub, match: Match, message_id: int, user_id: int, body: str
+) -> Message:
+    """Change the text of one of your recent messages; both people see it update."""
+    message = await session.get(Message, message_id)
+    if message is None or message.match_id != match.id or message.deleted_at is not None:
+        raise MessageNotFound(message_id)
+    if message.sender_id != user_id:
+        raise CannotEdit("You can only edit your own messages")
+    if utcnow() - message.created_at > EDIT_WINDOW:
+        minutes = int(EDIT_WINDOW.total_seconds() // 60)
+        raise CannotEdit(f"Messages can only be edited within {minutes} minutes")
+    if message.image_url is None and not body:
+        raise CannotEdit("A message can't be empty. Unsend it instead")
+    if message.image_url is not None and len(body) > MAX_CAPTION:
+        raise CannotEdit(f"Captions can be up to {MAX_CAPTION} characters")
+    if body == message.body:
+        return message
+
+    message.body = body
+    message.edited_at = utcnow()
+    await session.commit()
+    await hub.manager.send_many(
+        [match.user_a_id, match.user_b_id],
+        {
+            "type": "message.edited",
+            "match_id": match.id,
+            "message": MessageOut.model_validate(message),
         },
     )
     return message

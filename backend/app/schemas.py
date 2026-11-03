@@ -296,6 +296,7 @@ class MessageOut(BaseModel):
     created_at: datetime
     read_at: datetime | None
     deleted_at: datetime | None = None
+    edited_at: datetime | None = None
     reactions: list[ReactionOut] = []
 
 
@@ -310,6 +311,10 @@ ReactionEmoji = Annotated[str | None, AfterValidator(_known_reaction)]
 
 class ReactionIn(BaseModel):
     emoji: ReactionEmoji = Field(description="One of the quick reactions, or null to remove yours")
+
+
+class MessageEdit(BaseModel):
+    body: Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)]
 
 
 class MessageIn(BaseModel):

@@ -7,7 +7,7 @@ from app.deps import CurrentUser, HubDep, SessionDep, SettingsDep
 from app.limits import MESSAGES, PHOTOS
 from app.models import Match, Message
 from app.ratelimit import per_user
-from app.schemas import MatchOut, MessageIn, MessageOut, ReactionIn
+from app.schemas import MatchOut, MessageEdit, MessageIn, MessageOut, ReactionIn
 from app.services import chat
 from app.services.images import CHAT_PHOTO_SIDE, save_upload
 from app.services.personas import icebreakers
@@ -137,6 +137,26 @@ async def unsend_message(
     except chat.MessageNotFound:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Message not found") from None
     except chat.CannotUnsend as exc:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from None
+    return MessageOut.model_validate(message)
+
+
+@router.patch("/{match_id}/messages/{message_id}")
+async def edit_message(
+    match_id: int,
+    message_id: int,
+    data: MessageEdit,
+    user: CurrentUser,
+    session: SessionDep,
+    hub: HubDep,
+) -> MessageOut:
+    """Fix a typo in one of your messages within a few minutes of sending it."""
+    match = await _match_or_404(session, match_id, user.id)
+    try:
+        message = await chat.edit(session, hub, match, message_id, user.id, data.body)
+    except chat.MessageNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Message not found") from None
+    except chat.CannotEdit as exc:
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from None
     return MessageOut.model_validate(message)
 
