@@ -5,10 +5,11 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ProfileDetails } from '@/components/ProfileDetails'
+import { ReactionChips, ReactionPicker } from '@/components/Reactions'
 import { SafetyMenu } from '@/components/Safety'
 import { Avatar, Photo, Spinner, TypingDots } from '@/components/ui'
 import { api } from '@/lib/api'
-import { clearUnread, keys, markPendingFailed, upsertMessage } from '@/lib/cache'
+import { applyReaction, clearUnread, keys, markPendingFailed, upsertMessage } from '@/lib/cache'
 import type { Match, Message } from '@/lib/types'
 import { clockTime, dayLabel, isSameDay, lastSeen, shortAgo } from '@/lib/time'
 import { useRealtimeSend } from '@/realtime/RealtimeProvider'
@@ -89,6 +90,16 @@ export function ChatPage() {
     }, SEND_TIMEOUT_MS)
   }
 
+  const react = (message: Message, emoji: string) => {
+    if (!me || message.pending) return
+    const current = message.reactions?.find((r) => r.user_id === me.id)?.emoji ?? null
+    const next = current === emoji ? null : emoji
+    queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) =>
+      applyReaction(list, message.id, me.id, next),
+    )
+    send({ type: 'react', match_id: matchId, message_id: message.id, emoji: next })
+  }
+
   const retry = (message: Message) => {
     queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) =>
       list?.filter((m) => m.pending !== message.pending),
@@ -161,6 +172,7 @@ export function ChatPage() {
           meId={me?.id ?? -1}
           typing={typingUser !== undefined}
           onRetry={retry}
+          onReact={react}
           onIcebreaker={sendMessage}
         />
         <Composer matchId={matchId} onSend={sendMessage} name={other.name} />
@@ -204,6 +216,7 @@ function MessageList({
   meId,
   typing,
   onRetry,
+  onReact,
   onIcebreaker,
 }: {
   match: Match
@@ -212,9 +225,11 @@ function MessageList({
   meId: number
   typing: boolean
   onRetry: (message: Message) => void
+  onReact: (message: Message, emoji: string) => void
   onIcebreaker: (text: string) => void
 }) {
   const queryClient = useQueryClient()
+  const [pickerFor, setPickerFor] = useState<number | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [reachedStart, setReachedStart] = useState(false)
@@ -302,18 +317,40 @@ function MessageList({
                 >
                   <div
                     className={clsx(
-                      'max-w-[78%] px-4 py-2.5 text-[15px] leading-relaxed break-words whitespace-pre-wrap sm:max-w-[65%]',
-                      mine
-                        ? 'rounded-[1.4rem] rounded-br-md bg-gradient-brand text-ink'
-                        : 'rounded-[1.4rem] rounded-bl-md border border-line bg-raised',
-                      mine && groupedWithPrevious && 'rounded-tr-md',
-                      !mine && groupedWithPrevious && 'rounded-tl-md',
-                      message.pending && !message.failed && 'opacity-70',
-                      message.failed && 'opacity-60 ring-2 ring-danger',
+                      'group flex max-w-[88%] items-center gap-1 sm:max-w-[72%]',
+                      mine && 'flex-row-reverse',
                     )}
                   >
-                    {message.body}
+                    <div
+                      onDoubleClick={() => !message.pending && onReact(message, '❤️')}
+                      className={clsx(
+                        'min-w-0 px-4 py-2.5 text-[15px] leading-relaxed break-words whitespace-pre-wrap',
+                        mine
+                          ? 'rounded-[1.4rem] rounded-br-md bg-gradient-brand text-ink'
+                          : 'rounded-[1.4rem] rounded-bl-md border border-line bg-raised',
+                        mine && groupedWithPrevious && 'rounded-tr-md',
+                        !mine && groupedWithPrevious && 'rounded-tl-md',
+                        message.pending && !message.failed && 'opacity-70',
+                        message.failed && 'opacity-60 ring-2 ring-danger',
+                      )}
+                    >
+                      {message.body}
+                    </div>
+                    {!message.pending && (
+                      <ReactionPicker
+                        open={pickerFor === message.id}
+                        onOpenChange={(open) => setPickerFor(open ? message.id : null)}
+                        onPick={(emoji) => onReact(message, emoji)}
+                        align={mine ? 'right' : 'left'}
+                      />
+                    )}
                   </div>
+                  <ReactionChips
+                    reactions={message.reactions}
+                    meId={meId}
+                    onToggle={(emoji) => onReact(message, emoji)}
+                    align={mine ? 'right' : 'left'}
+                  />
                   {!groupedWithNext && (
                     <span className="mt-1.5 flex items-center gap-1 px-1 text-[11px] text-faint">
                       {message.failed ? (

@@ -49,6 +49,20 @@ export function applyReadReceipt(
   )
 }
 
+/** Replace `userId`'s reaction on a message (null removes it). */
+export function applyReaction(
+  list: Message[] | undefined,
+  messageId: number,
+  userId: number,
+  emoji: string | null,
+): Message[] | undefined {
+  return list?.map((m) => {
+    if (m.id !== messageId) return m
+    const others = (m.reactions ?? []).filter((r) => r.user_id !== userId)
+    return { ...m, reactions: emoji ? [...others, { user_id: userId, emoji }] : others }
+  })
+}
+
 export function applyMessageToMatches(
   matches: Match[] | undefined,
   message: Message,

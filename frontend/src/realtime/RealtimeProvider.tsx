@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { useLocation } from 'react-router'
 import {
   applyMessageToMatches,
+  applyReaction,
   applyReadReceipt,
   keys,
   setPresence,
@@ -118,6 +119,30 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             applyReadReceipt(list, event.reader_id, event.read_at),
           )
           break
+        case 'reaction': {
+          queryClient.setQueryData<Message[]>(keys.messages(event.match_id), (list) =>
+            applyReaction(list, event.message_id, event.user_id, event.emoji),
+          )
+          const me = useAuth.getState().user
+          const reactedToMine = queryClient
+            .getQueryData<Message[]>(keys.messages(event.match_id))
+            ?.find((m) => m.id === event.message_id)?.sender_id === me?.id
+          const elsewhere = useLive.getState().activeMatchId !== event.match_id
+          if (event.emoji && event.user_id !== me?.id && elsewhere && reactedToMine) {
+            const match = queryClient
+              .getQueryData<Match[]>(keys.matches)
+              ?.find((m) => m.id === event.match_id)
+            if (match) {
+              useToasts.getState().push({
+                title: match.user.name,
+                body: `Reacted ${event.emoji} to your message`,
+                image: match.user.photos[0],
+                href: `/app/matches/${match.id}`,
+              })
+            }
+          }
+          break
+        }
         case 'presence':
           useLive.getState().setOnline(event.user_id, event.online)
           queryClient.setQueryData<Match[]>(keys.matches, (matches) =>

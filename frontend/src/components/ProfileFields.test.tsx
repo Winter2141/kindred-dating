@@ -18,6 +18,7 @@ const META: Meta = {
   max_interests: 2,
   max_prompts: 3,
   max_photos: 6,
+  reactions: ['❤️'],
 }
 
 function withMeta(children: ReactNode) {

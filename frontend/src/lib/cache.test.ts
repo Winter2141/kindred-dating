@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyMessageToMatches,
+  applyReaction,
   applyReadReceipt,
   clearUnread,
   markPendingFailed,
@@ -112,5 +113,30 @@ describe('presence and unread helpers', () => {
 
   it('clears unread counts', () => {
     expect(clearUnread([match(1, { unread_count: 3 })], 1)![0].unread_count).toBe(0)
+  })
+})
+
+describe('applyReaction', () => {
+  const base = [
+    { id: 1, match_id: 1, sender_id: 1, body: 'hi', created_at: '', read_at: null, reactions: [] },
+    { id: 2, match_id: 1, sender_id: 2, body: 'yo', created_at: '', read_at: null },
+  ]
+
+  it('adds, replaces and removes one reaction per person', () => {
+    const added = applyReaction(base, 1, 2, '❤️')
+    expect(added?.[0].reactions).toEqual([{ user_id: 2, emoji: '❤️' }])
+    expect(added?.[1]).toBe(base[1])
+
+    const both = applyReaction(applyReaction(added, 1, 1, '😂'), 1, 2, '🔥')
+    expect(both?.[0].reactions).toEqual([
+      { user_id: 1, emoji: '😂' },
+      { user_id: 2, emoji: '🔥' },
+    ])
+    expect(applyReaction(both, 1, 1, null)?.[0].reactions).toEqual([{ user_id: 2, emoji: '🔥' }])
+  })
+
+  it('copes with messages that have no reactions yet and missing caches', () => {
+    expect(applyReaction(base, 2, 1, '👍')?.[1].reactions).toEqual([{ user_id: 1, emoji: '👍' }])
+    expect(applyReaction(undefined, 1, 1, '👍')).toBeUndefined()
   })
 })

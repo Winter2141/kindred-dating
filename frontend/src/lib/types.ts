@@ -42,6 +42,11 @@ export interface Candidate extends PublicProfile {
   super_liked_you: boolean
 }
 
+export interface Reaction {
+  user_id: number
+  emoji: string
+}
+
 export interface Message {
   id: number
   match_id: number
@@ -49,6 +54,7 @@ export interface Message {
   body: string
   created_at: string
   read_at: string | null
+  reactions?: Reaction[]
   /** Set on optimistic messages that the server hasn't confirmed yet. */
   pending?: string
   failed?: boolean
@@ -101,6 +107,7 @@ export interface Meta {
   max_interests: number
   max_prompts: number
   max_photos: number
+  reactions: string[]
 }
 
 export interface Session {
@@ -114,6 +121,7 @@ export type ServerEvent =
   | { type: 'message.new'; message: Message; client_id: string | null }
   | { type: 'typing'; match_id: number; user_id: number; is_typing: boolean }
   | { type: 'read'; match_id: number; reader_id: number; read_at: string }
+  | { type: 'reaction'; match_id: number; message_id: number; user_id: number; emoji: string | null }
   | { type: 'presence'; user_id: number; online: boolean; last_active_at: string }
   | { type: 'match.new'; match: Match }
   | { type: 'match.removed'; match_id: number }
@@ -124,4 +132,5 @@ export type ClientEvent =
   | { type: 'message.send'; match_id: number; body: string; client_id: string }
   | { type: 'typing'; match_id: number; is_typing: boolean }
   | { type: 'read'; match_id: number }
+  | { type: 'react'; match_id: number; message_id: number; emoji: string | null }
   | { type: 'ping' }
