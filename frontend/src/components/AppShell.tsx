@@ -2,12 +2,14 @@ import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
 import { BarChart3, Gavel, Heart, LogOut, MessageCircle, Settings, Sparkles, UserRound } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router'
+import { useEffect } from 'react'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { api } from '@/lib/api'
 import { keys, totalUnread } from '@/lib/cache'
+import { NAVIGATE_EVENT, titleWithCount } from '@/lib/desktop'
 import { useAuth } from '@/store/auth'
 import { useLive, useToasts } from '@/store/live'
-import { NotificationBell } from './Notifications'
+import { NotificationBell, useNotifications } from './Notifications'
 import { Avatar, Logo } from './ui'
 
 function useBadges() {
@@ -89,10 +91,29 @@ function Toaster() {
   )
 }
 
+/** "(3) Kindred…" while there are unread chats or notifications, and clicks from desktop alerts. */
+function useAttention(unreadChats: number) {
+  const navigate = useNavigate()
+  const notifications = useNotifications()
+  const count = unreadChats + (notifications.data?.unread ?? 0)
+  useEffect(() => {
+    document.title = titleWithCount(count)
+    return () => {
+      document.title = titleWithCount(0)
+    }
+  }, [count])
+  useEffect(() => {
+    const go = (e: Event) => navigate((e as CustomEvent<string>).detail)
+    window.addEventListener(NAVIGATE_EVENT, go)
+    return () => window.removeEventListener(NAVIGATE_EVENT, go)
+  }, [navigate])
+}
+
 export function AppShell() {
   const user = useAuth((s) => s.user)
   const signOut = useAuth((s) => s.signOut)
   const badges = useBadges()
+  useAttention(badges.unread)
   const location = useLocation()
   const inChat = /^\/app\/matches\/\d+/.test(location.pathname)
 

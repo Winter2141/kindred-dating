@@ -1,14 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Ban, EyeOff, Gavel, KeyRound, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
+import { Ban, BellRing, EyeOff, Gavel, KeyRound, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { BlockedList } from '@/components/Safety'
 import { Spinner, Switch } from '@/components/ui'
 import { api } from '@/lib/api'
+import { desktopPermission, requestDesktopPermission, type DesktopPermission } from '@/lib/desktop'
 import { keys } from '@/lib/cache'
 import type { Me } from '@/lib/types'
 import { useAuth } from '@/store/auth'
 import { useToasts } from '@/store/live'
+import { usePrefs } from '@/store/prefs'
 
 export function SettingsPage() {
   const user = useAuth((s) => s.user)
@@ -26,6 +28,7 @@ export function SettingsPage() {
       </header>
       <div className="space-y-6">
         <VisibilitySection user={user} />
+        <DesktopSection />
         <PasswordSection />
         <SessionsSection />
         <Section
@@ -109,6 +112,44 @@ function VisibilitySection({ user }: { user: Me }) {
         onChange={(paused) => pause.mutate(paused)}
         label="Pause my profile"
       />
+    </Section>
+  )
+}
+
+export function DesktopSection() {
+  const enabled = usePrefs((s) => s.desktopNotifications)
+  const setEnabled = usePrefs((s) => s.setDesktopNotifications)
+  const [permission, setPermission] = useState<DesktopPermission>(desktopPermission)
+
+  const toggle = async (on: boolean) => {
+    if (!on) {
+      setEnabled(false)
+      return
+    }
+    const result = permission === 'granted' ? permission : await requestDesktopPermission()
+    setPermission(result)
+    setEnabled(result === 'granted')
+  }
+
+  return (
+    <Section
+      icon={<BellRing className="size-5" />}
+      title="Desktop notifications"
+      description="Get a system notification for new messages, likes and matches while Kindred is in another tab."
+    >
+      <Switch
+        checked={enabled && permission === 'granted'}
+        disabled={permission === 'unsupported' || permission === 'denied'}
+        onChange={(on) => void toggle(on)}
+        label="Notify me on this device"
+      />
+      {(permission === 'denied' || permission === 'unsupported') && (
+        <p className="mt-3 text-sm text-apricot">
+          {permission === 'denied'
+            ? 'Notifications are blocked for this site. Allow them in your browser settings to turn this on.'
+            : "This browser doesn't support notifications."}
+        </p>
+      )}
     </Section>
   )
 }

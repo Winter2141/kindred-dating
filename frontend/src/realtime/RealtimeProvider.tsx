@@ -13,7 +13,8 @@ import {
   upsertMessage,
 } from '@/lib/cache'
 import { upsertDate } from '@/lib/dates'
-import { applyNotification } from '@/lib/notifications'
+import { notifyDesktop } from '@/lib/desktop'
+import { applyNotification, notificationHref, notificationText } from '@/lib/notifications'
 import { previewText } from '@/lib/photos'
 import { RealtimeClient, socketUrl } from '@/lib/realtime'
 import type {
@@ -26,6 +27,7 @@ import type {
 } from '@/lib/types'
 import { useAuth } from '@/store/auth'
 import { useLive, useToasts } from '@/store/live'
+import { usePrefs } from '@/store/prefs'
 
 const TYPING_TIMEOUT_MS = 6000
 
@@ -100,10 +102,23 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       )
       if (message.sender_id === me?.id) return
       setTyping(message.match_id, undefined)
-      if (activeMatchId === message.match_id) return
       const match = queryClient
         .getQueryData<Match[]>(keys.matches)
         ?.find((m) => m.id === message.match_id)
+      if (match) {
+        // Even the open chat is "unseen" while the tab is in the background.
+        notifyDesktop(
+          {
+            title: match.user.name,
+            body: previewText(message),
+            icon: match.user.photos[0],
+            href: `/app/matches/${match.id}`,
+            tag: `match-${match.id}`,
+          },
+          { enabled: usePrefs.getState().desktopNotifications },
+        )
+      }
+      if (activeMatchId === message.match_id) return
       if (!match) {
         void queryClient.invalidateQueries({ queryKey: keys.matches })
         return
@@ -194,6 +209,18 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           )
           if (event.notification.kind === 'like' || event.notification.kind === 'super_like') {
             void queryClient.invalidateQueries({ queryKey: keys.likes })
+          }
+          if (event.notification.kind !== 'message') {
+            // Messages already raised their own desktop notification above.
+            notifyDesktop(
+              {
+                title: notificationText(event.notification),
+                icon: event.notification.actor?.photos[0],
+                href: notificationHref(event.notification),
+                tag: `notification-${event.notification.id}`,
+              },
+              { enabled: usePrefs.getState().desktopNotifications },
+            )
           }
           break
         case 'date.updated': {
