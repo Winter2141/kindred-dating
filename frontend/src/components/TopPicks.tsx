@@ -24,11 +24,11 @@ export function TopPicksButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="btn-secondary relative py-2.5 pr-4 pl-3.5"
+        className="btn-secondary relative shrink-0 py-2.5 pr-4 pl-3.5 whitespace-nowrap"
         aria-label={`Today's top picks${count ? `, ${count} left` : ''}`}
       >
         <Sparkles className="size-4 text-apricot" />
-        Top picks
+        <span className="hidden sm:inline">Top picks</span>
         {count > 0 && (
           <span className="grid h-5 min-w-5 place-items-center rounded-full bg-gradient-brand px-1.5 text-[11px] font-bold text-ink">
             {count}

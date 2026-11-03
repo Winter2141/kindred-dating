@@ -124,7 +124,7 @@ export function SwipeCard({
                   <Briefcase className="size-4 shrink-0" /> {candidate.job_title}
                 </p>
               )}
-              <p className="flex items-center gap-2 truncate">
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <MapPin className="size-4 shrink-0" /> {candidate.city || 'Nearby'}
                 {candidate.distance_km != null && (
                   <span className="rounded-full bg-cream/15 px-2 py-0.5 text-xs font-semibold">

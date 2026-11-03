@@ -131,7 +131,7 @@ export function DiscoverPage() {
           <TopPicksButton onSwiped={onPickSwiped} />
         </header>
 
-        <div className="relative h-[calc(100dvh-22.5rem)] max-h-[640px] min-h-[400px] w-full max-w-[440px] sm:aspect-[3/4.25] sm:h-auto sm:max-h-none">
+        <div className="relative h-[calc(100dvh-23.5rem)] max-h-[640px] min-h-[400px] w-full max-w-[440px] sm:aspect-[3/4.25] sm:h-auto sm:max-h-none">
           {discover.isPending ? (
             <div className="card grid size-full place-items-center">
               <Spinner className="text-coral" />
