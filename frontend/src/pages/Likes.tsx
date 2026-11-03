@@ -7,6 +7,7 @@ import { MatchCelebration } from '@/components/MatchCelebration'
 import { ProfileDetails } from '@/components/ProfileDetails'
 import { EmptyState, Photo, Spinner } from '@/components/ui'
 import { api } from '@/lib/api'
+import { VerifiedBadge } from '@/components/Verification'
 import { keys } from '@/lib/cache'
 import type { Like, Match, SwipeAction } from '@/lib/types'
 import { shortAgo } from '@/lib/time'
@@ -94,6 +95,7 @@ export function LikesPage() {
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4">
                   <p className="truncate font-display text-3xl leading-none">
                     {like.user.name} <span className="text-cream/70">{like.user.age}</span>
+                    {like.user.verified && <VerifiedBadge className="ml-1.5 inline size-5 align-baseline" />}
                   </p>
                   <p className="mt-1 truncate text-xs text-cream/70">{like.user.job_title}</p>
                   <div className="pointer-events-auto mt-3 flex gap-2">

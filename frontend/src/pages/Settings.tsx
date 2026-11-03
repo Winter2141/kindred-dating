@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Ban, BellRing, EyeOff, Gavel, KeyRound, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
+import { Ban, BadgeCheck, BellRing, EyeOff, Gavel, KeyRound, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { BlockedList } from '@/components/Safety'
+import { VerificationFlow } from '@/components/Verification'
 import { Spinner, Switch } from '@/components/ui'
 import { api } from '@/lib/api'
 import { desktopPermission, requestDesktopPermission, type DesktopPermission } from '@/lib/desktop'
@@ -28,6 +29,13 @@ export function SettingsPage() {
       </header>
       <div className="space-y-6">
         <VisibilitySection user={user} />
+        <Section
+          icon={<BadgeCheck className="size-5" />}
+          title="Verify your photos"
+          description="Copy a pose in a quick selfie and a moderator checks it's really you. Verified profiles get a blue tick, and the selfie is deleted after review."
+        >
+          <VerificationFlow hasPhotos={user.photos.length > 0} />
+        </Section>
         <DesktopSection />
         <PasswordSection />
         <SessionsSection />

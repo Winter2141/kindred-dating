@@ -27,6 +27,8 @@ import type {
   SwipeResult,
   TopPicks,
   UpcomingDate,
+  VerificationReview,
+  VerificationState,
 } from './types'
 
 export class ApiError extends Error {
@@ -216,4 +218,15 @@ export const api = {
     request<AdminReport>(`/api/admin/reports/${id}/resolve`, { method: 'POST', body: { action } }),
   unban: (userId: number) => request<void>(`/api/admin/users/${userId}/unban`, { method: 'POST' }),
   moderationStats: () => request<ModerationStats>('/api/admin/stats'),
+  verificationQueue: () => request<VerificationReview[]>('/api/admin/verifications'),
+  reviewVerification: (id: number, approve: boolean, note: string) =>
+    request<VerificationReview>(`/api/admin/verifications/${id}/review`, { method: 'POST', body: { approve, note } }),
+
+  verification: () => request<VerificationState>('/api/me/verification'),
+  startVerification: () => request<VerificationState>('/api/me/verification', { method: 'POST' }),
+  sendSelfie: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<VerificationState>('/api/me/verification/selfie', { method: 'POST', body: form })
+  },
 }

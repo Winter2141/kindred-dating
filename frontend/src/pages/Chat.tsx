@@ -18,6 +18,7 @@ import {
   quoteOf,
 } from '@/components/Replies'
 import { SafetyMenu } from '@/components/Safety'
+import { VerifiedBadge } from '@/components/Verification'
 import { RecordButton, RecordingBar, VoicePlayer } from '@/components/VoiceNotes'
 import { Avatar, Photo, Spinner, TypingDots } from '@/components/ui'
 import { api } from '@/lib/api'
@@ -328,7 +329,10 @@ export function ChatPage() {
           >
             <Avatar src={other.photos[0]} name={other.name} size={44} online={online} />
             <span className="min-w-0">
-              <span className="block truncate font-semibold">{other.name}</span>
+              <span className="flex items-center gap-1.5 font-semibold">
+                <span className="truncate">{other.name}</span>
+                {other.verified && <VerifiedBadge className="size-4" />}
+              </span>
               <span className={clsx('block truncate text-xs', typingUser ? 'text-coral' : online ? 'text-mint' : 'text-muted')}>
                 {typingUser ? 'typing…' : lastSeen(other.last_active_at, Boolean(online))}
               </span>

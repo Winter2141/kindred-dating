@@ -25,6 +25,8 @@ export const keys = {
   places: (query: string) => ['places', query] as const,
   reports: (status: string) => ['reports', status] as const,
   moderationStats: ['moderation-stats'] as const,
+  verification: ['verification'] as const,
+  verificationQueue: ['verification-queue'] as const,
 }
 
 /** Insert or replace a message, swapping out the optimistic copy that has the same client id. */

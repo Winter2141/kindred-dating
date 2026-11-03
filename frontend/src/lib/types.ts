@@ -22,6 +22,32 @@ export interface PublicProfile {
   is_online: boolean
   /** Rounded kilometres from you, when both of you have a location. */
   distance_km?: number | null
+  /** A moderator matched a posed selfie to their photos. */
+  verified?: boolean
+}
+
+export interface Pose {
+  id: string
+  emoji: string
+  text: string
+}
+
+export interface VerificationState {
+  status: 'none' | 'awaiting_photo' | 'pending' | 'approved' | 'rejected'
+  verified: boolean
+  pose: Pose | null
+  note: string
+}
+
+export interface VerificationReview {
+  id: number
+  user: PublicProfile
+  pose: Pose
+  selfie_url: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  note: string
+  submitted_at: string | null
+  reviewed_at: string | null
 }
 
 export interface Me extends PublicProfile {
@@ -185,6 +211,7 @@ export interface AdminReport {
 }
 
 export interface ModerationStats {
+  pending_verifications: number
   open_reports: number
   resolved_this_week: number
   banned_users: number
@@ -235,7 +262,7 @@ export interface Session {
   user: Me
 }
 
-export type NotificationKind = 'like' | 'super_like' | 'match' | 'message'
+export type NotificationKind = 'like' | 'super_like' | 'match' | 'message' | 'verified' | 'verification_rejected'
 
 /** Named AppNotification so it doesn't clash with the browser's Notification. */
 export interface AppNotification {

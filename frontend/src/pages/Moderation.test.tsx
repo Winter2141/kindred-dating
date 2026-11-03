@@ -50,6 +50,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(api.reports).mockResolvedValue([REPORT])
   vi.mocked(api.moderationStats).mockResolvedValue({
+    pending_verifications: 0,
     open_reports: 1,
     resolved_this_week: 3,
     banned_users: 0,

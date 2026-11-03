@@ -220,6 +220,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           if (event.notification.kind === 'like' || event.notification.kind === 'super_like') {
             void queryClient.invalidateQueries({ queryKey: keys.likes })
           }
+          if (event.notification.kind === 'verified' || event.notification.kind === 'verification_rejected') {
+            void queryClient.invalidateQueries({ queryKey: keys.verification })
+            void queryClient.invalidateQueries({ queryKey: keys.me })
+            useToasts.getState().push({ title: notificationText(event.notification) })
+          }
           if (event.notification.kind !== 'message') {
             // Messages already raised their own desktop notification above.
             notifyDesktop(

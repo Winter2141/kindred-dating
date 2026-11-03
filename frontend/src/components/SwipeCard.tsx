@@ -4,6 +4,7 @@ import { motion, useMotionValue, useTransform, type PanInfo } from 'motion/react
 import type { Candidate, SwipeAction } from '@/lib/types'
 import { lastSeen } from '@/lib/time'
 import { CompatibilityRing, InterestChip, Photo, useInterestEmoji } from './ui'
+import { VerifiedBadge } from './Verification'
 
 const SWIPE_DISTANCE = 120
 const SWIPE_VELOCITY = 600
@@ -127,6 +128,7 @@ export function SwipeCard({
           <div className="min-w-0">
             <h2 className="font-display text-5xl leading-none drop-shadow-lg">
               {candidate.name} <span className="text-cream/75">{candidate.age}</span>
+              {candidate.verified && <VerifiedBadge className="ml-2 inline size-7 align-baseline" />}
             </h2>
             <div className="mt-3 space-y-1.5 text-sm text-cream/85">
               {candidate.job_title && (

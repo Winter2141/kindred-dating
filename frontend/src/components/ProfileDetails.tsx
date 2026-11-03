@@ -3,6 +3,7 @@ import { formatDistance } from '@/lib/distance'
 import type { PublicProfile } from '@/lib/types'
 import { lastSeen } from '@/lib/time'
 import { AgreementPanel } from './Questions'
+import { VerifiedBadge } from './Verification'
 import { InterestChip, useInterestEmoji } from './ui'
 
 export function ProfileDetails({
@@ -19,8 +20,9 @@ export function ProfileDetails({
     <div className="space-y-6">
       {showHeader && (
         <div>
-          <h3 className="font-display text-4xl leading-none">
+          <h3 className="flex items-center gap-2 font-display text-4xl leading-none">
             {profile.name} <span className="text-muted">{profile.age}</span>
+            {profile.verified && <VerifiedBadge className="size-6" />}
           </h3>
           <p className="mt-2 text-sm text-muted">{lastSeen(profile.last_active_at, profile.is_online)}</p>
         </div>

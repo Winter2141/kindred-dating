@@ -41,11 +41,16 @@ export function notificationText(n: AppNotification): string {
       return `It's a match with ${name}!`
     case 'message':
       return n.count > 1 ? `${name} sent you ${n.count} messages` : `${name} sent you a message`
+    case 'verified':
+      return 'Your photos are verified ✓'
+    case 'verification_rejected':
+      return n.body ? `Verification didn't go through: ${n.body}` : "Verification didn't go through"
   }
 }
 
 /** Where tapping a notification takes you. */
 export function notificationHref(n: AppNotification): string {
   if ((n.kind === 'match' || n.kind === 'message') && n.match_id) return `/app/matches/${n.match_id}`
+  if (n.kind === 'verified' || n.kind === 'verification_rejected') return '/app/settings'
   return '/app/likes'
 }

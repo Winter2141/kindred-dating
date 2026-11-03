@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { Navigate } from 'react-router'
 import { REPORT_REASONS } from '@/components/Safety'
+import { VerificationQueue } from '@/components/Verification'
 import { Avatar, EmptyState, Spinner } from '@/components/ui'
 import { api } from '@/lib/api'
 import { keys } from '@/lib/cache'
@@ -26,6 +27,7 @@ export function ModerationPage() {
   // Ask the server rather than trusting the profile saved in the browser, which may be stale.
   const me = useQuery({ queryKey: keys.me, queryFn: api.me })
   const isAdmin = me.data?.is_admin === true
+  const [area, setArea] = useState<'reports' | 'verification'>('reports')
   const [tab, setTab] = useState<ReportStatus>('open')
   const stats = useQuery({ queryKey: keys.moderationStats, queryFn: api.moderationStats, enabled: isAdmin })
   const reports = useQuery({ queryKey: keys.reports(tab), queryFn: () => api.reports(tab), enabled: isAdmin })
@@ -49,55 +51,85 @@ export function ModerationPage() {
         <p className="mt-2 text-sm text-muted">Review what members flagged. Bans take effect immediately.</p>
       </header>
 
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Stat label="Open reports" value={stats.data?.open_reports} accent />
+        <Stat label="Selfies to check" value={stats.data?.pending_verifications} accent />
         <Stat label="Resolved this week" value={stats.data?.resolved_this_week} />
         <Stat label="Banned accounts" value={stats.data?.banned_users} />
         <Stat label="Members" value={stats.data?.total_users} />
       </div>
 
-      <div role="tablist" aria-label="Report status" className="mb-6 inline-flex rounded-full border border-line bg-surface p-1">
-        {TABS.map((t) => (
+      <div role="tablist" aria-label="Queue" className="mb-4 flex gap-6 border-b border-line">
+        {(
+          [
+            ['reports', 'Reports'],
+            ['verification', 'Photo verification'],
+          ] as const
+        ).map(([value, label]) => (
           <button
-            key={t.value}
+            key={value}
             type="button"
             role="tab"
-            aria-selected={tab === t.value}
-            onClick={() => setTab(t.value)}
+            aria-selected={area === value}
+            onClick={() => setArea(value)}
             className={clsx(
-              'rounded-full px-4 py-2 text-sm font-semibold transition',
-              tab === t.value ? 'bg-raised text-cream shadow-card' : 'text-muted hover:text-cream',
+              '-mb-px border-b-2 pb-3 text-sm font-semibold transition',
+              area === value ? 'border-coral text-cream' : 'border-transparent text-muted hover:text-cream',
             )}
           >
-            {t.label}
+            {label}
           </button>
         ))}
       </div>
 
-      {reports.isPending ? (
-        <div className="grid place-items-center py-20">
-          <Spinner className="text-coral" />
-        </div>
-      ) : reports.data?.length ? (
-        <ul className="space-y-4">
-          <AnimatePresence initial={false}>
-            {reports.data.map((report) => (
-              <motion.li
-                key={report.id}
-                layout
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: 40 }}
-              >
-                <ReportCard report={report} />
-              </motion.li>
-            ))}
-          </AnimatePresence>
-        </ul>
+      {area === 'verification' ? (
+        <VerificationQueue />
       ) : (
-        <EmptyState icon={<ShieldCheck className="size-9" />} title={tab === 'open' ? 'All clear' : 'Nothing here yet'}>
-          {tab === 'open' ? 'No reports are waiting for review.' : 'Resolved reports will show up here.'}
-        </EmptyState>
+        <>
+          <div role="tablist" aria-label="Report status" className="mb-6 inline-flex rounded-full border border-line bg-surface p-1">
+            {TABS.map((t) => (
+              <button
+                key={t.value}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.value}
+                onClick={() => setTab(t.value)}
+                className={clsx(
+                  'rounded-full px-4 py-2 text-sm font-semibold transition',
+                  tab === t.value ? 'bg-raised text-cream shadow-card' : 'text-muted hover:text-cream',
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {reports.isPending ? (
+            <div className="grid place-items-center py-20">
+              <Spinner className="text-coral" />
+            </div>
+          ) : reports.data?.length ? (
+            <ul className="space-y-4">
+              <AnimatePresence initial={false}>
+                {reports.data.map((report) => (
+                  <motion.li
+                    key={report.id}
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: 40 }}
+                  >
+                    <ReportCard report={report} />
+                  </motion.li>
+                ))}
+              </AnimatePresence>
+            </ul>
+          ) : (
+            <EmptyState icon={<ShieldCheck className="size-9" />} title={tab === 'open' ? 'All clear' : 'Nothing here yet'}>
+              {tab === 'open' ? 'No reports are waiting for review.' : 'Resolved reports will show up here.'}
+            </EmptyState>
+          )}
+        </>
       )}
     </div>
   )

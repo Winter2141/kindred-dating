@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { ChatMenu, muteLabel } from '@/components/ChatMenu'
 import { MIN_SEARCH_LENGTH, MessageResults } from '@/components/ChatSearch'
+import { VerifiedBadge } from '@/components/Verification'
 import { Avatar, EmptyState, Spinner, TypingDots } from '@/components/ui'
 import { api } from '@/lib/api'
 import { keys } from '@/lib/cache'
@@ -240,6 +241,7 @@ function ConversationRow({
           <div className="flex items-baseline justify-between gap-2">
             <p className={clsx('flex min-w-0 items-center gap-1.5 text-[15px]', unread ? 'font-bold' : 'font-semibold')}>
               <span className="truncate">{match.user.name}</span>
+              {match.user.verified && <VerifiedBadge className="size-3.5" />}
               {match.pinned && <Pin className="size-3.5 shrink-0 text-apricot" aria-label="Pinned" />}
               {match.muted && (
                 <BellOff className="size-3.5 shrink-0 text-faint" aria-label={muteLabel(match.muted_until)} />
