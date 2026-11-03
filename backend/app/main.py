@@ -1,3 +1,4 @@
+import asyncio
 import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -7,6 +8,7 @@ from fastapi import FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app import scheduler
 from app.broker import RedisBroker
 from app.config import Settings, get_settings
 from app.db import Database
@@ -53,7 +55,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             settings=settings, db=db, manager=ConnectionManager(broker), limiter=limiter
         )
         await hub.manager.start()
+        # Not a hub task: hub.drain() waits for those to finish, and this loop never does.
+        jobs = (
+            asyncio.create_task(scheduler.run(hub, settings.scheduler_interval_seconds))
+            if settings.scheduler_interval_seconds > 0
+            else None
+        )
         yield
+        if jobs is not None:
+            jobs.cancel()
+            await asyncio.gather(jobs, return_exceptions=True)
         await hub.shutdown()
         await hub.manager.stop()
         await db.dispose()

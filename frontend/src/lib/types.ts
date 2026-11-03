@@ -324,7 +324,14 @@ export interface Session {
   user: Me
 }
 
-export type NotificationKind = 'like' | 'super_like' | 'match' | 'message' | 'verified' | 'verification_rejected'
+export type NotificationKind =
+  | 'like'
+  | 'super_like'
+  | 'match'
+  | 'message'
+  | 'date_reminder'
+  | 'verified'
+  | 'verification_rejected'
 
 /** Named AppNotification so it doesn't clash with the browser's Notification. */
 export interface AppNotification {

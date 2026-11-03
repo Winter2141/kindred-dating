@@ -55,6 +55,7 @@ class NotificationKind(StrEnum):
     SUPER_LIKE = "super_like"
     MATCH = "match"
     MESSAGE = "message"
+    DATE_REMINDER = "date_reminder"
     VERIFIED = "verified"
     VERIFICATION_REJECTED = "verification_rejected"
 
@@ -303,6 +304,8 @@ class DateProposal(Base):
     status: Mapped[str] = mapped_column(String(16), default=DateStatus.PROPOSED)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     responded_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    # Set once the "starts soon" reminder has gone out (see app.scheduler).
+    reminded_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
 
 
 class ChatSetting(Base):

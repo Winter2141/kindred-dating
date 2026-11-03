@@ -41,6 +41,8 @@ export function notificationText(n: AppNotification): string {
       return `It's a match with ${name}!`
     case 'message':
       return n.count > 1 ? `${name} sent you ${n.count} messages` : `${name} sent you a message`
+    case 'date_reminder':
+      return n.body || `Your date with ${name} is coming up`
     case 'verified':
       return 'Your photos are verified ✓'
     case 'verification_rejected':
@@ -50,7 +52,9 @@ export function notificationText(n: AppNotification): string {
 
 /** Where tapping a notification takes you. */
 export function notificationHref(n: AppNotification): string {
-  if ((n.kind === 'match' || n.kind === 'message') && n.match_id) return `/app/matches/${n.match_id}`
+  if ((n.kind === 'match' || n.kind === 'message' || n.kind === 'date_reminder') && n.match_id) {
+    return `/app/matches/${n.match_id}`
+  }
   if (n.kind === 'verified' || n.kind === 'verification_rejected') return '/app/settings'
   return '/app/likes'
 }

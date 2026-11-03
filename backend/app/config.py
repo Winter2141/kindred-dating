@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     ice_servers: list[dict[str, Any]] = [{"urls": ["stun:stun.l.google.com:19302"]}]
     call_ring_seconds: float = 45
 
+    # Background jobs (date reminders): how often they look for work. 0 turns them off.
+    scheduler_interval_seconds: float = 60
+
     # "json" writes one JSON object per log line, for log collectors. Setting a metrics token
     # makes GET /metrics require "Authorization: Bearer <token>".
     log_format: Literal["text", "json"] = "text"
