@@ -1,6 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { ArrowLeft, Check, CheckCheck, ImagePlus, Info, SendHorizontal, Sparkles, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  Check,
+  CheckCheck,
+  ImagePlus,
+  Info,
+  Phone,
+  PhoneMissed,
+  SendHorizontal,
+  Sparkles,
+  Video,
+  X,
+} from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
@@ -34,6 +46,7 @@ import {
   upsertMessage,
 } from '@/lib/cache'
 import type { Match, Message, QuotedMessage } from '@/lib/types'
+import { describeCallRecord, startCall } from '@/lib/calls'
 import { photoProblem } from '@/lib/photos'
 import { useVoiceRecorder, type Recording } from '@/lib/voice'
 import { clockTime, dayLabel, isSameDay, lastSeen, shortAgo } from '@/lib/time'
@@ -311,6 +324,7 @@ export function ChatPage() {
   }
 
   const other = match.user
+  const callPeer = { id: other.id, name: other.name, photo: other.photos[0] ?? null }
   return (
     <div className="flex h-dvh lg:h-full">
       <div className="flex min-w-0 flex-1 flex-col">
@@ -346,6 +360,24 @@ export function ChatPage() {
             title="View profile"
           >
             <Info className="size-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => void startCall(match.id, callPeer, 'audio')}
+            className="hidden size-10 place-items-center rounded-full text-muted transition hover:bg-raised hover:text-cream sm:grid"
+            aria-label={`Call ${other.name}`}
+            title="Audio call"
+          >
+            <Phone className="size-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => void startCall(match.id, callPeer, 'video')}
+            className="grid size-10 place-items-center rounded-full text-muted transition hover:bg-raised hover:text-cream"
+            aria-label={`Video call ${other.name}`}
+            title="Video call"
+          >
+            <Video className="size-5" />
           </button>
           <PlanDateButton match={match} />
           <SafetyMenu person={other} onUnmatch={() => unmatch.mutate()} onGone={() => navigate('/app/matches')} />
@@ -548,143 +580,147 @@ function MessageList({
                     <span className="h-px flex-1 bg-line" />
                   </div>
                 )}
-                <motion.div
-                  id={message.pending ? undefined : `message-${message.id}`}
-                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.18 }}
-                  drag={touch && !message.pending && !message.deleted_at ? 'x' : false}
-                  dragDirectionLock
-                  dragSnapToOrigin
-                  dragConstraints={{ left: 0, right: 0 }}
-                  dragElastic={{ left: 0, right: 0.35 }}
-                  onDragEnd={(_, info) => info.offset.x > SWIPE_TO_REPLY_PX && onReply(message)}
-                  className={clsx(
-                    'flex flex-col',
-                    mine ? 'items-end' : 'items-start',
-                    groupedWithPrevious ? 'mt-1' : 'mt-3',
-                  )}
-                >
-                  <div
+                {message.call_kind ? (
+                  <CallRecord message={message} mine={mine} />
+                ) : (
+                  <motion.div
+                    id={message.pending ? undefined : `message-${message.id}`}
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.18 }}
+                    drag={touch && !message.pending && !message.deleted_at ? 'x' : false}
+                    dragDirectionLock
+                    dragSnapToOrigin
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={{ left: 0, right: 0.35 }}
+                    onDragEnd={(_, info) => info.offset.x > SWIPE_TO_REPLY_PX && onReply(message)}
                     className={clsx(
-                      'group flex max-w-[88%] items-center gap-1 sm:max-w-[72%]',
-                      mine && 'flex-row-reverse',
+                      'flex flex-col',
+                      mine ? 'items-end' : 'items-start',
+                      groupedWithPrevious ? 'mt-1' : 'mt-3',
                     )}
                   >
-                    {message.deleted_at ? (
-                      <div className="rounded-[1.4rem] border border-dashed border-line-strong px-4 py-2.5 text-sm text-faint italic">
-                        {mine ? 'You unsent a message' : 'Message unsent'}
-                      </div>
-                    ) : (
-                      <div
-                        onDoubleClick={() => !message.pending && onReact(message, '❤️')}
-                        className={clsx(
-                          'min-w-0 text-[15px] leading-relaxed break-words whitespace-pre-wrap',
-                          message.image_url ? 'p-1.5' : message.audio_url ? 'px-3 py-2' : 'px-4 py-2.5',
-                          mine
-                            ? 'rounded-[1.4rem] rounded-br-md bg-gradient-brand text-ink'
-                            : 'rounded-[1.4rem] rounded-bl-md border border-line bg-raised',
-                          mine && groupedWithPrevious && 'rounded-tr-md',
-                          !mine && groupedWithPrevious && 'rounded-tl-md',
-                          message.pending && !message.failed && 'opacity-70',
-                          message.failed && 'opacity-60 ring-2 ring-danger',
-                        )}
-                      >
-                        {message.reply_to && (
-                          <QuoteBlock
-                            quote={message.reply_to}
-                            meId={meId}
-                            otherName={match.user.name}
-                            mine={mine}
-                            onJump={onJump}
-                          />
-                        )}
-                        {message.audio_url ? (
-                          <VoicePlayer
-                            src={message.audio_url}
-                            durationMs={message.audio_ms ?? 0}
-                            waveform={message.waveform}
-                            mine={mine}
-                          />
-                        ) : message.image_url ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => setViewing(message.image_url!)}
-                              className="block overflow-hidden rounded-[1.1rem]"
-                              aria-label="Open photo"
-                            >
-                              <img
-                                src={message.image_url}
-                                alt={message.body || 'Photo'}
-                                loading="lazy"
-                                onLoad={keepAtBottom}
-                                className="max-h-80 w-full max-w-72 object-cover"
-                              />
-                            </button>
-                            {message.body && (
-                              <p className="px-2.5 pt-1.5 pb-1">
-                                {message.body}
-                                {message.edited_at && <EditedLabel />}
-                              </p>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            {message.body}
-                            {message.edited_at && <EditedLabel />}
-                          </>
-                        )}
-                      </div>
-                    )}
-                    {!message.pending && !message.deleted_at && (
-                      <>
-                        <ReactionPicker
-                          open={pickerFor === message.id}
-                          onOpenChange={(open) => setPickerFor(open ? message.id : null)}
-                          onPick={(emoji) => onReact(message, emoji)}
-                          align={mine ? 'right' : 'left'}
-                        />
-                        <ReplyButton onReply={() => onReply(message)} />
-                        <MessageMenu
-                          message={message}
-                          meId={meId}
-                          onUnsend={onUnsend}
-                          onReply={onReply}
-                          onEdit={onEdit}
-                          align={mine ? 'right' : 'left'}
-                        />
-                      </>
-                    )}
-                  </div>
-                  <ReactionChips
-                    reactions={message.reactions}
-                    meId={meId}
-                    onToggle={(emoji) => onReact(message, emoji)}
-                    align={mine ? 'right' : 'left'}
-                  />
-                  {!groupedWithNext && (
-                    <span className="mt-1.5 flex items-center gap-1 px-1 text-[11px] text-faint">
-                      {message.failed ? (
-                        <button type="button" onClick={() => onRetry(message)} className="font-semibold text-danger hover:underline">
-                          Not sent · Tap to retry
-                        </button>
-                      ) : message.pending ? (
-                        'Sending…'
+                    <div
+                      className={clsx(
+                        'group flex max-w-[88%] items-center gap-1 sm:max-w-[72%]',
+                        mine && 'flex-row-reverse',
+                      )}
+                    >
+                      {message.deleted_at ? (
+                        <div className="rounded-[1.4rem] border border-dashed border-line-strong px-4 py-2.5 text-sm text-faint italic">
+                          {mine ? 'You unsent a message' : 'Message unsent'}
+                        </div>
                       ) : (
+                        <div
+                          onDoubleClick={() => !message.pending && onReact(message, '❤️')}
+                          className={clsx(
+                            'min-w-0 text-[15px] leading-relaxed break-words whitespace-pre-wrap',
+                            message.image_url ? 'p-1.5' : message.audio_url ? 'px-3 py-2' : 'px-4 py-2.5',
+                            mine
+                              ? 'rounded-[1.4rem] rounded-br-md bg-gradient-brand text-ink'
+                              : 'rounded-[1.4rem] rounded-bl-md border border-line bg-raised',
+                            mine && groupedWithPrevious && 'rounded-tr-md',
+                            !mine && groupedWithPrevious && 'rounded-tl-md',
+                            message.pending && !message.failed && 'opacity-70',
+                            message.failed && 'opacity-60 ring-2 ring-danger',
+                          )}
+                        >
+                          {message.reply_to && (
+                            <QuoteBlock
+                              quote={message.reply_to}
+                              meId={meId}
+                              otherName={match.user.name}
+                              mine={mine}
+                              onJump={onJump}
+                            />
+                          )}
+                          {message.audio_url ? (
+                            <VoicePlayer
+                              src={message.audio_url}
+                              durationMs={message.audio_ms ?? 0}
+                              waveform={message.waveform}
+                              mine={mine}
+                            />
+                          ) : message.image_url ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setViewing(message.image_url!)}
+                                className="block overflow-hidden rounded-[1.1rem]"
+                                aria-label="Open photo"
+                              >
+                                <img
+                                  src={message.image_url}
+                                  alt={message.body || 'Photo'}
+                                  loading="lazy"
+                                  onLoad={keepAtBottom}
+                                  className="max-h-80 w-full max-w-72 object-cover"
+                                />
+                              </button>
+                              {message.body && (
+                                <p className="px-2.5 pt-1.5 pb-1">
+                                  {message.body}
+                                  {message.edited_at && <EditedLabel />}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {message.body}
+                              {message.edited_at && <EditedLabel />}
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {!message.pending && !message.deleted_at && (
                         <>
-                          {clockTime(message.created_at)}
-                          {mine &&
-                            (message.read_at ? (
-                              <CheckCheck className="size-3.5 text-sky" aria-label="Read" />
-                            ) : (
-                              <Check className="size-3.5" aria-label="Sent" />
-                            ))}
+                          <ReactionPicker
+                            open={pickerFor === message.id}
+                            onOpenChange={(open) => setPickerFor(open ? message.id : null)}
+                            onPick={(emoji) => onReact(message, emoji)}
+                            align={mine ? 'right' : 'left'}
+                          />
+                          <ReplyButton onReply={() => onReply(message)} />
+                          <MessageMenu
+                            message={message}
+                            meId={meId}
+                            onUnsend={onUnsend}
+                            onReply={onReply}
+                            onEdit={onEdit}
+                            align={mine ? 'right' : 'left'}
+                          />
                         </>
                       )}
-                    </span>
-                  )}
-                </motion.div>
+                    </div>
+                    <ReactionChips
+                      reactions={message.reactions}
+                      meId={meId}
+                      onToggle={(emoji) => onReact(message, emoji)}
+                      align={mine ? 'right' : 'left'}
+                    />
+                    {!groupedWithNext && (
+                      <span className="mt-1.5 flex items-center gap-1 px-1 text-[11px] text-faint">
+                        {message.failed ? (
+                          <button type="button" onClick={() => onRetry(message)} className="font-semibold text-danger hover:underline">
+                            Not sent · Tap to retry
+                          </button>
+                        ) : message.pending ? (
+                          'Sending…'
+                        ) : (
+                          <>
+                            {clockTime(message.created_at)}
+                            {mine &&
+                              (message.read_at ? (
+                                <CheckCheck className="size-3.5 text-sky" aria-label="Read" />
+                              ) : (
+                                <Check className="size-3.5" aria-label="Sent" />
+                              ))}
+                          </>
+                        )}
+                      </span>
+                    )}
+                  </motion.div>
+                )}
               </Fragment>
             )
           })}
@@ -708,6 +744,27 @@ function MessageList({
           </AnimatePresence>
         </div>
       )}
+    </div>
+  )
+}
+
+/** A call in the conversation's history, centred like the day dividers. */
+function CallRecord({ message, mine }: { message: Message; mine: boolean }) {
+  const kind = message.call_kind === 'audio' ? 'audio' : 'video'
+  const missed = message.call_ms == null
+  const Icon = missed && !mine ? PhoneMissed : kind === 'video' ? Video : Phone
+  return (
+    <div id={`message-${message.id}`} className="my-3 flex justify-center">
+      <span
+        className={clsx(
+          'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm',
+          missed && !mine ? 'border-danger/30 bg-danger/10 text-danger' : 'border-line bg-raised/70 text-muted',
+        )}
+      >
+        <Icon className="size-4" />
+        {describeCallRecord(kind, message.call_ms ?? null, mine)}
+        <span className="text-xs text-faint">{clockTime(message.created_at)}</span>
+      </span>
     </div>
   )
 }

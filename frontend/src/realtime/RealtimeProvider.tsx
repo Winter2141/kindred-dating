@@ -15,6 +15,7 @@ import {
   setPresence,
   upsertMessage,
 } from '@/lib/cache'
+import * as calls from '@/lib/calls'
 import { upsertDate } from '@/lib/dates'
 import { notifyDesktop } from '@/lib/desktop'
 import { applyNotification, notificationHref, notificationText } from '@/lib/notifications'
@@ -60,6 +61,19 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     pathRef.current = location.pathname
   }, [location.pathname])
   const typingTimers = useRef(new Map<number, ReturnType<typeof setTimeout>>())
+
+  // Calls signal over this socket; hang up if it goes away (signing out, switching account).
+  useEffect(() => {
+    if (!client) return
+    calls.bindCalls(
+      (event) => client.send(event),
+      (title, body) => useToasts.getState().push({ title, body }),
+    )
+    return () => {
+      if (calls.inCall()) calls.hangUp('ended')
+      calls.bindCalls(() => {}, () => {})
+    }
+  }, [client])
 
   useEffect(() => {
     if (!client) return
@@ -270,6 +284,34 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             matches?.filter((m) => m.id !== event.match_id),
           )
           queryClient.removeQueries({ queryKey: keys.messages(event.match_id) })
+          break
+        case 'call.ringing':
+          calls.onRinging(event.call_id, event.match_id)
+          break
+        case 'call.incoming':
+          calls.onIncoming(event.call_id, event.match_id, event.kind, event.from)
+          notifyDesktop(
+            {
+              title: `${event.from.name} is calling`,
+              body: `Incoming ${event.kind} call`,
+              icon: event.from.photo ?? undefined,
+              href: `/app/matches/${event.match_id}`,
+              tag: `call-${event.call_id}`,
+            },
+            { enabled: usePrefs.getState().desktopNotifications },
+          )
+          break
+        case 'call.accepted':
+          void calls.onAccepted(event.call_id)
+          break
+        case 'call.signal':
+          void calls.onSignal(event.call_id, event.data)
+          break
+        case 'call.ended':
+          calls.onEnded(event.call_id, event.reason, event.by, useAuth.getState().user?.id)
+          break
+        case 'call.failed':
+          calls.onFailed(event.detail)
           break
         case 'error':
           // A message the server refused (e.g. sending too fast): fail it now instead of

@@ -170,6 +170,9 @@ export interface Message {
   audio_url?: string | null
   audio_ms?: number | null
   waveform?: number[] | null
+  /** Call log entries: the kind of call, and its length (null if nobody answered). */
+  call_kind?: 'audio' | 'video' | null
+  call_ms?: number | null
   reply_to?: QuotedMessage | null
   created_at: string
   read_at: string | null
@@ -345,6 +348,18 @@ export type ServerEvent =
   | ({ type: 'match.settings'; match_id: number } & ChatSettings)
   | { type: 'notification.new'; notification: AppNotification }
   | { type: 'date.updated'; date: DateProposal }
+  | { type: 'call.ringing'; call_id: string; match_id: number }
+  | {
+      type: 'call.incoming'
+      call_id: string
+      match_id: number
+      kind: 'audio' | 'video'
+      from: { id: number; name: string; photo: string | null }
+    }
+  | { type: 'call.accepted'; call_id: string }
+  | { type: 'call.signal'; call_id: string; data: Record<string, unknown> }
+  | { type: 'call.ended'; call_id: string; reason: string; by: number | null }
+  | { type: 'call.failed'; reason: string; detail: string; match_id: number | null; call_id: string | null }
   | { type: 'pong' }
   | { type: 'error'; detail: string; match_id?: number; client_id?: string | null }
 
@@ -353,4 +368,8 @@ export type ClientEvent =
   | { type: 'typing'; match_id: number; is_typing: boolean }
   | { type: 'read'; match_id: number }
   | { type: 'react'; match_id: number; message_id: number; emoji: string | null }
+  | { type: 'call.invite'; match_id: number; kind: 'audio' | 'video' }
+  | { type: 'call.accept'; call_id: string }
+  | { type: 'call.signal'; call_id: string; data: Record<string, unknown> }
+  | { type: 'call.end'; call_id: string; reason: 'ended' | 'declined' | 'cancelled' }
   | { type: 'ping' }

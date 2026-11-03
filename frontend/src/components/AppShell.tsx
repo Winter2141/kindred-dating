@@ -4,6 +4,7 @@ import { BarChart3, Gavel, Heart, LogOut, MessageCircle, Settings, Sparkles, Use
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { CallScreen } from '@/components/CallScreen'
 import { EmailBanner } from '@/components/EmailBanner'
 import { api } from '@/lib/api'
 import { keys, totalUnread } from '@/lib/cache'
@@ -261,6 +262,7 @@ export function AppShell() {
         </nav>
       )}
       <Toaster />
+      <CallScreen />
     </div>
   )
 }

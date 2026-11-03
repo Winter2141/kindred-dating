@@ -12,6 +12,7 @@ export function canUnsend(message: Message, meId: number, now = Date.now()): boo
     message.sender_id === meId &&
     !message.pending &&
     !message.deleted_at &&
+    !message.call_kind &&
     now - new Date(message.created_at).getTime() < UNSEND_WINDOW_MS
   )
 }

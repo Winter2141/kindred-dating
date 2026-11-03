@@ -208,6 +208,7 @@ export const api = {
   messages: (id: number, before?: number) =>
     request<Message[]>(`/api/matches/${id}/messages${before ? `?before=${before}` : ''}`),
   icebreakers: (id: number) => request<string[]>(`/api/matches/${id}/icebreakers`),
+  callConfig: (id: number) => request<{ ice_servers: RTCIceServer[] }>(`/api/matches/${id}/call-config`),
   sendPhoto: (matchId: number, file: File, caption: string, replyToId?: number | null) => {
     const form = new FormData()
     form.append('file', file)
