@@ -13,6 +13,7 @@ from app.realtime import ConnectionManager, Hub
 from app.routers import (
     account,
     admin,
+    admin_users,
     auth,
     dates,
     discover,
@@ -76,6 +77,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         safety,
         verification,
         admin,
+        admin_users,
         ws,
     ):
         app.include_router(module.router)

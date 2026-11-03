@@ -15,6 +15,7 @@ from pydantic import (
 
 from app.catalog import INTERESTS, MAX_INTERESTS, MAX_PROMPTS, PROMPT_QUESTIONS, REACTIONS
 from app.models import (
+    AuditEvent,
     DateProposal,
     DateStatus,
     Gender,
@@ -607,6 +608,46 @@ class VerificationReviewOut(BaseModel):
     note: str
     submitted_at: datetime | None
     reviewed_at: datetime | None
+
+
+class AdminUserOut(PublicProfile):
+    email: EmailStr
+    created_at: datetime
+    banned: bool
+    email_verified: bool
+    is_admin: bool
+    is_persona: bool
+    open_reports: int
+    matches: int
+
+
+class AdminUserPage(BaseModel):
+    total: int
+    items: list[AdminUserOut]
+
+
+class BanIn(BaseModel):
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=300)]
+
+
+class AuditEventOut(BaseModel):
+    id: int
+    action: str
+    actor_name: str | None
+    target: PublicProfile | None
+    detail: str
+    created_at: datetime
+
+    @classmethod
+    def build(cls, event: AuditEvent) -> Self:
+        return cls(
+            id=event.id,
+            action=event.action,
+            actor_name=event.actor.name if event.actor else None,
+            target=PublicProfile.build(event.target) if event.target else None,
+            detail=event.detail,
+            created_at=event.created_at,
+        )
 
 
 class ModerationStats(BaseModel):

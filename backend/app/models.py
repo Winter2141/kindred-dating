@@ -357,6 +357,24 @@ class VerificationRequest(Base):
     user: Mapped[User] = relationship(foreign_keys=[user_id], lazy="joined")
 
 
+class AuditEvent(Base):
+    """One moderator action (see app.services.audit). Rows are never edited or deleted."""
+
+    __tablename__ = "audit_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    action: Mapped[str] = mapped_column(String(40), index=True)
+    target_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True, default=None
+    )
+    detail: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    actor: Mapped[User | None] = relationship(foreign_keys=[actor_id], lazy="joined")
+    target: Mapped[User | None] = relationship(foreign_keys=[target_user_id], lazy="joined")
+
+
 class OutboxEmail(Base):
     """An email the outbox mail backend kept instead of sending (see app.mail)."""
 

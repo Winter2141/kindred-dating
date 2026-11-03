@@ -10,6 +10,7 @@ from app.deps import AdminUser, HubDep, SessionDep
 from app.models import Report, ReportStatus, User, VerificationRequest, VerificationStatus
 from app.routers.ws import CLOSE_UNAUTHORIZED
 from app.schemas import ModerationStats, ReportOut, ResolveIn
+from app.services import audit
 
 router = APIRouter(prefix="/api/admin", tags=["moderation"])
 
@@ -59,11 +60,25 @@ async def resolve_report(
     if data.action == "dismiss":
         report.status = ReportStatus.DISMISSED
         report.resolved_at, report.resolved_by_id = now, admin.id
+        audit.record(
+            session,
+            admin.id,
+            audit.AuditAction.REPORT_DISMISSED,
+            target_user_id=reported.id,
+            detail=f"Report #{report.id} ({report.reason})",
+        )
     else:
         if reported.is_admin:
             raise HTTPException(status.HTTP_409_CONFLICT, "Moderators can't be banned here")
         reported.banned_at = now
         reported.token_version += 1
+        audit.record(
+            session,
+            admin.id,
+            audit.AuditAction.USER_BANNED,
+            target_user_id=reported.id,
+            detail=f"From report #{report.id} ({report.reason})",
+        )
         await session.execute(
             update(Report)
             .where(Report.reported_id == reported.id, Report.status == ReportStatus.OPEN)
@@ -78,11 +93,12 @@ async def resolve_report(
 
 
 @router.post("/users/{user_id}/unban", status_code=status.HTTP_204_NO_CONTENT)
-async def unban(user_id: int, _: AdminUser, session: SessionDep) -> Response:
+async def unban(user_id: int, admin: AdminUser, session: SessionDep) -> Response:
     user = await session.get(User, user_id)
     if user is None or user.banned_at is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No banned user with that id")
     user.banned_at = None
+    audit.record(session, admin.id, audit.AuditAction.USER_UNBANNED, target_user_id=user.id)
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

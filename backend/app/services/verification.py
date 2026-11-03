@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import utcnow
 from app.models import NotificationKind, User, VerificationRequest, VerificationStatus
 from app.realtime import Hub
+from app.services import audit
 from app.services.images import delete_local
 from app.services.notifications import notify
 
@@ -106,6 +107,15 @@ async def review(
     request.reviewed_by_id = moderator.id
     if approve:
         request.user.verified_at = now
+    audit.record(
+        session,
+        moderator.id,
+        audit.AuditAction.VERIFICATION_APPROVED
+        if approve
+        else audit.AuditAction.VERIFICATION_REJECTED,
+        target_user_id=request.user_id,
+        detail=note,
+    )
     # The selfie has done its job either way; don't keep a face photo around for nothing.
     selfie, request.selfie_url = request.selfie_url, None
     await session.commit()
