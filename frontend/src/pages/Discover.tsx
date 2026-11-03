@@ -7,20 +7,27 @@ import { Link } from 'react-router'
 import { MatchCelebration } from '@/components/MatchCelebration'
 import { ProfileDetails } from '@/components/ProfileDetails'
 import { SwipeCard } from '@/components/SwipeCard'
+import { FiltersButton } from '@/components/DiscoverFilters'
 import { TopPicksButton } from '@/components/TopPicks'
 import { EmptyState, Spinner } from '@/components/ui'
 import { api, ApiError } from '@/lib/api'
 import { keys } from '@/lib/cache'
 import type { Candidate, Match, SwipeAction, SwipeResult } from '@/lib/types'
+import { activeFilterCount, NO_FILTERS } from '@/lib/filters'
 import { useAuth } from '@/store/auth'
 import { useToasts } from '@/store/live'
+import { usePrefs } from '@/store/prefs'
 
 const VISIBLE = 3
 
 export function DiscoverPage() {
   const queryClient = useQueryClient()
   const user = useAuth((s) => s.user)
-  const discover = useQuery({ queryKey: keys.discover, queryFn: api.discover })
+  const filters = usePrefs((s) => s.discoverFilters)
+  const setFilters = usePrefs((s) => s.setDiscoverFilters)
+  const filtered = activeFilterCount(filters) > 0
+  // The filters are part of the key, so changing them fetches a fresh deck.
+  const discover = useQuery({ queryKey: [...keys.discover, filters], queryFn: () => api.discover(filters) })
   const [gone, setGone] = useState<Record<number, SwipeAction>>({})
   const [history, setHistory] = useState<Candidate[]>([])
   const [restored, setRestored] = useState<Candidate[]>([])
@@ -128,13 +135,30 @@ export function DiscoverPage() {
               Picked for you{user?.city ? ` around ${user.city}` : ''} · best fit first
             </p>
           </div>
-          <TopPicksButton onSwiped={onPickSwiped} />
+          <div className="flex items-center gap-2">
+            <TopPicksButton onSwiped={onPickSwiped} />
+            <FiltersButton />
+          </div>
         </header>
 
         <div className="relative h-[calc(100dvh-23.5rem)] max-h-[640px] min-h-[400px] w-full max-w-[440px] sm:aspect-[3/4.25] sm:h-auto sm:max-h-none">
           {discover.isPending ? (
             <div className="card grid size-full place-items-center">
               <Spinner className="text-coral" />
+            </div>
+          ) : deck.length === 0 && filtered ? (
+            <div className="card grid size-full place-items-center">
+              <EmptyState
+                icon={<SearchX className="size-8" />}
+                title="No one fits those filters"
+                action={
+                  <button type="button" className="btn-secondary" onClick={() => setFilters(NO_FILTERS)}>
+                    Clear filters
+                  </button>
+                }
+              >
+                Try fewer filters, or a wider set of interests.
+              </EmptyState>
             </div>
           ) : deck.length === 0 ? (
             <div className="card grid size-full place-items-center">

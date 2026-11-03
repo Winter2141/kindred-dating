@@ -1,4 +1,5 @@
 import { useAuth } from '@/store/auth'
+import { NO_FILTERS, filtersToQuery, type DiscoverFilters } from './filters'
 import type { QuestionAnswer } from './questions'
 import type {
   AdminReport,
@@ -149,7 +150,7 @@ export const api = {
   deleteAccount: (password: string) =>
     request<void>('/api/me', { method: 'DELETE', body: { password } }),
 
-  discover: () => request<Candidate[]>('/api/discover'),
+  discover: (filters: DiscoverFilters = NO_FILTERS) => request<Candidate[]>(`/api/discover${filtersToQuery(filters)}`),
   topPicks: () => request<TopPicks>('/api/discover/top-picks'),
   swipe: (targetId: number, action: SwipeAction) =>
     request<SwipeResult>('/api/swipes', { method: 'POST', body: { target_id: targetId, action } }),
