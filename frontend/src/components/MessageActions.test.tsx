@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Message } from '@/lib/types'
-import { MessageMenu, UNSEND_WINDOW_MS, canUnsend } from './MessageActions'
+import { MessageMenu, UNSEND_WINDOW_MS, canUnsend, lastEditable } from './MessageActions'
 
 const now = Date.parse('2026-11-02T12:00:00Z')
 const message = (overrides: Partial<Message> = {}): Message => ({
@@ -26,7 +26,28 @@ describe('canUnsend', () => {
   })
 })
 
+describe('lastEditable', () => {
+  it('finds my latest message still inside the window', () => {
+    const mine = message({ id: 1, created_at: new Date(now - 120_000).toISOString() })
+    const newer = message({ id: 2, created_at: new Date(now - 60_000).toISOString() })
+    const theirs = message({ id: 3, sender_id: 8 })
+    const pending = message({ id: 4, pending: 'c9' })
+    expect(lastEditable([mine, newer, theirs, pending], 7, now)?.id).toBe(2)
+    expect(lastEditable([theirs], 7, now)).toBeUndefined()
+  })
+})
+
 describe('MessageMenu', () => {
+  it('offers to edit my recent message', async () => {
+    const onEdit = vi.fn()
+    const user = userEvent.setup()
+    const recent = message({ created_at: new Date().toISOString() })
+    render(<MessageMenu message={recent} meId={7} onUnsend={vi.fn()} onEdit={onEdit} align="right" />)
+    await user.click(screen.getByRole('button', { name: 'Message options' }))
+    await user.click(screen.getByRole('menuitem', { name: /edit/i }))
+    expect(onEdit).toHaveBeenCalledWith(recent)
+  })
+
   it('copies text and unsends my recent message', async () => {
     const onUnsend = vi.fn()
     const user = userEvent.setup()

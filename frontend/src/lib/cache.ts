@@ -1,4 +1,5 @@
 /** Pure helpers that fold real-time events into the React Query caches. */
+import { trimQuote } from './quotes'
 import type { Match, Message } from './types'
 
 export const keys = {
@@ -79,6 +80,23 @@ export function applyUnsend(list: Message[] | undefined, messageId: number, dele
     }
     return m
   })
+}
+
+/** Swap in an edited message's text, wherever it appears or is quoted. */
+export function applyEdit(list: Message[] | undefined, edited: Pick<Message, 'id' | 'body' | 'edited_at'>): Message[] | undefined {
+  return list?.map((m) => {
+    if (m.id === edited.id) return { ...m, body: edited.body, edited_at: edited.edited_at }
+    if (m.reply_to?.id === edited.id) return { ...m, reply_to: { ...m.reply_to, body: trimQuote(edited.body) } }
+    return m
+  })
+}
+
+export function applyEditToMatches(matches: Match[] | undefined, edited: Pick<Message, 'id' | 'body' | 'edited_at'>): Match[] | undefined {
+  return matches?.map((m) =>
+    m.last_message?.id === edited.id
+      ? { ...m, last_message: { ...m.last_message, body: edited.body, edited_at: edited.edited_at } }
+      : m,
+  )
 }
 
 export function applyUnsendToMatches(

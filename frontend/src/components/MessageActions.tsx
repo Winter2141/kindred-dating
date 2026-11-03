@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Copy, CornerUpLeft, MoreHorizontal, Undo2 } from 'lucide-react'
+import { Copy, CornerUpLeft, MoreHorizontal, Pencil, Undo2, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import type { Message } from '@/lib/types'
@@ -16,17 +16,54 @@ export function canUnsend(message: Message, meId: number, now = Date.now()): boo
   )
 }
 
+/** Same window as unsend; a photo can always lose or change its caption. */
+export function canEdit(message: Message, meId: number, now = Date.now()): boolean {
+  return canUnsend(message, meId, now)
+}
+
+/** The latest message of mine that can still be edited, for the ↑ shortcut. */
+export function lastEditable(messages: Message[] | undefined, meId: number, now = Date.now()): Message | undefined {
+  return [...(messages ?? [])].reverse().find((m) => canEdit(m, meId, now))
+}
+
+/** Above the composer while you edit a message. */
+export function EditBanner({ message, onCancel }: { message: Message; onCancel: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mx-auto mb-2 flex max-w-3xl items-center gap-3 rounded-2xl border border-line bg-raised/70 py-2 pr-2 pl-3"
+    >
+      <Pencil className="size-4 shrink-0 text-apricot" aria-hidden />
+      <div className="min-w-0 flex-1 text-sm">
+        <p className="text-xs font-semibold text-apricot">Editing message</p>
+        <p className="truncate text-muted">{message.image_url ? 'Photo caption' : message.body}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="grid size-8 shrink-0 place-items-center rounded-full text-muted transition hover:bg-surface hover:text-cream"
+        aria-label="Cancel editing"
+      >
+        <X className="size-4" />
+      </button>
+    </motion.div>
+  )
+}
+
 export function MessageMenu({
   message,
   meId,
   onUnsend,
   onReply,
+  onEdit,
   align,
 }: {
   message: Message
   meId: number
   onUnsend: (message: Message) => void
   onReply?: (message: Message) => void
+  onEdit?: (message: Message) => void
   align: 'left' | 'right'
 }) {
   const [open, setOpen] = useState(false)
@@ -100,6 +137,19 @@ export function MessageMenu({
             >
               <Copy className="size-4" /> {copied ? 'Copied' : 'Copy text'}
             </button>
+            {onEdit && canEdit(message, meId) && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false)
+                  onEdit(message)
+                }}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold hover:bg-raised"
+              >
+                <Pencil className="size-4" /> Edit
+              </button>
+            )}
             {canUnsend(message, meId) && (
               <button
                 type="button"

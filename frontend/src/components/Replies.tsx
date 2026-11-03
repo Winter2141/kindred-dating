@@ -1,32 +1,10 @@
 import clsx from 'clsx'
 import { CornerUpLeft, X } from 'lucide-react'
 import { motion } from 'motion/react'
-import type { Message, QuotedMessage } from '@/lib/types'
+import { quoteAuthor, quoteText } from '@/lib/quotes'
+import type { QuotedMessage } from '@/lib/types'
 
-/** Matches the server's trim so an optimistic quote looks like the one that comes back. */
-export const QUOTE_LENGTH = 160
-
-export function quoteOf(message: Message): QuotedMessage {
-  const body = message.body.length <= QUOTE_LENGTH ? message.body : `${message.body.slice(0, QUOTE_LENGTH - 1).trimEnd()}…`
-  return {
-    id: message.id,
-    sender_id: message.sender_id,
-    body,
-    image_url: message.image_url ?? null,
-    deleted_at: message.deleted_at ?? null,
-  }
-}
-
-/** One line describing what a quote contains. */
-export function quoteText(quote: QuotedMessage): string {
-  if (quote.deleted_at) return 'Message unsent'
-  if (quote.image_url) return quote.body ? `📷 ${quote.body}` : '📷 Photo'
-  return quote.body
-}
-
-export function quoteAuthor(quote: QuotedMessage, meId: number, otherName: string): string {
-  return quote.sender_id === meId ? 'You' : otherName
-}
+export { QUOTE_LENGTH, quoteAuthor, quoteOf, quoteText } from '@/lib/quotes'
 
 /** The quoted message shown inside a reply bubble. Clicking it jumps to the original. */
 export function QuoteBlock({

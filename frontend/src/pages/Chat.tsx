@@ -7,7 +7,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { ProfileDetails } from '@/components/ProfileDetails'
 import { DateBar, PlanDateButton } from '@/components/DatePlanner'
 import { Lightbox } from '@/components/Lightbox'
-import { MessageMenu } from '@/components/MessageActions'
+import { EditBanner, MessageMenu, lastEditable } from '@/components/MessageActions'
 import { ReactionChips, ReactionPicker } from '@/components/Reactions'
 import {
   QuoteBlock,
@@ -21,6 +21,8 @@ import { SafetyMenu } from '@/components/Safety'
 import { Avatar, Photo, Spinner, TypingDots } from '@/components/ui'
 import { api } from '@/lib/api'
 import {
+  applyEdit,
+  applyEditToMatches,
   applyReaction,
   applyUnsend,
   applyUnsendToMatches,
@@ -48,11 +50,13 @@ export function ChatPage() {
   const send = useRealtimeSend()
   const [showProfile, setShowProfile] = useState(false)
   const [replyingTo, setReplyingTo] = useState<QuotedMessage | null>(null)
-  // A reply in progress belongs to its conversation; switching chats drops it.
-  const [replyMatchId, setReplyMatchId] = useState(matchId)
-  if (replyMatchId !== matchId) {
-    setReplyMatchId(matchId)
+  const [editing, setEditing] = useState<Message | null>(null)
+  // A reply or edit in progress belongs to its conversation; switching chats drops it.
+  const [draftMatchId, setDraftMatchId] = useState(matchId)
+  if (draftMatchId !== matchId) {
+    setDraftMatchId(matchId)
     setReplyingTo(null)
+    setEditing(null)
   }
 
   const matches = useQuery({ queryKey: keys.matches, queryFn: api.matches })
@@ -137,6 +141,28 @@ export function ChatPage() {
     },
     onError: (error) => useToasts.getState().push({ title: "Couldn't unsend", body: error.message }),
   })
+
+  const edit = useMutation({
+    mutationFn: ({ message, body }: { message: Message; body: string }) => api.editMessage(matchId, message.id, body),
+    onMutate: ({ message, body }) => {
+      // Show the new text straight away; put the old one back if the server says no.
+      const draft = { id: message.id, body, edited_at: new Date().toISOString() }
+      queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => applyEdit(list, draft))
+    },
+    onSuccess: (saved) => {
+      queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => applyEdit(list, saved))
+      queryClient.setQueryData<Match[]>(keys.matches, (list) => applyEditToMatches(list, saved))
+    },
+    onError: (error, { message }) => {
+      queryClient.setQueryData<Message[]>(keys.messages(matchId), (list) => applyEdit(list, message))
+      useToasts.getState().push({ title: "Couldn't edit", body: error.message })
+    },
+  })
+
+  const startEdit = (message: Message) => {
+    setReplyingTo(null)
+    setEditing(message)
+  }
 
   // Files for photos still uploading (or failed), so "Tap to retry" can send them again.
   const pendingPhotos = useRef(new Map<string, File>())
@@ -256,7 +282,11 @@ export function ChatPage() {
           onRetry={retry}
           onReact={react}
           onUnsend={(message) => unsend.mutate(message)}
-          onReply={(message) => setReplyingTo(quoteOf(message))}
+          onReply={(message) => {
+            setEditing(null)
+            setReplyingTo(quoteOf(message))
+          }}
+          onEdit={startEdit}
           onJump={jump}
           onIcebreaker={(text) => sendMessage(text)}
         />
@@ -282,6 +312,16 @@ export function ChatPage() {
             )
           }
           onCancelReply={replyingTo ? () => setReplyingTo(null) : undefined}
+          editing={editing}
+          onSaveEdit={(body) => {
+            if (editing && body !== editing.body) edit.mutate({ message: editing, body })
+            setEditing(null)
+          }}
+          onCancelEdit={() => setEditing(null)}
+          onEditLast={() => {
+            const last = lastEditable(messages.data, me?.id ?? -1)
+            if (last) startEdit(last)
+          }}
         />
       </div>
 
@@ -326,6 +366,7 @@ function MessageList({
   onReact,
   onUnsend,
   onReply,
+  onEdit,
   onJump,
   onIcebreaker,
 }: {
@@ -338,6 +379,7 @@ function MessageList({
   onReact: (message: Message, emoji: string) => void
   onUnsend: (message: Message) => void
   onReply: (message: Message) => void
+  onEdit: (message: Message) => void
   onJump: (messageId: number) => void
   onIcebreaker: (text: string) => void
 }) {
@@ -490,10 +532,18 @@ function MessageList({
                                 className="max-h-80 w-full max-w-72 object-cover"
                               />
                             </button>
-                            {message.body && <p className="px-2.5 pt-1.5 pb-1">{message.body}</p>}
+                            {message.body && (
+                              <p className="px-2.5 pt-1.5 pb-1">
+                                {message.body}
+                                {message.edited_at && <EditedLabel />}
+                              </p>
+                            )}
                           </>
                         ) : (
-                          message.body
+                          <>
+                            {message.body}
+                            {message.edited_at && <EditedLabel />}
+                          </>
                         )}
                       </div>
                     )}
@@ -511,6 +561,7 @@ function MessageList({
                           meId={meId}
                           onUnsend={onUnsend}
                           onReply={onReply}
+                          onEdit={onEdit}
                           align={mine ? 'right' : 'left'}
                         />
                       </>
@@ -571,6 +622,10 @@ function MessageList({
   )
 }
 
+function EditedLabel() {
+  return <span className="ml-1.5 align-baseline text-[11px] opacity-60 select-none">edited</span>
+}
+
 function MatchedBanner({
   match,
   empty,
@@ -619,6 +674,10 @@ function Composer({
   onSendPhoto,
   reply,
   onCancelReply,
+  editing,
+  onSaveEdit,
+  onCancelEdit,
+  onEditLast,
 }: {
   matchId: number
   name: string
@@ -627,6 +686,12 @@ function Composer({
   /** The quote of the message being answered, shown above the input. */
   reply?: ReactNode
   onCancelReply?: () => void
+  /** A message of mine being edited: the input holds its text and saving replaces it. */
+  editing?: Message | null
+  onSaveEdit?: (body: string) => void
+  onCancelEdit?: () => void
+  /** ↑ in an empty input edits my last message. */
+  onEditLast?: () => void
 }) {
   const send = useRealtimeSend()
   const [text, setText] = useState('')
@@ -637,6 +702,15 @@ function Composer({
   const idleTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const textarea = useRef<HTMLTextAreaElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+
+  // Load the message's text when editing starts, and clear it when editing ends.
+  const editingId = editing?.id ?? null
+  const [loadedEditId, setLoadedEditId] = useState<number | null>(null)
+  if (editingId !== loadedEditId) {
+    setLoadedEditId(editingId)
+    setText(editing ? editing.body : '')
+    setPhoto(null)
+  }
 
   useEffect(() => () => {
     if (preview) URL.revokeObjectURL(preview)
@@ -665,8 +739,8 @@ function Composer({
 
   const replying = Boolean(reply)
   useEffect(() => {
-    if (replying) textarea.current?.focus()
-  }, [replying])
+    if (replying || editingId !== null) textarea.current?.focus()
+  }, [replying, editingId])
 
   const pick = (file: File | undefined) => {
     if (!file) return
@@ -678,6 +752,11 @@ function Composer({
 
   const submit = () => {
     const body = text.trim()
+    if (editing) {
+      if (!body && !editing.image_url) return
+      onSaveEdit?.(body)
+      return
+    }
     if (photo) onSendPhoto(photo, body)
     else if (body) onSend(body)
     else return
@@ -695,7 +774,7 @@ function Composer({
       }}
       className="border-t border-line px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6"
     >
-      {reply}
+      {editing && onCancelEdit ? <EditBanner message={editing} onCancel={onCancelEdit} /> : reply}
       {(preview || problem) && (
         <div className="mx-auto mb-2 flex max-w-3xl items-center gap-3">
           {preview && (
@@ -720,7 +799,8 @@ function Composer({
         <button
           type="button"
           onClick={() => fileInput.current?.click()}
-          className="grid size-11 shrink-0 place-items-center rounded-full text-muted transition hover:bg-surface hover:text-cream"
+          disabled={Boolean(editing)}
+          className="grid size-11 shrink-0 place-items-center rounded-full text-muted transition hover:bg-surface hover:text-cream disabled:opacity-40"
           aria-label="Attach a photo"
           title="Attach a photo"
         >
@@ -760,22 +840,28 @@ function Composer({
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault()
               submit()
+            } else if (e.key === 'Escape' && editing && onCancelEdit) {
+              e.preventDefault()
+              onCancelEdit()
             } else if (e.key === 'Escape' && onCancelReply) {
               e.preventDefault()
               onCancelReply()
+            } else if (e.key === 'ArrowUp' && !text && !photo && !editing && onEditLast) {
+              e.preventDefault()
+              onEditLast()
             }
           }}
-          placeholder={photo ? 'Add a caption…' : `Message ${name}…`}
+          placeholder={editing ? 'Edit your message…' : photo ? 'Add a caption…' : `Message ${name}…`}
           aria-label={`Message ${name}`}
           className="max-h-40 flex-1 resize-none bg-transparent py-2.5 text-[15px] text-cream outline-none placeholder:text-faint"
         />
         <button
           type="submit"
-          disabled={!text.trim() && !photo}
+          disabled={editing ? !text.trim() && !editing.image_url : !text.trim() && !photo}
           className="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-brand text-ink shadow-glow transition hover:brightness-110 disabled:bg-none disabled:bg-surface disabled:text-faint disabled:shadow-none"
-          aria-label="Send"
+          aria-label={editing ? 'Save edit' : 'Send'}
         >
-          <SendHorizontal className="size-5" />
+          {editing ? <Check className="size-5" /> : <SendHorizontal className="size-5" />}
         </button>
       </div>
     </form>

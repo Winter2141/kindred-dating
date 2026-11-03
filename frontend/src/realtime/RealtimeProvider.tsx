@@ -2,6 +2,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { useLocation } from 'react-router'
 import {
+  applyEdit,
+  applyEditToMatches,
   applyMessageToMatches,
   applyReaction,
   applyReadReceipt,
@@ -140,6 +142,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           break
         case 'message.new':
           onMessage(event.message, event.client_id)
+          break
+        case 'message.edited':
+          queryClient.setQueryData<Message[]>(keys.messages(event.match_id), (list) => applyEdit(list, event.message))
+          queryClient.setQueryData<Match[]>(keys.matches, (matches) => applyEditToMatches(matches, event.message))
           break
         case 'message.deleted':
           queryClient.setQueryData<Message[]>(keys.messages(event.match_id), (list) =>
