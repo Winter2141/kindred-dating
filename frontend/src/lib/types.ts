@@ -1,5 +1,6 @@
 export type Gender = 'woman' | 'man' | 'nonbinary'
 export type SwipeAction = 'like' | 'pass' | 'super'
+export type ReportReason = 'fake_profile' | 'inappropriate' | 'harassment' | 'spam' | 'underage' | 'other'
 
 export interface Prompt {
   question: string

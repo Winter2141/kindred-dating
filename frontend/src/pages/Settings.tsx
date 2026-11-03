@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { EyeOff, KeyRound, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
+import { Ban, EyeOff, KeyRound, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
+import { BlockedList } from '@/components/Safety'
 import { Spinner, Switch } from '@/components/ui'
 import { api } from '@/lib/api'
 import { keys } from '@/lib/cache'
@@ -21,6 +22,13 @@ export function SettingsPage() {
         <VisibilitySection user={user} />
         <PasswordSection />
         <SessionsSection />
+        <Section
+          icon={<Ban className="size-5" />}
+          title="Blocked people"
+          description="They can't see you and you can't see them. Unblocking puts them back in Discover."
+        >
+          <BlockedList />
+        </Section>
         <DeleteSection />
       </div>
     </div>

@@ -1,5 +1,8 @@
 import clsx from 'clsx'
-import { useId, useState, type ReactNode } from 'react'
+import { X } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { keys } from '@/lib/cache'
@@ -211,6 +214,73 @@ export function Switch({
       </span>
       {label}
     </button>
+  )
+}
+
+/** A centred modal sheet (bottom sheet on phones). Escape and the backdrop close it. */
+export function Dialog({
+  open,
+  onClose,
+  title,
+  children,
+  wide,
+}: {
+  open: boolean
+  onClose: () => void
+  title: string
+  children: ReactNode
+  wide?: boolean
+}) {
+  const titleId = useId()
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center sm:p-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+        >
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 30, opacity: 0 }}
+            transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+            className={clsx(
+              'card max-h-[92dvh] w-full overflow-y-auto rounded-b-none p-6 shadow-card sm:rounded-b-[var(--radius-card)] sm:p-8',
+              wide ? 'sm:max-w-2xl' : 'sm:max-w-lg',
+            )}
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <h2 id={titleId} className="font-display text-3xl leading-tight">
+                {title}
+              </h2>
+              <button
+                type="button"
+                onClick={onClose}
+                className="grid size-9 shrink-0 place-items-center rounded-full text-muted transition hover:bg-raised hover:text-cream"
+                aria-label="Close"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            {children}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body,
   )
 }
 

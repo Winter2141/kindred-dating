@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { ArrowLeft, Check, CheckCheck, HeartCrack, Info, SendHorizontal, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, Check, CheckCheck, Info, SendHorizontal, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ProfileDetails } from '@/components/ProfileDetails'
+import { SafetyMenu } from '@/components/Safety'
 import { Avatar, Photo, Spinner, TypingDots } from '@/components/ui'
 import { api } from '@/lib/api'
 import { clearUnread, keys, markPendingFailed, upsertMessage } from '@/lib/cache'
@@ -150,19 +151,7 @@ export function ChatPage() {
           >
             <Info className="size-5" />
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm(`Unmatch ${other.name}? This deletes the conversation for both of you.`)) {
-                unmatch.mutate()
-              }
-            }}
-            className="grid size-10 place-items-center rounded-full text-muted transition hover:bg-raised hover:text-rose"
-            aria-label="Unmatch"
-            title="Unmatch"
-          >
-            <HeartCrack className="size-5" />
-          </button>
+          <SafetyMenu person={other} onUnmatch={() => unmatch.mutate()} onGone={() => navigate('/app/matches')} />
         </header>
 
         <MessageList

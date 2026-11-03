@@ -10,6 +10,7 @@ export const keys = {
   match: (id: number) => ['matches', id] as const,
   messages: (id: number) => ['messages', id] as const,
   icebreakers: (id: number) => ['icebreakers', id] as const,
+  blocks: ['blocks'] as const,
 }
 
 /** Insert or replace a message, swapping out the optimistic copy that has the same client id. */

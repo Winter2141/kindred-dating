@@ -8,6 +8,7 @@ import type {
   Meta,
   Prompt,
   PublicProfile,
+  ReportReason,
   Session,
   SwipeAction,
   SwipeResult,
@@ -128,4 +129,10 @@ export const api = {
   messages: (id: number, before?: number) =>
     request<Message[]>(`/api/matches/${id}/messages${before ? `?before=${before}` : ''}`),
   icebreakers: (id: number) => request<string[]>(`/api/matches/${id}/icebreakers`),
+
+  block: (userId: number) => request<void>('/api/blocks', { method: 'POST', body: { user_id: userId } }),
+  unblock: (userId: number) => request<void>(`/api/blocks/${userId}`, { method: 'DELETE' }),
+  blocks: () => request<PublicProfile[]>('/api/blocks'),
+  report: (data: { user_id: number; reason: ReportReason; details: string; block: boolean }) =>
+    request<{ id: number }>('/api/reports', { method: 'POST', body: data }),
 }
