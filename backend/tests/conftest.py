@@ -43,6 +43,7 @@ def settings(tmp_path: Path) -> Settings:
         persona_read_delay=(0, 0),
         persona_typing_delay=(0, 0),
         rate_limit_enabled=False,  # test_rate_limits switches it back on
+        expose_outbox=True,  # tests read sent emails from GET /api/dev/outbox
     )
 
 

@@ -267,6 +267,8 @@ async def seed_demo_data(db: Database) -> bool:
                     created_at=now - timedelta(hours=hours_ago * 5),
                 )
             )
+        for user in [alex, *people.values()]:
+            user.email_verified_at = user.created_at
         _seed_answers([alex, *people.values()], session)
         _seed_verification(list(people.values()), now, session)
         await session.commit()

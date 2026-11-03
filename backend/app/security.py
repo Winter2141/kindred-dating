@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import bcrypt
 import jwt
@@ -33,10 +34,42 @@ def create_access_token(user_id: int, secret: str, ttl_minutes: int, version: in
     return jwt.encode(payload, secret, algorithm=ALGORITHM)
 
 
+def create_purpose_token(
+    user_id: int, purpose: str, secret: str, ttl_minutes: int, claims: dict[str, Any] | None = None
+) -> str:
+    """A signed, expiring token for one job (confirming an email, resetting a password).
+
+    The purpose is checked on the way back in, so one kind can't be used as another, nor as
+    an access token, which has no purpose claim.
+    """
+    now = datetime.now(UTC)
+    payload = {
+        **(claims or {}),
+        "sub": str(user_id),
+        "purpose": purpose,
+        "iat": now,
+        "exp": now + timedelta(minutes=ttl_minutes),
+    }
+    return jwt.encode(payload, secret, algorithm=ALGORITHM)
+
+
+def decode_purpose_token(token: str, purpose: str, secret: str) -> tuple[int, dict[str, Any]]:
+    """Returns (user id, all claims) if the token is valid and made for `purpose`."""
+    try:
+        payload = jwt.decode(token, secret, algorithms=[ALGORITHM], options={"require": ["exp"]})
+        if payload.get("purpose") != purpose:
+            raise InvalidToken("wrong purpose")
+        return int(payload["sub"]), payload
+    except (jwt.PyJWTError, KeyError, ValueError, TypeError) as exc:
+        raise InvalidToken from exc
+
+
 def decode_access_token(token: str, secret: str) -> tuple[int, int]:
     """Returns (user id, token version)."""
     try:
         payload = jwt.decode(token, secret, algorithms=[ALGORITHM], options={"require": ["exp"]})
+        if "purpose" in payload:  # an emailed link token is never a session
+            raise InvalidToken("not an access token")
         return int(payload["sub"]), int(payload.get("ver", 0))
     except (jwt.PyJWTError, KeyError, ValueError, TypeError) as exc:
         raise InvalidToken from exc

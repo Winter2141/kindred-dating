@@ -3,6 +3,7 @@ from sqlalchemy import select
 
 from app.deps import SessionDep, SettingsDep
 from app.limits import LOGIN, REGISTER
+from app.mail import send_verification
 from app.models import User
 from app.places import geocode
 from app.ratelimit import per_ip
@@ -46,6 +47,7 @@ async def register(data: RegisterIn, session: SessionDep, settings: SettingsDep)
         user.latitude, user.longitude = coordinates
     session.add(user)
     await session.commit()
+    await send_verification(session, settings, user)
     return token_for(user, settings)
 
 

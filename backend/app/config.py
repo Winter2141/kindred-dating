@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -27,6 +28,19 @@ class Settings(BaseSettings):
 
     # Set to fan real-time events out through Redis so several API workers can run.
     redis_url: str | None = None
+
+    # Where links in emails point (the web app), and how email goes out. The outbox backend
+    # stores messages in the database instead of sending them; see app.mail.
+    app_url: str = "http://localhost:5173"
+    mail_backend: Literal["outbox", "smtp"] = "outbox"
+    mail_from: str = "Kindred <hello@kindred.app>"
+    smtp_host: str = "localhost"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_starttls: bool = True
+    # Serve the outbox at GET /api/dev/outbox. Local development only: it shows reset links.
+    expose_outbox: bool = False
 
     # Demo mode makes the seeded personas feel alive: they like you back and reply in chat.
     demo_mode: bool = True

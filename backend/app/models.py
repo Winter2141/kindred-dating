@@ -108,6 +108,8 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column(default=False, server_default=false())
     # Banned accounts can't sign in and are hidden from everyone.
     banned_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    # Set once they follow the link in the confirmation email.
+    email_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
     # Set when a moderator matched a posed selfie to the profile photos.
     verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
@@ -347,3 +349,16 @@ class VerificationRequest(Base):
     )
 
     user: Mapped[User] = relationship(foreign_keys=[user_id], lazy="joined")
+
+
+class OutboxEmail(Base):
+    """An email the outbox mail backend kept instead of sending (see app.mail)."""
+
+    __tablename__ = "outbox_emails"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    to: Mapped[str] = mapped_column(String(255), index=True)
+    subject: Mapped[str] = mapped_column(String(200))
+    body: Mapped[str] = mapped_column(Text)
+    kind: Mapped[str] = mapped_column(String(16))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

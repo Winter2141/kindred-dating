@@ -124,6 +124,35 @@ class LoginIn(BaseModel):
     password: str
 
 
+class VerifyEmailIn(BaseModel):
+    token: str
+
+
+class EmailVerifiedOut(BaseModel):
+    email: EmailStr
+    verified: Literal[True] = True
+
+
+class ForgotPasswordIn(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordIn(BaseModel):
+    token: str
+    new_password: Password
+
+
+class OutboxEmailOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    to: str
+    subject: str
+    body: str
+    kind: str
+    created_at: datetime
+
+
 class PasswordChange(BaseModel):
     current_password: str
     new_password: Password
@@ -216,6 +245,7 @@ class MeOut(PublicProfile):
     has_location: bool
     is_paused: bool
     is_admin: bool
+    email_verified: bool = False
 
     @classmethod
     def build(cls, user: User, *, online: bool = True) -> Self:
@@ -231,6 +261,7 @@ class MeOut(PublicProfile):
             has_location=user.latitude is not None,
             is_paused=user.is_paused,
             is_admin=user.is_admin,
+            email_verified=user.email_verified_at is not None,
         )
 
 
