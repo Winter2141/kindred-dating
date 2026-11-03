@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Gavel, Heart, LogOut, MessageCircle, Settings, Sparkles, UserRound } from 'lucide-react'
+import { BarChart3, Gavel, Heart, LogOut, MessageCircle, Settings, Sparkles, UserRound } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { api } from '@/lib/api'
@@ -131,6 +131,21 @@ export function AppShell() {
               )}
             </NavLink>
           ))}
+          <NavLink
+            to="/app/insights"
+            className={({ isActive }) =>
+              clsx(
+                'flex items-center gap-3.5 rounded-2xl px-3.5 py-3 text-[15px] font-semibold transition',
+                isActive ? 'bg-raised text-cream shadow-card' : 'text-muted hover:bg-raised/60 hover:text-cream',
+              )
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <BarChart3 className={clsx('size-5', isActive && 'text-coral')} /> Insights
+              </>
+            )}
+          </NavLink>
           {user?.is_admin && (
             <NavLink
               to="/app/moderation"

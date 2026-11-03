@@ -4,6 +4,7 @@ import type { Match, Message } from './types'
 export const keys = {
   me: ['me'] as const,
   strength: ['strength'] as const,
+  insights: (days: number) => ['insights', days] as const,
   meta: ['meta'] as const,
   discover: ['discover'] as const,
   topPicks: ['top-picks'] as const,

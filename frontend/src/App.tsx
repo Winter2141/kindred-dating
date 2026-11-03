@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import { keys } from '@/lib/cache'
 import { ChatPage } from '@/pages/Chat'
 import { DiscoverPage } from '@/pages/Discover'
+import { InsightsPage } from '@/pages/Insights'
 import { LandingPage } from '@/pages/Landing'
 import { LikesPage } from '@/pages/Likes'
 import { LoginPage, SignupPage } from '@/pages/Auth'
@@ -50,6 +51,7 @@ export function App() {
         </Route>
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="insights" element={<InsightsPage />} />
         <Route path="moderation" element={<ModerationPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

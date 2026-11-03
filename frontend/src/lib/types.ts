@@ -134,6 +134,29 @@ export interface ProfileStrength {
   tips: { key: string; text: string; points: number }[]
 }
 
+export interface ActivityDay {
+  day: string
+  likes_received: number
+  matches: number
+  messages: number
+}
+
+export interface Insights {
+  days: number
+  likes_sent: number
+  passes_sent: number
+  likes_received: number
+  super_likes_received: number
+  matches: number
+  match_rate: number
+  messages_sent: number
+  messages_received: number
+  reply_rate: number | null
+  median_reply_minutes: number | null
+  liked_by_interests: { interest: string; count: number }[]
+  activity: ActivityDay[]
+}
+
 export interface Meta {
   interests: { name: string; emoji: string }[]
   prompt_questions: string[]

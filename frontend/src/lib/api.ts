@@ -3,6 +3,7 @@ import type {
   AdminReport,
   AppNotification,
   DateProposal,
+  Insights,
   Candidate,
   Like,
   Match,
@@ -110,6 +111,7 @@ export const api = {
 
   me: () => request<Me>('/api/me'),
   strength: () => request<ProfileStrength>('/api/me/strength'),
+  insights: (days: number) => request<Insights>(`/api/me/insights?days=${days}`),
   updateMe: (data: ProfileUpdate) => request<Me>('/api/me', { method: 'PATCH', body: data }),
   uploadPhoto: (file: File) => {
     const form = new FormData()

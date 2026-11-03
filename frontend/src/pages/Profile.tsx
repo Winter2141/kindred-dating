@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Camera, Check, EyeOff, ImagePlus, LocateFixed, Settings, Star, X } from 'lucide-react'
+import { BarChart3, Camera, Check, EyeOff, ImagePlus, LocateFixed, Settings, Star, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import {
@@ -75,9 +75,14 @@ function ProfileEditor({ user }: { user: Me }) {
           <h1 className="font-display text-5xl leading-none">Your profile</h1>
           <p className="mt-2 text-sm text-muted">This is what people see when you show up in their deck.</p>
         </div>
-        <Link to="/app/settings" className="btn-secondary">
-          <Settings className="size-4" /> Settings
-        </Link>
+        <div className="flex gap-2">
+          <Link to="/app/insights" className="btn-secondary">
+            <BarChart3 className="size-4" /> Insights
+          </Link>
+          <Link to="/app/settings" className="btn-secondary">
+            <Settings className="size-4" /> Settings
+          </Link>
+        </div>
       </header>
 
       {user.is_paused && (
