@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
 
+from app.catalog import INTERESTS
 from app.deps import CurrentUser, HubDep, SessionDep
 from app.limits import SWIPES
 from app.models import Match, NotificationKind, Swipe, SwipeAction, User
@@ -17,7 +18,7 @@ from app.schemas import (
     TopPicksOut,
 )
 from app.services import chat
-from app.services.discovery import find_candidates, next_refresh, top_picks
+from app.services.discovery import Filters, find_candidates, next_refresh, top_picks
 from app.services.matching import distance_between
 from app.services.notifications import notify
 from app.services.personas import likes_back
@@ -32,13 +33,31 @@ async def discover(
     session: SessionDep,
     hub: HubDep,
     limit: int = Query(default=20, ge=1, le=50),
+    verified_only: bool = Query(default=False, description="Only photo-verified people"),
+    active_within_days: int | None = Query(default=None, ge=1, le=30),
+    interests: list[str] = Query(default=[], description="Anyone into at least one of these"),
+    with_prompts: bool = Query(default=False, description="Only profiles with prompt answers"),
+    min_agreement: int | None = Query(default=None, ge=1, le=100),
 ) -> list[Candidate]:
     """People who fit your preferences (and you theirs), best fit first.
 
     Excludes anyone you've already swiped on and anyone who passed on you. People who
-    super-liked you jump to the front of the queue.
+    super-liked you jump to the front of the queue. The optional filters narrow the deck
+    further; `min_agreement` leaves out people you can't be compared with yet.
     """
-    candidates = await find_candidates(session, hub, user, datetime.now(UTC))
+    unknown = [i for i in interests if i not in INTERESTS]
+    if unknown:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, f"unknown interests: {', '.join(unknown)}"
+        )
+    filters = Filters(
+        verified_only=verified_only,
+        active_within_days=active_within_days,
+        interests=tuple(interests),
+        with_prompts=with_prompts,
+        min_agreement=min_agreement,
+    )
+    candidates = await find_candidates(session, hub, user, datetime.now(UTC), filters)
     return candidates[:limit]
 
 

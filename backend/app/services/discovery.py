@@ -1,6 +1,7 @@
 """Who can show up for whom: shared by the Discover deck and the daily top picks."""
 
 import random
+from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 
 from sqlalchemy import select
@@ -20,6 +21,27 @@ from app.services.matching import (
 )
 from app.services.safety import hidden_ids
 
+
+@dataclass(frozen=True)
+class Filters:
+    """Optional narrowing of the deck on top of everyone's own preferences."""
+
+    verified_only: bool = False
+    active_within_days: int | None = None
+    interests: tuple[str, ...] = ()  # any of these
+    with_prompts: bool = False
+    min_agreement: int | None = None
+
+    def keeps(self, candidate: Candidate) -> bool:
+        if self.interests and not set(self.interests) & set(candidate.interests):
+            return False
+        if self.with_prompts and not candidate.prompts:
+            return False
+        return self.min_agreement is None or (candidate.agreement or 0) >= self.min_agreement
+
+
+NO_FILTERS = Filters()
+
 TOP_PICKS_PER_DAY = 4
 # Picks are drawn from this many of your strongest candidates, so they vary day to day.
 TOP_PICKS_POOL = 12
@@ -27,7 +49,7 @@ TOP_PICK_MIN_SCORE = 50
 
 
 async def find_candidates(
-    session: AsyncSession, hub: Hub, user: User, now: datetime
+    session: AsyncSession, hub: Hub, user: User, now: datetime, filters: Filters = NO_FILTERS
 ) -> list[Candidate]:
     """Everyone who fits `user` and whom `user` fits, best fit first.
 
@@ -50,6 +72,10 @@ async def find_candidates(
             User.latitude.is_(None)
             | (User.latitude.between(min_lat, max_lat) & User.longitude.between(min_lng, max_lng))
         )
+    if filters.verified_only:
+        query = query.where(User.verified_at.is_not(None))
+    if filters.active_within_days is not None:
+        query = query.where(User.last_active_at >= now - timedelta(days=filters.active_within_days))
     rows = await session.scalars(
         query.where(
             User.id != user.id,
@@ -90,6 +116,7 @@ async def find_candidates(
                 agreement=agreement(answers[user.id], answers[other.id]).percent,
             )
         )
+    candidates = [c for c in candidates if filters.keeps(c)]
     candidates.sort(key=lambda c: (c.super_liked_you, c.compatibility), reverse=True)
     return candidates
 
