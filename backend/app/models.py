@@ -272,7 +272,7 @@ class Notification(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    kind: Mapped[str] = mapped_column(String(16))
+    kind: Mapped[str] = mapped_column(String(32))
     actor_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), default=None
     )
