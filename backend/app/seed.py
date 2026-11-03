@@ -13,6 +13,7 @@ from sqlalchemy import select
 
 from app.db import Base, Database, utcnow
 from app.models import Match, Message, Report, ReportReason, Swipe, SwipeAction, User
+from app.places import geocode
 from app.security import hash_password
 from app.seed_data import DEMO_EMAIL, DEMO_PASSWORD, PERSONAS, SECOND_DEMO_EMAIL, unsplash
 from app.services.matching import years_before
@@ -162,6 +163,9 @@ async def seed_demo_data(db: Database) -> bool:
             )
             session.add(user)
             people[spec.name] = user
+        for user in [alex, *people.values()]:
+            if (coordinates := geocode(user.city)) is not None:
+                user.latitude, user.longitude = coordinates
         await session.flush()
 
         for name, hours_ago, lines, unread in CONVERSATIONS:

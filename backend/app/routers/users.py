@@ -10,7 +10,10 @@ from app.catalog import INTERESTS, PROMPT_QUESTIONS
 from app.config import Settings
 from app.deps import CurrentUser, HubDep, SessionDep, SettingsDep
 from app.models import Gender, User
+from app.places import geocode
+from app.places import search as search_places
 from app.schemas import Interest, MeOut, MetaOut, ProfileUpdate, PublicProfile
+from app.services.matching import distance_between
 from app.services.safety import is_hidden
 
 router = APIRouter(prefix="/api", tags=["profile"])
@@ -26,6 +29,12 @@ async def meta(settings: SettingsDep) -> MetaOut:
         genders=list(Gender),
         max_photos=settings.max_photos,
     )
+
+
+@router.get("/places")
+async def places(q: str = Query(min_length=1, max_length=80)) -> list[str]:
+    """Known places matching `q`, for the city autocomplete."""
+    return search_places(q)
 
 
 @router.get("/me")
@@ -49,6 +58,10 @@ async def update_me(data: ProfileUpdate, user: CurrentUser, session: SessionDep)
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "photos can only reorder or remove existing photos; upload new ones",
             )
+
+    # A new city moves you to that place, unless the browser sent precise coordinates too.
+    if "city" in changes and changes.get("latitude") is None:
+        user.latitude, user.longitude = geocode(changes["city"] or "") or (None, None)
 
     for field, value in changes.items():
         if value is None and field not in {"bio", "job_title", "city"}:
@@ -124,4 +137,8 @@ async def read_user(
     other = await session.get(User, user_id)
     if other is None or await is_hidden(session, user.id, other.id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
-    return PublicProfile.build(other, online=hub.manager.is_online(other.id))
+    return PublicProfile.build(
+        other,
+        online=hub.manager.is_online(other.id),
+        distance_km=distance_between(user, other),
+    )

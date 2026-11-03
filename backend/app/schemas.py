@@ -22,7 +22,7 @@ from app.models import (
     SwipeAction,
     User,
 )
-from app.services.matching import age_on
+from app.services.matching import age_on, display_distance
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
 ShortText = Annotated[str, StringConstraints(strip_whitespace=True, max_length=80)]
@@ -31,6 +31,9 @@ MessageBody = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)
 ]
 Age = Annotated[int, Field(ge=18, le=99)]
+DistanceKm = Annotated[int, Field(ge=1, le=500)]
+Latitude = Annotated[float, Field(ge=-90, le=90)]
+Longitude = Annotated[float, Field(ge=-180, le=180)]
 Password = Annotated[str, Field(min_length=8, max_length=128)]
 
 
@@ -92,6 +95,7 @@ class RegisterIn(ProfileFields):
     interested_in: Annotated[list[Gender], Field(min_length=1)]
     age_min: Age = 18
     age_max: Age = 99
+    max_distance_km: DistanceKm = 50
 
     @field_validator("birthdate")
     @classmethod
@@ -131,6 +135,9 @@ class ProfileUpdate(BaseModel):
     interested_in: Annotated[list[Gender], Field(min_length=1)] | None = None
     age_min: Age | None = None
     age_max: Age | None = None
+    max_distance_km: DistanceKm | None = None
+    latitude: Latitude | None = None
+    longitude: Longitude | None = None
     is_paused: bool | None = None
     photos: list[str] | None = Field(
         default=None, description="Reorder or remove existing photos; new ones are uploaded."
@@ -140,6 +147,12 @@ class ProfileUpdate(BaseModel):
     @classmethod
     def valid_interests(cls, value: list[str] | None) -> list[str] | None:
         return None if value is None else _check_interests(value)
+
+    @model_validator(mode="after")
+    def coordinates_together(self) -> Self:
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("send latitude and longitude together")
+        return self
 
     @field_validator("prompts")
     @classmethod
@@ -162,9 +175,10 @@ class PublicProfile(BaseModel):
     prompts: list[Prompt]
     last_active_at: datetime
     is_online: bool = False
+    distance_km: int | None = None
 
     @classmethod
-    def build(cls, user: User, *, online: bool = False) -> Self:
+    def build(cls, user: User, *, online: bool = False, distance_km: float | None = None) -> Self:
         return cls(
             id=user.id,
             name=user.name,
@@ -178,6 +192,7 @@ class PublicProfile(BaseModel):
             prompts=[Prompt.model_construct(**p) for p in user.prompts],
             last_active_at=user.last_active_at,
             is_online=online,
+            distance_km=display_distance(distance_km),
         )
 
 
@@ -187,6 +202,8 @@ class MeOut(PublicProfile):
     interested_in: list[Gender]
     age_min: int
     age_max: int
+    max_distance_km: int
+    has_location: bool
     is_paused: bool
     is_admin: bool
 
@@ -200,6 +217,8 @@ class MeOut(PublicProfile):
             interested_in=[Gender(g) for g in user.interested_in],
             age_min=user.age_min,
             age_max=user.age_max,
+            max_distance_km=user.max_distance_km,
+            has_location=user.latitude is not None,
             is_paused=user.is_paused,
             is_admin=user.is_admin,
         )

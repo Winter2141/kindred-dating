@@ -72,6 +72,11 @@ class User(Base):
     photos: Mapped[list[str]] = mapped_column(JSON, default=list)
     prompts: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
 
+    # Either a known place's centre or what the browser shared; never shown to anyone else.
+    latitude: Mapped[float | None] = mapped_column(default=None)
+    longitude: Mapped[float | None] = mapped_column(default=None)
+    max_distance_km: Mapped[int] = mapped_column(default=50, server_default=text("50"))
+
     is_persona: Mapped[bool] = mapped_column(default=False)
     # Paused profiles keep their matches and chats but don't appear in anyone's deck.
     is_paused: Mapped[bool] = mapped_column(default=False, server_default=false())
@@ -83,7 +88,10 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     last_active_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
-    __table_args__ = (CheckConstraint("age_min <= age_max", name="ck_users_age_range"),)
+    __table_args__ = (
+        CheckConstraint("age_min <= age_max", name="ck_users_age_range"),
+        Index("ix_users_location", "latitude", "longitude"),
+    )
 
 
 class Swipe(Base):

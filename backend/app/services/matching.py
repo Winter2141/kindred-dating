@@ -1,5 +1,6 @@
 """Who shows up in Discover, and how well two people fit."""
 
+import math
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING
@@ -27,14 +28,57 @@ def birthdate_bounds(age_min: int, age_max: int, today: date) -> tuple[date, dat
     return earliest, latest
 
 
+EARTH_RADIUS_KM = 6371.0
+
+
+def haversine_km(a: tuple[float, float], b: tuple[float, float]) -> float:
+    """Great-circle distance between two (latitude, longitude) points."""
+    lat1, lng1, lat2, lng2 = map(math.radians, (*a, *b))
+    h = (
+        math.sin((lat2 - lat1) / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin((lng2 - lng1) / 2) ** 2
+    )
+    return 2 * EARTH_RADIUS_KM * math.asin(math.sqrt(h))
+
+
+def bounding_box(
+    centre: tuple[float, float], radius_km: float
+) -> tuple[float, float, float, float]:
+    """(min_lat, max_lat, min_lng, max_lng) around `centre`: a cheap SQL prefilter."""
+    lat, lng = centre
+    lat_delta = math.degrees(radius_km / EARTH_RADIUS_KM)
+    # Longitude degrees shrink towards the poles; clamp to avoid dividing by ~0.
+    lng_delta = lat_delta / max(math.cos(math.radians(lat)), 0.01)
+    return lat - lat_delta, lat + lat_delta, lng - lng_delta, lng + lng_delta
+
+
+def location(user: "User") -> tuple[float, float] | None:
+    if user.latitude is None or user.longitude is None:
+        return None
+    return user.latitude, user.longitude
+
+
+def distance_between(me: "User", other: "User") -> float | None:
+    """Kilometres between two people, or None if either hasn't shared a location."""
+    mine, theirs = location(me), location(other)
+    return None if mine is None or theirs is None else haversine_km(mine, theirs)
+
+
+def display_distance(km: float | None) -> int | None:
+    """Rounded for privacy: whole kilometres, never below 1."""
+    return None if km is None else max(1, round(km))
+
+
 def is_mutual_fit(me: "User", other: "User", today: date) -> bool:
-    """Both people match each other's gender and age preferences."""
+    """Both people match each other's gender, age and distance preferences."""
     my_age, their_age = age_on(me.birthdate, today), age_on(other.birthdate, today)
+    km = distance_between(me, other)
     return (
         other.gender in me.interested_in
         and me.gender in other.interested_in
         and me.age_min <= their_age <= me.age_max
         and other.age_min <= my_age <= other.age_max
+        and (km is None or km <= min(me.max_distance_km, other.max_distance_km))
     )
 
 

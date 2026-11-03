@@ -7,7 +7,14 @@ from app.deps import CurrentUser, HubDep, SessionDep
 from app.models import Match, Swipe, SwipeAction, User
 from app.schemas import Candidate, LikeOut, MatchOut, PublicProfile, SwipeIn, SwipeOut
 from app.services import chat
-from app.services.matching import birthdate_bounds, compatibility, is_mutual_fit
+from app.services.matching import (
+    birthdate_bounds,
+    bounding_box,
+    compatibility,
+    distance_between,
+    is_mutual_fit,
+    location,
+)
 from app.services.personas import likes_back
 from app.services.safety import hidden_ids, is_hidden
 
@@ -34,10 +41,17 @@ async def discover(
     )
     earliest, latest = birthdate_bounds(user.age_min, user.age_max, today)
 
-    # SQL narrows by the cheap columns; JSON list membership is checked in Python so the
-    # query stays portable between SQLite and Postgres.
+    # SQL narrows by the cheap columns; JSON list membership and exact distances are checked
+    # in Python so the query stays portable between SQLite and Postgres.
+    query = select(User)
+    if (here := location(user)) is not None:
+        min_lat, max_lat, min_lng, max_lng = bounding_box(here, user.max_distance_km)
+        query = query.where(
+            User.latitude.is_(None)
+            | (User.latitude.between(min_lat, max_lat) & User.longitude.between(min_lng, max_lng))
+        )
     rows = await session.scalars(
-        select(User).where(
+        query.where(
             User.id != user.id,
             User.is_paused.is_(False),
             User.banned_at.is_(None),
@@ -61,7 +75,11 @@ async def discover(
         if not is_mutual_fit(user, other, today):
             continue
         fit = compatibility(user, other, now)
-        base = PublicProfile.build(other, online=hub.manager.is_online(other.id))
+        base = PublicProfile.build(
+            other,
+            online=hub.manager.is_online(other.id),
+            distance_km=distance_between(user, other),
+        )
         candidates.append(
             Candidate(
                 **base.model_dump(),
@@ -150,7 +168,11 @@ async def likes_you(user: CurrentUser, session: SessionDep, hub: HubDep) -> list
     )
     return [
         LikeOut(
-            user=PublicProfile.build(liker, online=hub.manager.is_online(liker.id)),
+            user=PublicProfile.build(
+                liker,
+                online=hub.manager.is_online(liker.id),
+                distance_km=distance_between(user, liker),
+            ),
             action=SwipeAction(swipe.action),
             created_at=swipe.created_at,
         )

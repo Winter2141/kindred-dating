@@ -3,6 +3,7 @@ from sqlalchemy import select
 
 from app.deps import SessionDep, SettingsDep
 from app.models import User
+from app.places import geocode
 from app.schemas import LoginIn, MeOut, RegisterIn, TokenOut
 from app.security import create_access_token, hash_password, verify_password
 
@@ -31,6 +32,7 @@ async def register(data: RegisterIn, session: SessionDep, settings: SettingsDep)
         interested_in=list(data.interested_in),
         age_min=data.age_min,
         age_max=data.age_max,
+        max_distance_km=data.max_distance_km,
         bio=data.bio,
         job_title=data.job_title,
         city=data.city,
@@ -38,6 +40,8 @@ async def register(data: RegisterIn, session: SessionDep, settings: SettingsDep)
         prompts=[p.model_dump() for p in data.prompts],
         photos=[],
     )
+    if (coordinates := geocode(data.city)) is not None:
+        user.latitude, user.longitude = coordinates
     session.add(user)
     await session.commit()
     return token_for(user, settings)
