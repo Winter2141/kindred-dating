@@ -188,6 +188,9 @@ class Message(Base):
     audio_url: Mapped[str | None] = mapped_column(String(255), default=None)
     audio_ms: Mapped[int | None] = mapped_column(default=None)
     waveform: Mapped[list[int] | None] = mapped_column(JSON, default=None)
+    # Call log entries: "audio" or "video", and how long it lasted (None if not answered).
+    call_kind: Mapped[str | None] = mapped_column(String(8), default=None)
+    call_ms: Mapped[int | None] = mapped_column(default=None)
     # The message this one answers, quoted above it in the chat.
     reply_to_id: Mapped[int | None] = mapped_column(
         ForeignKey("messages.id", ondelete="SET NULL"), default=None

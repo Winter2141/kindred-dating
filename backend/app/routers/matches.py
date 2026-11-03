@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Form, HTTPException, Query, Response, UploadFile, status
 from pydantic import TypeAdapter, ValidationError
@@ -265,6 +265,15 @@ async def mark_read(
 ) -> dict[str, int]:
     match = await _match_or_404(session, match_id, user.id)
     return {"marked": await chat.mark_read(session, hub, match, user.id)}
+
+
+@router.get("/{match_id}/call-config")
+async def call_config(
+    match_id: int, user: CurrentUser, session: SessionDep, settings: SettingsDep
+) -> dict[str, Any]:
+    """The STUN/TURN servers to give RTCPeerConnection for a call in this chat."""
+    await _match_or_404(session, match_id, user.id)
+    return {"ice_servers": settings.ice_servers}
 
 
 @router.get("/{match_id}/icebreakers")

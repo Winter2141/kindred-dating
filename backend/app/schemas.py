@@ -413,6 +413,8 @@ class MessageOut(BaseModel):
     audio_url: str | None = None
     audio_ms: int | None = None
     waveform: list[int] | None = None
+    call_kind: Literal["audio", "video"] | None = None
+    call_ms: int | None = None
     reply_to: QuotedMessage | None = None
     created_at: datetime
     read_at: datetime | None

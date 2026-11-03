@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     smtp_starttls: bool = True
     # Serve the outbox at GET /api/dev/outbox. Local development only: it shows reset links.
     expose_outbox: bool = False
+
+    # WebRTC calls: the STUN/TURN servers browsers use to find a path to each other, and how
+    # long a call rings before it counts as missed. Add a TURN server for strict networks.
+    ice_servers: list[dict[str, Any]] = [{"urls": ["stun:stun.l.google.com:19302"]}]
+    call_ring_seconds: float = 45
 
     # Demo mode makes the seeded personas feel alive: they like you back and reply in chat.
     demo_mode: bool = True

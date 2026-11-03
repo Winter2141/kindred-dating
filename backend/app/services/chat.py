@@ -136,8 +136,13 @@ async def send_message(
     image_url: str | None = None,
     reply_to_id: int | None = None,
     audio: tuple[str, int, list[int]] | None = None,
+    call: tuple[str, int | None] | None = None,
 ) -> Message:
-    """Store and deliver a message. `audio` is (url, length in ms, waveform) for voice notes."""
+    """Store and deliver a message.
+
+    `audio` is (url, length in ms, waveform) for voice notes; `call` is (kind, length in ms or
+    None if unanswered) for the call log entry left when a call ends.
+    """
     recipient = match.other_user(sender_id)
     sender = match.other_user(recipient.id)
     reply_to = None if reply_to_id is None else await reply_target(session, match, reply_to_id)
@@ -149,6 +154,8 @@ async def send_message(
         audio_url=audio[0] if audio else None,
         audio_ms=audio[1] if audio else None,
         waveform=audio[2] if audio else None,
+        call_kind=call[0] if call else None,
+        call_ms=call[1] if call else None,
         created_at=utcnow(),
         reactions=[],
         # Set the object, not just the id, so building the payload needs no lazy load.
@@ -168,7 +175,10 @@ async def send_message(
 
     muted = await chat_settings.on_incoming_message(session, hub, recipient.id, match.id)
     if not hub.manager.is_online(recipient.id) and not recipient.is_persona and not muted:
-        preview = body or ("Sent a voice note" if audio else "Sent a photo")
+        if call:
+            preview = f"Missed {call[0]} call" if call[1] is None else f"{call[0].title()} call"
+        else:
+            preview = body or ("Sent a voice note" if audio else "Sent a photo")
         await notify(
             session,
             hub,
@@ -222,6 +232,8 @@ async def unsend(
         raise MessageNotFound(message_id)
     if message.sender_id != user_id:
         raise CannotUnsend("You can only unsend your own messages")
+    if message.call_kind is not None:
+        raise CannotUnsend("Call records stay in the chat")
     if utcnow() - message.created_at > UNSEND_WINDOW:
         minutes = int(UNSEND_WINDOW.total_seconds() // 60)
         raise CannotUnsend(f"Messages can only be unsent within {minutes} minutes")
@@ -260,8 +272,8 @@ async def edit(
     if utcnow() - message.created_at > EDIT_WINDOW:
         minutes = int(EDIT_WINDOW.total_seconds() // 60)
         raise CannotEdit(f"Messages can only be edited within {minutes} minutes")
-    if message.audio_url is not None:
-        raise CannotEdit("Voice notes can't be edited")
+    if message.audio_url is not None or message.call_kind is not None:
+        raise CannotEdit("Only text and captions can be edited")
     if message.image_url is None and not body:
         raise CannotEdit("A message can't be empty. Unsend it instead")
     if message.image_url is not None and len(body) > MAX_CAPTION:
