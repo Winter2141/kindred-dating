@@ -57,6 +57,13 @@ class NotificationKind(StrEnum):
     MESSAGE = "message"
 
 
+class DateStatus(StrEnum):
+    PROPOSED = "proposed"
+    ACCEPTED = "accepted"
+    DECLINED = "declined"
+    CANCELLED = "cancelled"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -240,3 +247,19 @@ class Notification(Base):
     actor: Mapped[User | None] = relationship(foreign_keys=[actor_id], lazy="joined")
 
     __table_args__ = (Index("ix_notifications_user_created", "user_id", "created_at"),)
+
+
+class DateProposal(Base):
+    """A first date suggested in a chat. At most one per match waits for an answer."""
+
+    __tablename__ = "date_proposals"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    match_id: Mapped[int] = mapped_column(ForeignKey("matches.id", ondelete="CASCADE"), index=True)
+    proposer_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    place: Mapped[str] = mapped_column(String(120))
+    starts_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    note: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(16), default=DateStatus.PROPOSED)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    responded_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)

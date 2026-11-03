@@ -13,6 +13,7 @@ from app.routers import (
     account,
     admin,
     auth,
+    dates,
     discover,
     matches,
     notifications,
@@ -51,7 +52,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    for module in (auth, users, account, discover, matches, notifications, safety, admin, ws):
+    for module in (
+        auth,
+        users,
+        account,
+        discover,
+        matches,
+        dates,
+        notifications,
+        safety,
+        admin,
+        ws,
+    ):
         app.include_router(module.router)
     app.mount(settings.media_url, StaticFiles(directory=settings.media_dir), name="media")
 

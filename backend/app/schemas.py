@@ -3,6 +3,7 @@ from typing import Annotated, Literal, Self
 
 from pydantic import (
     AfterValidator,
+    AwareDatetime,
     BaseModel,
     ConfigDict,
     EmailStr,
@@ -14,6 +15,8 @@ from pydantic import (
 
 from app.catalog import INTERESTS, MAX_INTERESTS, MAX_PROMPTS, PROMPT_QUESTIONS, REACTIONS
 from app.models import (
+    DateProposal,
+    DateStatus,
     Gender,
     Match,
     Message,
@@ -430,3 +433,36 @@ class NotificationOut(BaseModel):
 class NotificationList(BaseModel):
     items: list[NotificationOut]
     unread: int
+
+
+class DateIn(BaseModel):
+    place: Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=120)]
+    starts_at: AwareDatetime
+    note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] = ""
+
+
+class DateResponseIn(BaseModel):
+    response: Literal["accept", "decline"]
+
+
+class DateOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    match_id: int
+    proposer_id: int
+    place: str
+    starts_at: datetime
+    note: str
+    status: DateStatus
+    created_at: datetime
+    responded_at: datetime | None
+
+
+class UpcomingDate(DateOut):
+    with_user: PublicProfile
+
+    @classmethod
+    def build(cls, proposal: DateProposal, other: User) -> Self:
+        base = DateOut.model_validate(proposal).model_dump()
+        return cls(**base, with_user=PublicProfile.build(other))
