@@ -477,3 +477,31 @@ class TipOut(BaseModel):
 class StrengthOut(BaseModel):
     score: int = Field(ge=0, le=100)
     tips: list[TipOut]
+
+
+class ActivityDay(BaseModel):
+    day: date
+    likes_received: int
+    matches: int
+    messages: int
+
+
+class InterestCount(BaseModel):
+    interest: str
+    count: int
+
+
+class InsightsOut(BaseModel):
+    days: int
+    likes_sent: int
+    passes_sent: int
+    likes_received: int
+    super_likes_received: int
+    matches: int
+    match_rate: float = Field(description="Matches per like you sent, 0-1")
+    messages_sent: int
+    messages_received: int
+    reply_rate: float | None = Field(description="Share of their messages you answered, 0-1")
+    median_reply_minutes: int | None
+    liked_by_interests: list[InterestCount]
+    activity: list[ActivityDay]

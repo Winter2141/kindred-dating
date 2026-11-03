@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 
 from app.catalog import INTERESTS, PROMPT_QUESTIONS
@@ -5,8 +7,20 @@ from app.deps import CurrentUser, HubDep, SessionDep, SettingsDep
 from app.models import Gender, User
 from app.places import geocode
 from app.places import search as search_places
-from app.schemas import Interest, MeOut, MetaOut, ProfileUpdate, PublicProfile, StrengthOut, TipOut
+from app.schemas import (
+    ActivityDay,
+    InsightsOut,
+    Interest,
+    InterestCount,
+    MeOut,
+    MetaOut,
+    ProfileUpdate,
+    PublicProfile,
+    StrengthOut,
+    TipOut,
+)
 from app.services.images import PROFILE_PHOTO_SIDE, delete_local, save_upload
+from app.services.insights import build_insights
 from app.services.matching import distance_between
 from app.services.profile_strength import profile_strength
 from app.services.safety import is_hidden
@@ -42,6 +56,36 @@ async def read_strength(user: CurrentUser) -> StrengthOut:
     return StrengthOut(
         score=strength.score,
         tips=[TipOut(key=t.key, text=t.text, points=t.points) for t in strength.tips],
+    )
+
+
+@router.get("/me/insights")
+async def read_insights(
+    user: CurrentUser, session: SessionDep, days: int = Query(default=14, ge=7, le=90)
+) -> InsightsOut:
+    """Your swiping and chatting over the last `days` days, with a per-day series."""
+    stats = await build_insights(session, user, datetime.now(UTC), days)
+    return InsightsOut(
+        days=stats.days,
+        likes_sent=stats.likes_sent,
+        passes_sent=stats.passes_sent,
+        likes_received=stats.likes_received,
+        super_likes_received=stats.super_likes_received,
+        matches=stats.matches,
+        match_rate=stats.match_rate,
+        messages_sent=stats.messages_sent,
+        messages_received=stats.messages_received,
+        reply_rate=stats.reply_rate,
+        median_reply_minutes=stats.median_reply_minutes,
+        liked_by_interests=[
+            InterestCount(interest=name, count=count) for name, count in stats.liked_by_interests
+        ],
+        activity=[
+            ActivityDay(
+                day=d.day, likes_received=d.likes_received, matches=d.matches, messages=d.messages
+            )
+            for d in stats.activity
+        ],
     )
 
 
