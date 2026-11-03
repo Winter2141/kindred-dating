@@ -3,7 +3,10 @@ import { NO_FILTERS, filtersToQuery, type DiscoverFilters } from './filters'
 import type { QuestionAnswer } from './questions'
 import type {
   AdminReport,
+  AdminUser,
   Agreement,
+  AuditEvent,
+  MemberFilter,
   AppNotification,
   ChatSettings,
   DateProposal,
@@ -255,6 +258,13 @@ export const api = {
     request<AdminReport>(`/api/admin/reports/${id}/resolve`, { method: 'POST', body: { action } }),
   unban: (userId: number) => request<void>(`/api/admin/users/${userId}/unban`, { method: 'POST' }),
   moderationStats: () => request<ModerationStats>('/api/admin/stats'),
+  members: ({ q, filter, limit, offset }: { q: string; filter: MemberFilter; limit: number; offset: number }) =>
+    request<{ total: number; items: AdminUser[] }>(
+      `/api/admin/users?${new URLSearchParams({ q, filter, limit: String(limit), offset: String(offset) })}`,
+    ),
+  banMember: (userId: number, reason: string) =>
+    request<void>(`/api/admin/users/${userId}/ban`, { method: 'POST', body: { reason } }),
+  audit: (before?: number) => request<AuditEvent[]>(`/api/admin/audit${before ? `?before=${before}` : ''}`),
   verificationQueue: () => request<VerificationReview[]>('/api/admin/verifications'),
   reviewVerification: (id: number, approve: boolean, note: string) =>
     request<VerificationReview>(`/api/admin/verifications/${id}/review`, { method: 'POST', body: { approve, note } }),

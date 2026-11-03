@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { Navigate } from 'react-router'
 import { REPORT_REASONS } from '@/components/Safety'
+import { AuditPanel, MembersPanel } from '@/components/ModerationPanels'
 import { VerificationQueue } from '@/components/Verification'
 import { Avatar, EmptyState, Spinner } from '@/components/ui'
 import { api } from '@/lib/api'
@@ -27,7 +28,7 @@ export function ModerationPage() {
   // Ask the server rather than trusting the profile saved in the browser, which may be stale.
   const me = useQuery({ queryKey: keys.me, queryFn: api.me })
   const isAdmin = me.data?.is_admin === true
-  const [area, setArea] = useState<'reports' | 'verification'>('reports')
+  const [area, setArea] = useState<'reports' | 'verification' | 'members' | 'audit'>('reports')
   const [tab, setTab] = useState<ReportStatus>('open')
   const stats = useQuery({ queryKey: keys.moderationStats, queryFn: api.moderationStats, enabled: isAdmin })
   const reports = useQuery({ queryKey: keys.reports(tab), queryFn: () => api.reports(tab), enabled: isAdmin })
@@ -59,11 +60,13 @@ export function ModerationPage() {
         <Stat label="Members" value={stats.data?.total_users} />
       </div>
 
-      <div role="tablist" aria-label="Queue" className="mb-4 flex gap-6 border-b border-line">
+      <div role="tablist" aria-label="Queue" className="mb-6 flex gap-6 overflow-x-auto border-b border-line scrollbar-none">
         {(
           [
             ['reports', 'Reports'],
             ['verification', 'Photo verification'],
+            ['members', 'Members'],
+            ['audit', 'Audit log'],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -73,7 +76,7 @@ export function ModerationPage() {
             aria-selected={area === value}
             onClick={() => setArea(value)}
             className={clsx(
-              '-mb-px border-b-2 pb-3 text-sm font-semibold transition',
+              '-mb-px shrink-0 border-b-2 pb-3 text-sm font-semibold transition',
               area === value ? 'border-coral text-cream' : 'border-transparent text-muted hover:text-cream',
             )}
           >
@@ -84,6 +87,10 @@ export function ModerationPage() {
 
       {area === 'verification' ? (
         <VerificationQueue />
+      ) : area === 'members' ? (
+        <MembersPanel />
+      ) : area === 'audit' ? (
+        <AuditPanel />
       ) : (
         <>
           <div role="tablist" aria-label="Report status" className="mb-6 inline-flex rounded-full border border-line bg-surface p-1">

@@ -238,6 +238,28 @@ export interface AdminReport {
   reported: PublicProfile & { email: string; banned: boolean; open_reports: number }
 }
 
+export type MemberFilter = 'all' | 'banned' | 'verified' | 'unverified' | 'admins'
+
+export interface AdminUser extends PublicProfile {
+  email: string
+  created_at: string
+  banned: boolean
+  email_verified: boolean
+  is_admin: boolean
+  is_persona: boolean
+  open_reports: number
+  matches: number
+}
+
+export interface AuditEvent {
+  id: number
+  action: string
+  actor_name: string | null
+  target: PublicProfile | null
+  detail: string
+  created_at: string
+}
+
 export interface ModerationStats {
   pending_verifications: number
   open_reports: number
