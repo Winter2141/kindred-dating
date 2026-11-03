@@ -159,7 +159,7 @@ async def _persona_answers(hub: Hub, proposal_id: int, persona_id: int) -> None:
         human_id = match.other_id(persona_id)
         await hub.manager.send(human_id, typing_event(match.id, persona_id, True))
         await asyncio.sleep(random.uniform(*hub.settings.persona_typing_delay))
-        when = proposal.starts_at.strftime("%A")
+        # No weekday here: the server only knows UTC, not what day it is for the human.
         await send_message(
-            session, hub, match, persona_id, f"Yes! {proposal.place} on {when} sounds perfect 😊"
+            session, hub, match, persona_id, f"Yes! {proposal.place} sounds perfect 😊 See you then"
         )

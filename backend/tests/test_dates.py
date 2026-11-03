@@ -151,4 +151,4 @@ def test_personas_accept_dates_in_demo_mode(settings: Settings) -> None:
                 ):
                     reply = event["message"]["body"]
             assert statuses == ["proposed", "accepted"]
-            assert reply.startswith("Yes! The planetarium on ")
+            assert reply.startswith("Yes! The planetarium sounds perfect")
