@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import { CalendarCheck, MessageCircleHeart, Search } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
+import { MIN_SEARCH_LENGTH, MessageResults } from '@/components/ChatSearch'
 import { Avatar, EmptyState, Spinner, TypingDots } from '@/components/ui'
 import { api } from '@/lib/api'
 import { keys } from '@/lib/cache'
@@ -59,6 +60,7 @@ function MatchList() {
     )
   }
   const all = matches.data ?? []
+  const searching = filter.trim().length >= MIN_SEARCH_LENGTH
   const fresh = all.filter((m) => !m.last_message)
   const conversations = all
     .filter((m) => m.last_message)
@@ -139,9 +141,12 @@ function MatchList() {
         <label className="relative block">
           <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-faint" />
           <input
+            type="search"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Search conversations"
+            onKeyDown={(e) => e.key === 'Escape' && setFilter('')}
+            placeholder="Search people and messages"
+            aria-label="Search people and messages"
             className="field rounded-full py-2.5 pl-11 text-sm"
           />
         </label>
@@ -158,9 +163,14 @@ function MatchList() {
             />
           </li>
         ))}
-        {conversations.length === 0 && (
+        {conversations.length === 0 && !searching && (
           <li className="px-3 py-8 text-center text-sm text-muted">
             {filter ? 'No conversations match that name.' : 'Say hi to a new match to start chatting.'}
+          </li>
+        )}
+        {searching && (
+          <li>
+            <MessageResults query={filter} meId={me?.id} />
           </li>
         )}
       </ul>

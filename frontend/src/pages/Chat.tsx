@@ -3,7 +3,7 @@ import clsx from 'clsx'
 import { ArrowLeft, Check, CheckCheck, ImagePlus, Info, SendHorizontal, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { ProfileDetails } from '@/components/ProfileDetails'
 import { DateBar, PlanDateButton } from '@/components/DatePlanner'
 import { Lightbox } from '@/components/Lightbox'
@@ -41,6 +41,8 @@ import { useAuth } from '@/store/auth'
 import { useLive, useToasts } from '@/store/live'
 
 const PAGE_SIZE = 50
+/** How far back opening a chat at a search result will page to find the message. */
+const MAX_PAGES_TO_FIND = 20
 
 /** A temporary id for a message until the server confirms it. */
 function newClientId(prefix: string): string {
@@ -80,6 +82,43 @@ export function ChatPage() {
     queryFn: () => api.messages(matchId),
     enabled: Boolean(match),
   })
+  // ?message=123 (from search) opens the chat scrolled to that message, paging back if needed.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const target = Number(searchParams.get('message')) || null
+  const messagesLoaded = messages.isSuccess
+  useEffect(() => {
+    if (!target || !messagesLoaded) return
+    let cancelled = false
+    const reveal = async () => {
+      let list = queryClient.getQueryData<Message[]>(keys.messages(matchId)) ?? []
+      for (let page = 0; page < MAX_PAGES_TO_FIND && !list.some((m) => m.id === target); page++) {
+        const first = list.find((m) => !m.pending)
+        if (!first) break
+        const older = await api.messages(matchId, first.id)
+        if (cancelled) return
+        list = older.reduce((acc, message) => upsertMessage(acc, message), list)
+        queryClient.setQueryData(keys.messages(matchId), list)
+        if (older.length < PAGE_SIZE) break
+      }
+      // Let the older pages render before scrolling to the message.
+      setTimeout(() => {
+        if (cancelled) return
+        jumpToMessage(target)
+        setSearchParams(
+          (params) => {
+            params.delete('message')
+            return params
+          },
+          { replace: true },
+        )
+      }, 120)
+    }
+    void reveal()
+    return () => {
+      cancelled = true
+    }
+  }, [target, messagesLoaded, matchId, queryClient, setSearchParams])
+
   const typingUser = useLive((s) => s.typing[matchId])
   const online = useLive((s) => (match ? s.online[match.user.id] : undefined)) ?? match?.user.is_online
 

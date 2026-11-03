@@ -13,6 +13,7 @@ export const keys = {
   matches: ['matches'] as const,
   match: (id: number) => ['matches', id] as const,
   messages: (id: number) => ['messages', id] as const,
+  search: (query: string) => ['search', query] as const,
   icebreakers: (id: number) => ['icebreakers', id] as const,
   blocks: ['blocks'] as const,
   notifications: ['notifications'] as const,

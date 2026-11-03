@@ -114,6 +114,18 @@ export interface Match {
   unread_count: number
 }
 
+export interface SearchHit {
+  match_id: number
+  with_user: PublicProfile
+  message: Message
+}
+
+export interface SearchResults {
+  query: string
+  people: Match[]
+  messages: SearchHit[]
+}
+
 export interface SwipeResult {
   matched: boolean
   match: Match | null

@@ -17,6 +17,7 @@ import type {
   PublicProfile,
   ReportReason,
   ReportStatus,
+  SearchResults,
   Session,
   SwipeAction,
   SwipeResult,
@@ -139,6 +140,7 @@ export const api = {
   likes: () => request<Like[]>('/api/likes'),
 
   matches: () => request<Match[]>('/api/matches'),
+  search: (query: string) => request<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`),
   match: (id: number) => request<Match>(`/api/matches/${id}`),
   unmatch: (id: number) => request<void>(`/api/matches/${id}`, { method: 'DELETE' }),
   messages: (id: number, before?: number) =>
