@@ -9,10 +9,11 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import utcnow
-from app.models import Match, Message, Reaction, User
+from app.models import Match, Message, NotificationKind, Reaction, User
 from app.realtime import Hub
 from app.schemas import MatchOut, MessageOut
 from app.services.images import delete_local
+from app.services.notifications import notify
 from app.services.personas import compose_reply
 
 # How long after sending a message its sender can still unsend it.
@@ -82,6 +83,15 @@ async def create_match(session: AsyncSession, hub: Hub, first: User, second: Use
         other = match.other_id(viewer.id)
         payload = MatchOut.build(match, viewer.id, online=online(other))
         await hub.manager.send(viewer.id, {"type": "match.new", "match": payload})
+    for viewer in (first, second):
+        await notify(
+            session,
+            hub,
+            viewer.id,
+            NotificationKind.MATCH,
+            actor_id=match.other_id(viewer.id),
+            match_id=match.id,
+        )
     return match
 
 
@@ -115,6 +125,18 @@ async def send_message(
         "client_id": client_id,
     }
     await hub.manager.send_many([match.user_a_id, match.user_b_id], payload)
+
+    if not hub.manager.is_online(recipient.id) and not recipient.is_persona:
+        preview = body or "Sent a photo"
+        await notify(
+            session,
+            hub,
+            recipient.id,
+            NotificationKind.MESSAGE,
+            actor_id=sender_id,
+            match_id=match.id,
+            body=preview,
+        )
 
     if hub.settings.demo_mode and recipient.is_persona and not sender.is_persona:
         schedule_persona_reply(hub, match.id, persona_id=recipient.id, human_id=sender_id)

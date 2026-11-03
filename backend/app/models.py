@@ -50,6 +50,13 @@ class ReportStatus(StrEnum):
     ACTIONED = "actioned"
 
 
+class NotificationKind(StrEnum):
+    LIKE = "like"
+    SUPER_LIKE = "super_like"
+    MATCH = "match"
+    MESSAGE = "message"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -210,3 +217,26 @@ class Report(Base):
 
     reporter: Mapped[User] = relationship(foreign_keys=[reporter_id], lazy="joined")
     reported: Mapped[User] = relationship(foreign_keys=[reported_id], lazy="joined")
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(16))
+    actor_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), default=None
+    )
+    match_id: Mapped[int | None] = mapped_column(
+        ForeignKey("matches.id", ondelete="CASCADE"), default=None
+    )
+    body: Mapped[str] = mapped_column(Text, default="")
+    # Missed messages from one chat collapse into a single notification with a count.
+    count: Mapped[int] = mapped_column(default=1, server_default=text("1"))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    read_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+
+    actor: Mapped[User | None] = relationship(foreign_keys=[actor_id], lazy="joined")
+
+    __table_args__ = (Index("ix_notifications_user_created", "user_id", "created_at"),)

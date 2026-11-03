@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
 
 from app.deps import CurrentUser, HubDep, SessionDep
-from app.models import Match, Swipe, SwipeAction, User
+from app.models import Match, NotificationKind, Swipe, SwipeAction, User
 from app.schemas import Candidate, LikeOut, MatchOut, PublicProfile, SwipeIn, SwipeOut
 from app.services import chat
 from app.services.matching import (
@@ -15,6 +15,7 @@ from app.services.matching import (
     is_mutual_fit,
     location,
 )
+from app.services.notifications import notify
 from app.services.personas import likes_back
 from app.services.safety import hidden_ids, is_hidden
 
@@ -120,6 +121,13 @@ async def swipe(data: SwipeIn, user: CurrentUser, session: SessionDep, hub: HubD
         await session.commit()
 
     if their_swipe is None or not SwipeAction(their_swipe.action).is_positive:
+        if not target.is_persona:
+            kind = (
+                NotificationKind.SUPER_LIKE
+                if data.action is SwipeAction.SUPER
+                else NotificationKind.LIKE
+            )
+            await notify(session, hub, target.id, kind, actor_id=user.id)
         return SwipeOut(matched=False)
 
     match = await chat.create_match(session, hub, user, target)

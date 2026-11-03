@@ -17,6 +17,8 @@ from app.models import (
     Gender,
     Match,
     Message,
+    Notification,
+    NotificationKind,
     Report,
     ReportReason,
     ReportStatus,
@@ -390,3 +392,32 @@ class ModerationStats(BaseModel):
     resolved_this_week: int
     banned_users: int
     total_users: int
+
+
+class NotificationOut(BaseModel):
+    id: int
+    kind: NotificationKind
+    actor: PublicProfile | None
+    match_id: int | None
+    body: str
+    count: int
+    created_at: datetime
+    read_at: datetime | None
+
+    @classmethod
+    def build(cls, notification: Notification) -> Self:
+        return cls(
+            id=notification.id,
+            kind=NotificationKind(notification.kind),
+            actor=PublicProfile.build(notification.actor) if notification.actor else None,
+            match_id=notification.match_id,
+            body=notification.body,
+            count=notification.count,
+            created_at=notification.created_at,
+            read_at=notification.read_at,
+        )
+
+
+class NotificationList(BaseModel):
+    items: list[NotificationOut]
+    unread: int
