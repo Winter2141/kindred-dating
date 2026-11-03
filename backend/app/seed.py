@@ -12,7 +12,17 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import select
 
 from app.db import Base, Database, utcnow
-from app.models import Match, Message, Report, ReportReason, Swipe, SwipeAction, User
+from app.models import (
+    Match,
+    Message,
+    Notification,
+    NotificationKind,
+    Report,
+    ReportReason,
+    Swipe,
+    SwipeAction,
+    User,
+)
 from app.places import geocode
 from app.security import hash_password
 from app.seed_data import DEMO_EMAIL, DEMO_PASSWORD, PERSONAS, SECOND_DEMO_EMAIL, unsplash
@@ -208,14 +218,38 @@ async def seed_demo_data(db: Database) -> bool:
                     )
                 )
             match.last_activity_at = sent_at
+            # The bell starts with the newest matches and the chat Alex hasn't read yet.
+            if not lines or unread:
+                session.add(
+                    Notification(
+                        user_id=alex.id,
+                        kind=NotificationKind.MESSAGE if unread else NotificationKind.MATCH,
+                        actor_id=other.id,
+                        match_id=match.id,
+                        body=lines[-1][1] if unread else "",
+                        count=max(unread, 1),
+                        created_at=sent_at,
+                    )
+                )
 
         for name, action in LIKED_ALEX.items():
+            liked_at = now - timedelta(hours=rng.randint(1, 30))
             session.add(
                 Swipe(
                     swiper_id=people[name].id,
                     target_id=alex.id,
                     action=action,
-                    created_at=now - timedelta(hours=rng.randint(1, 30)),
+                    created_at=liked_at,
+                )
+            )
+            super_like = action is SwipeAction.SUPER
+            session.add(
+                Notification(
+                    user_id=alex.id,
+                    kind=NotificationKind.SUPER_LIKE if super_like else NotificationKind.LIKE,
+                    actor_id=people[name].id,
+                    created_at=liked_at,
+                    read_at=None if super_like else liked_at + timedelta(minutes=30),
                 )
             )
         for hours_ago, (reporter, reported, reason, details) in enumerate(REPORTS, start=3):

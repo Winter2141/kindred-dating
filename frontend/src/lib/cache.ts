@@ -11,6 +11,7 @@ export const keys = {
   messages: (id: number) => ['messages', id] as const,
   icebreakers: (id: number) => ['icebreakers', id] as const,
   blocks: ['blocks'] as const,
+  notifications: ['notifications'] as const,
   places: (query: string) => ['places', query] as const,
   reports: (status: string) => ['reports', status] as const,
   moderationStats: ['moderation-stats'] as const,

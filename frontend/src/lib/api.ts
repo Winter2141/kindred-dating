@@ -1,6 +1,7 @@
 import { useAuth } from '@/store/auth'
 import type {
   AdminReport,
+  AppNotification,
   Candidate,
   Like,
   Match,
@@ -8,6 +9,7 @@ import type {
   Message,
   Meta,
   ModerationStats,
+  NotificationList,
   Prompt,
   PublicProfile,
   ReportReason,
@@ -142,6 +144,11 @@ export const api = {
   },
   unsend: (matchId: number, messageId: number) =>
     request<Message>(`/api/matches/${matchId}/messages/${messageId}`, { method: 'DELETE' }),
+
+  notifications: () => request<NotificationList>('/api/notifications'),
+  readNotification: (id: number) =>
+    request<AppNotification>(`/api/notifications/${id}/read`, { method: 'POST' }),
+  readAllNotifications: () => request<void>('/api/notifications/read', { method: 'POST' }),
 
   block: (userId: number) => request<void>('/api/blocks', { method: 'POST', body: { user_id: userId } }),
   unblock: (userId: number) => request<void>(`/api/blocks/${userId}`, { method: 'DELETE' }),

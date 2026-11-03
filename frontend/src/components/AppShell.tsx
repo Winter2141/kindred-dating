@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import { keys, totalUnread } from '@/lib/cache'
 import { useAuth } from '@/store/auth'
 import { useLive, useToasts } from '@/store/live'
+import { NotificationBell } from './Notifications'
 import { Avatar, Logo } from './ui'
 
 function useBadges() {
@@ -97,10 +98,13 @@ export function AppShell() {
 
   return (
     <div className="ambient relative flex min-h-dvh">
-      <aside className="sticky top-0 hidden h-dvh w-[264px] shrink-0 flex-col border-r border-line px-5 py-7 lg:flex">
-        <Link to="/app/discover" className="px-3">
-          <Logo />
-        </Link>
+      <aside className="sticky top-0 z-40 hidden h-dvh w-[264px] shrink-0 flex-col border-r border-line px-5 py-7 lg:flex">
+        <div className="flex items-center justify-between pl-3">
+          <Link to="/app/discover">
+            <Logo />
+          </Link>
+          <NotificationBell />
+        </div>
         <nav className="mt-10 flex flex-col gap-1">
           {NAV.map(({ to, label, icon: Icon, badge }) => (
             <NavLink
@@ -181,7 +185,10 @@ export function AppShell() {
         {!inChat && (
           <header className="glass sticky top-0 z-30 flex items-center justify-between border-b border-line px-5 py-3.5 lg:hidden">
             <Logo />
-            <ConnectionDot />
+            <div className="flex items-center gap-2">
+              <ConnectionDot />
+              <NotificationBell align="right" />
+            </div>
           </header>
         )}
         <main className={clsx('flex-1', !inChat && 'pb-24 lg:pb-0')}>

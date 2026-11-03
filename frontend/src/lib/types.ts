@@ -118,6 +118,25 @@ export interface Session {
   user: Me
 }
 
+export type NotificationKind = 'like' | 'super_like' | 'match' | 'message'
+
+/** Named AppNotification so it doesn't clash with the browser's Notification. */
+export interface AppNotification {
+  id: number
+  kind: NotificationKind
+  actor: PublicProfile | null
+  match_id: number | null
+  body: string
+  count: number
+  created_at: string
+  read_at: string | null
+}
+
+export interface NotificationList {
+  items: AppNotification[]
+  unread: number
+}
+
 export type ServerEvent =
   | { type: 'hello'; user_id: number; online: number[] }
   | { type: 'message.new'; message: Message; client_id: string | null }
@@ -128,6 +147,7 @@ export type ServerEvent =
   | { type: 'presence'; user_id: number; online: boolean; last_active_at: string }
   | { type: 'match.new'; match: Match }
   | { type: 'match.removed'; match_id: number }
+  | { type: 'notification.new'; notification: AppNotification }
   | { type: 'pong' }
   | { type: 'error'; detail: string; match_id?: number }
 

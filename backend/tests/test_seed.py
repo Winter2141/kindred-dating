@@ -24,6 +24,10 @@ def test_demo_data_gives_a_full_first_session(settings: Settings) -> None:
         assert sum(m["unread_count"] for m in matches) == 2
         assert len(client.get("/api/likes", headers=headers).json()) == 6
         assert login.json()["user"]["is_admin"] is True
+        bell = client.get("/api/notifications", headers=headers).json()
+        # Two super likes, two fresh matches and Sofia's unread messages.
+        assert bell["unread"] == 5
+        assert {n["kind"] for n in bell["items"]} == {"like", "super_like", "match", "message"}
         queue = client.get("/api/admin/reports", headers=headers).json()
         assert [r["reported"]["name"] for r in queue] == ["Ryan", "Ryan", "Owen", "Henrik"]
 

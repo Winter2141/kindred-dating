@@ -11,9 +11,10 @@ import {
   setPresence,
   upsertMessage,
 } from '@/lib/cache'
+import { applyNotification } from '@/lib/notifications'
 import { previewText } from '@/lib/photos'
 import { RealtimeClient, socketUrl } from '@/lib/realtime'
-import type { ClientEvent, Match, Message, ServerEvent } from '@/lib/types'
+import type { ClientEvent, Match, Message, NotificationList, ServerEvent } from '@/lib/types'
 import { useAuth } from '@/store/auth'
 import { useLive, useToasts } from '@/store/live'
 
@@ -178,6 +179,14 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           }
           break
         }
+        case 'notification.new':
+          queryClient.setQueryData<NotificationList>(keys.notifications, (feed) =>
+            applyNotification(feed, event.notification),
+          )
+          if (event.notification.kind === 'like' || event.notification.kind === 'super_like') {
+            void queryClient.invalidateQueries({ queryKey: keys.likes })
+          }
+          break
         case 'match.removed':
           queryClient.setQueryData<Match[]>(keys.matches, (matches) =>
             matches?.filter((m) => m.id !== event.match_id),
