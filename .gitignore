@@ -13,6 +13,9 @@ backend/media/
 node_modules/
 dist/
 *.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
+backend/.e2e/
 
 # Editors / OS
 .vscode/
