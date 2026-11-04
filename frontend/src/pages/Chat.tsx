@@ -19,6 +19,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { ProfileDetails } from '@/components/ProfileDetails'
 import { DateBar, PlanDateButton } from '@/components/DatePlanner'
 import { Lightbox } from '@/components/Lightbox'
+import { KindnessNudge, useKindnessCheck } from '@/components/Kindness'
 import { EditBanner, MessageMenu, lastEditable } from '@/components/MessageActions'
 import { ReactionChips, ReactionPicker } from '@/components/Reactions'
 import {
@@ -854,6 +855,9 @@ function Composer({
   const fileInput = useRef<HTMLInputElement>(null)
   const recorder = useVoiceRecorder(onSendVoice)
   const recording = recorder.state === 'recording'
+  const checkKindness = useKindnessCheck()
+  // What looked unkind in the draft the person just tried to send; non-empty opens the nudge.
+  const [nudge, setNudge] = useState<string[]>([])
 
   useEffect(() => {
     if (recorder.state === 'unavailable') {
@@ -917,8 +921,15 @@ function Composer({
     textarea.current?.focus()
   }
 
-  const submit = () => {
+  const submit = (sendAnyway = false) => {
     const body = text.trim()
+    if (!sendAnyway && body) {
+      const phrases = checkKindness(body)
+      if (phrases.length > 0) {
+        setNudge(phrases)
+        return
+      }
+    }
     if (editing) {
       if (!body && !editing.image_url) return
       onSaveEdit?.(body)
@@ -942,6 +953,18 @@ function Composer({
       className="border-t border-line px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6"
     >
       {editing && onCancelEdit ? <EditBanner message={editing} onCancel={onCancelEdit} /> : reply}
+      <KindnessNudge
+        phrases={nudge}
+        name={name}
+        onEdit={() => {
+          setNudge([])
+          textarea.current?.focus()
+        }}
+        onSendAnyway={() => {
+          setNudge([])
+          submit(true)
+        }}
+      />
       {(preview || problem) && (
         <div className="mx-auto mb-2 flex max-w-3xl items-center gap-3">
           {preview && (

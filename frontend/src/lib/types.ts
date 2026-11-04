@@ -247,7 +247,7 @@ export interface AdminReport {
   created_at: string
   resolved_at: string | null
   reporter: PublicProfile
-  reported: PublicProfile & { email: string; banned: boolean; open_reports: number }
+  reported: PublicProfile & { email: string; banned: boolean; open_reports: number; unkind_messages: number }
 }
 
 export type MemberFilter = 'all' | 'banned' | 'verified' | 'unverified' | 'admins'
@@ -316,6 +316,8 @@ export interface Meta {
   max_prompts: number
   max_photos: number
   reactions: string[]
+  /** Case-insensitive regex sources for the "Are you sure?" nudge (lib/kindness.ts). */
+  unkind_patterns?: string[]
 }
 
 export interface Session {

@@ -13,6 +13,7 @@ from pydantic import (
     model_validator,
 )
 
+from app import kindness
 from app.catalog import INTERESTS, MAX_INTERESTS, MAX_PROMPTS, PROMPT_QUESTIONS, REACTIONS
 from app.models import (
     AuditEvent,
@@ -581,6 +582,10 @@ class MetaOut(BaseModel):
     max_prompts: int = MAX_PROMPTS
     max_photos: int
     reactions: list[str] = REACTIONS
+    unkind_patterns: list[str] = Field(
+        default_factory=kindness.patterns,
+        description="Case-insensitive regexes for the send-anyway nudge (app.kindness)",
+    )
 
 
 class BlockIn(BaseModel):
@@ -598,6 +603,7 @@ class ReportedPerson(PublicProfile):
     email: EmailStr
     banned: bool
     open_reports: int
+    unkind_messages: int = Field(description="Messages they sent that read as insults")
 
 
 class ReportOut(BaseModel):
@@ -626,6 +632,7 @@ class ReportOut(BaseModel):
                 email=reported.email,
                 banned=reported.banned_at is not None,
                 open_reports=open_reports,
+                unkind_messages=reported.unkind_messages,
             ),
         )
 

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Ban, Check, Gavel, ShieldAlert, ShieldCheck, Undo2 } from 'lucide-react'
+import { Ban, Check, Gavel, MessageCircleWarning, ShieldAlert, ShieldCheck, Undo2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { Navigate } from 'react-router'
@@ -194,6 +194,12 @@ export function ReportCard({ report }: { report: AdminReport }) {
             </span>
             {person.open_reports > 1 && report.status === 'open' && (
               <span className="chip">{person.open_reports} open reports</span>
+            )}
+            {person.unkind_messages > 0 && (
+              <span className="chip border-apricot/40 bg-apricot/10 text-apricot" title="Messages that read as insults">
+                <MessageCircleWarning className="size-3.5" /> {person.unkind_messages} unkind{' '}
+                {person.unkind_messages === 1 ? 'message' : 'messages'}
+              </span>
             )}
             {person.banned && <span className="chip border-line-strong text-muted">Banned</span>}
           </div>

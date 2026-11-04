@@ -53,3 +53,32 @@ test('two people chat live: messages, typing, replies and edits', async ({ brows
   await alex.context().close()
   await maya.context().close()
 })
+
+test('an unkind message gets a second thought before it goes', async ({ page }) => {
+  await signIn(page, ALEX)
+  await openChat(page, 'Maya')
+  const box = page.getByRole('textbox', { name: 'Message Maya' })
+  const bubble = (body: string) => page.locator('[id^="message-"]', { hasText: body })
+
+  const harsh = `ur such a l0ser ${Date.now()}`
+  await box.fill(harsh)
+  await page.keyboard.press('Enter')
+  const nudge = page.getByRole('dialog', { name: 'Are you sure?' })
+  await expect(nudge).toContainText('"loser" might hurt')
+  await expect(box).toHaveValue(harsh) // nothing sent yet
+
+  // Rewording it sends straight away.
+  await nudge.getByRole('button', { name: /edit message/i }).click()
+  await expect(nudge).toBeHidden()
+  const kinder = `Ha, I lost that round ${Date.now()}`
+  await box.fill(kinder)
+  await page.keyboard.press('Enter')
+  await expect(bubble(kinder)).toBeVisible()
+  await expect(bubble(harsh)).toHaveCount(0)
+
+  // It's a nudge, not a filter: "Send anyway" still sends.
+  await box.fill(harsh)
+  await page.keyboard.press('Enter')
+  await nudge.getByRole('button', { name: /send anyway/i }).click()
+  await expect(bubble(harsh)).toBeVisible()
+})

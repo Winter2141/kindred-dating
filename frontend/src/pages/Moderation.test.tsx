@@ -24,6 +24,7 @@ const person = (id: number, name: string) => ({
   email: `${name.toLowerCase()}@example.com`,
   banned: false,
   open_reports: 2,
+  unkind_messages: 0,
 })
 
 const REPORT = {
@@ -68,6 +69,21 @@ describe('ModerationPage', () => {
     expect(within(card).getByText('2 open reports')).toBeInTheDocument()
     expect(within(card).getByText('Pitched me a crypto course')).toBeInTheDocument()
     expect(screen.getByText('48')).toBeInTheDocument()
+  })
+
+  it('flags people whose messages read as insults', async () => {
+    vi.mocked(api.reports).mockResolvedValue([
+      { ...REPORT, reported: { ...REPORT.reported, unkind_messages: 3 } },
+    ])
+    renderPage(<ModerationPage />)
+    const card = await screen.findByRole('article')
+    expect(within(card).getByText(/3 unkind messages/)).toBeInTheDocument()
+  })
+
+  it('says nothing about kindness when there is nothing to say', async () => {
+    renderPage(<ModerationPage />)
+    const card = await screen.findByRole('article')
+    expect(within(card).queryByText(/unkind/)).not.toBeInTheDocument()
   })
 
   it('dismisses a report and refreshes the queue', async () => {

@@ -9,6 +9,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import utcnow
+from app.kindness import is_unkind
 from app.models import ChatSetting, Match, Message, NotificationKind, Reaction, User
 from app.realtime import Hub
 from app.schemas import MatchOut, MessageOut
@@ -164,6 +165,8 @@ async def send_message(
     session.add(message)
     match.last_activity_at = message.created_at
     sender.last_active_at = message.created_at
+    if is_unkind(body):
+        sender.unkind_messages += 1
     await session.commit()
 
     payload = {
@@ -281,6 +284,9 @@ async def edit(
     if body == message.body:
         return message
 
+    if is_unkind(body) and not is_unkind(message.body):
+        sender = match.user_a if match.user_a_id == user_id else match.user_b
+        sender.unkind_messages += 1
     message.body = body
     message.edited_at = utcnow()
     await session.commit()
