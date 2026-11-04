@@ -322,6 +322,18 @@ export interface Session {
   access_token: string
   token_type: 'bearer'
   user: Me
+  session_id?: number | null
+}
+
+/** A browser that's signed in to the account (GET /api/me/sessions). */
+export interface DeviceSession {
+  id: number
+  label: string
+  mobile: boolean
+  ip_address: string
+  created_at: string
+  last_seen_at: string
+  current: boolean
 }
 
 export type NotificationKind =

@@ -29,6 +29,7 @@ export const keys = {
   audit: ['audit'] as const,
   verification: ['verification'] as const,
   twoFactor: ['two-factor'] as const,
+  deviceSessions: ['device-sessions'] as const,
   verificationQueue: ['verification-queue'] as const,
 }
 

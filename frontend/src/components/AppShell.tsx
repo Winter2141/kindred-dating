@@ -7,7 +7,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { CallScreen } from '@/components/CallScreen'
 import { EmailBanner } from '@/components/EmailBanner'
 import { ShortcutsButton, ShortcutsDialog, useGlobalShortcuts } from '@/components/Shortcuts'
-import { api } from '@/lib/api'
+import { api, signOutHere } from '@/lib/api'
 import { keys, totalUnread } from '@/lib/cache'
 import { NAVIGATE_EVENT, titleWithCount } from '@/lib/desktop'
 import { useAuth } from '@/store/auth'
@@ -210,7 +210,7 @@ export function AppShell() {
               </Link>
               <button
                 type="button"
-                onClick={signOut}
+                onClick={() => void signOutHere(signOut)}
                 className="grid size-9 place-items-center rounded-xl text-muted transition hover:bg-raised hover:text-cream"
                 aria-label="Sign out"
                 title="Sign out"

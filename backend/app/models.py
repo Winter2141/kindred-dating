@@ -396,3 +396,23 @@ class OutboxEmail(Base):
     body: Mapped[str] = mapped_column(Text)
     kind: Mapped[str] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class DeviceSession(Base):
+    """One signed-in browser. Its id rides in the access token, so it can be signed out alone.
+
+    A session is live while it isn't revoked or expired and was issued at the user's current
+    token_version (bumping that, e.g. on a password change, ends every session at once).
+    """
+
+    __tablename__ = "device_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_version: Mapped[int] = mapped_column(default=0)
+    user_agent: Mapped[str] = mapped_column(String(255), default="")
+    ip_address: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    revoked_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)

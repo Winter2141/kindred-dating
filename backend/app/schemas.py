@@ -311,6 +311,17 @@ class TokenOut(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"
     user: MeOut
+    session_id: int | None = None
+
+
+class DeviceSessionOut(BaseModel):
+    id: int
+    label: str = Field(description='A readable guess like "Safari on iPhone"')
+    mobile: bool
+    ip_address: str
+    created_at: datetime
+    last_seen_at: datetime
+    current: bool = Field(description="True for the browser making this request")
 
 
 class Candidate(PublicProfile):

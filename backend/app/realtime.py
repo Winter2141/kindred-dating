@@ -31,6 +31,8 @@ log = logging.getLogger(__name__)
 
 # Internal event that closes a user's sockets wherever they are; never sent to clients.
 CLOSE_EVENT = "__close__"
+# Close code meaning "signed out": the client stops reconnecting (frontend/src/lib/realtime.ts).
+CLOSE_UNAUTHORIZED = 4401
 # Internal presence events between API processes (never sent to clients):
 PRESENCE_EVENT = "__presence__"  # one user came online or went offline on a process
 ALIVE_EVENT = "__alive__"  # a process's full list of online users, sent as a heartbeat
@@ -166,6 +168,12 @@ class ConnectionManager:
         """Close every socket a user has open, on every process, e.g. after a ban."""
         await self.broker.publish([user_id], {"type": CLOSE_EVENT, "code": code})
 
+    async def close_session(self, user_id: int, session_id: int, code: int) -> None:
+        """Close the sockets one signed-in device has open, on every process."""
+        await self.broker.publish(
+            [user_id], {"type": CLOSE_EVENT, "code": code, "session_id": session_id}
+        )
+
     async def deliver_local(self, user_ids: list[int], data: dict[str, Any]) -> None:
         """Write an event to the sockets this process holds for each user."""
         if data.get("type") in INTERNAL_EVENTS:
@@ -173,7 +181,7 @@ class ConnectionManager:
             return
         for user_id in user_ids:
             if data.get("type") == CLOSE_EVENT:
-                await self._close_local(user_id, data["code"])
+                await self._close_local(user_id, data["code"], data.get("session_id"))
                 continue
             for websocket in list(self._sockets.get(user_id, ())):
                 try:
@@ -182,15 +190,26 @@ class ConnectionManager:
                     log.debug("dropping dead socket for user %s", user_id)
                     self.disconnect(user_id, websocket)
 
-    async def _close_local(self, user_id: int, code: int) -> None:
-        sockets = self._sockets.pop(user_id, set())
-        if sockets:
-            self._closing.add(user_id)
+    async def _close_local(self, user_id: int, code: int, session_id: int | None = None) -> None:
+        held = self._sockets.get(user_id, set())
+        if session_id is None:
+            sockets = set(held)
+        else:
+            sockets = {ws for ws in held if _device_session(ws) == session_id}
+        held -= sockets
+        if not held:  # this closes their last socket here, so they go offline
+            self._sockets.pop(user_id, None)
+            if sockets:
+                self._closing.add(user_id)
         for websocket in list(sockets):
             try:
                 await websocket.close(code=code)
             except Exception:
                 log.debug("socket for user %s was already closed", user_id)
+
+
+def _device_session(websocket: WebSocket) -> int | None:
+    return getattr(websocket.state, "device_session_id", None)
 
 
 @dataclass

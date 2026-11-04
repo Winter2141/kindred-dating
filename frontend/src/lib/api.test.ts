@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { api, ApiError } from './api'
+import { useAuth } from '@/store/auth'
+import type { Me } from './types'
+import { api, ApiError, signOutHere } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -24,5 +26,23 @@ describe('request', () => {
     expect(error).toBeInstanceOf(ApiError)
     expect((error as ApiError).status).toBe(400)
     expect((error as ApiError).message).toBe('That link is invalid or has expired')
+  })
+})
+
+describe('signOutHere', () => {
+  it('ends the session on the server, then forgets the token', async () => {
+    respond(204, '')
+    useAuth.setState({ token: 'token', user: { id: 1 } as Me })
+    const forget = vi.fn()
+    await signOutHere(forget)
+    expect(fetch).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ method: 'POST' }))
+    expect(forget).toHaveBeenCalledOnce()
+  })
+
+  it('still forgets the token when the server cannot be reached', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    const forget = vi.fn()
+    await signOutHere(forget)
+    expect(forget).toHaveBeenCalledOnce()
   })
 })

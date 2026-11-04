@@ -1,6 +1,6 @@
 """Two-factor sign-in with an authenticator app, and recovery codes for when it's lost."""
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 
 from app import totp
 from app.db import utcnow
@@ -123,7 +123,7 @@ async def regenerate_codes(
 
 @router.post("/auth/login/2fa", dependencies=[per_ip(LOGIN)])
 async def login_second_step(
-    data: MfaLoginIn, session: SessionDep, settings: SettingsDep
+    data: MfaLoginIn, request: Request, session: SessionDep, settings: SettingsDep
 ) -> TokenOut:
     """Finish signing in with the challenge from /auth/login and a code."""
     expired = HTTPException(status.HTTP_401_UNAUTHORIZED, "Sign in again: that took too long")
@@ -139,4 +139,4 @@ async def login_second_step(
     if not check_second_factor(user, data.code):
         raise _wrong_code()
     await session.commit()  # records the used code, so it can't be replayed
-    return token_for(user, settings)
+    return await token_for(session, settings, user, request)

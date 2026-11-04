@@ -10,6 +10,7 @@ import type {
   AppNotification,
   ChatSettings,
   DateProposal,
+  DeviceSession,
   Insights,
   Candidate,
   Like,
@@ -178,6 +179,10 @@ export const api = {
       body: { current_password: currentPassword, new_password: newPassword },
     }),
   signOutEverywhere: () => request<void>('/api/me/sign-out-everywhere', { method: 'POST' }),
+  logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
+  deviceSessions: () => request<DeviceSession[]>('/api/me/sessions'),
+  endSession: (id: number) => request<void>(`/api/me/sessions/${id}`, { method: 'DELETE' }),
+  signOutOtherSessions: () => request<void>('/api/me/sessions/sign-out-others', { method: 'POST' }),
   /** The JSON export as a file to save. */
   exportData: async (): Promise<Blob> => {
     const { token } = useAuth.getState()
@@ -279,4 +284,14 @@ export const api = {
     form.append('file', file)
     return request<VerificationState>('/api/me/verification/selfie', { method: 'POST', body: form })
   },
+}
+
+/** End this browser's session on the server as well, then forget the token here. */
+export async function signOutHere(forget: () => void): Promise<void> {
+  try {
+    await api.logout()
+  } catch {
+    // Already signed out, or offline: forgetting the token is still the right thing to do.
+  }
+  forget()
 }

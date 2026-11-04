@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
+import { DeviceList } from '@/components/Devices'
 import { BlockedList } from '@/components/Safety'
 import { Segmented } from '@/components/ProfileFields'
 import { TwoFactorSettings } from '@/components/TwoFactor'
@@ -329,12 +330,13 @@ function SessionsSection() {
   return (
     <Section
       icon={<MonitorSmartphone className="size-5" />}
-      title="Sessions"
-      description="Lost a phone or used a shared computer? Sign out of Kindred everywhere, including here."
+      title="Where you're signed in"
+      description="Don't recognise one? Sign it out, then change your password. Lost a phone or used a shared computer? You can sign out everywhere at once, including here."
     >
+      <DeviceList />
       <button
         type="button"
-        className="btn-secondary"
+        className="btn-ghost mt-3 text-sm text-danger"
         disabled={everywhere.isPending}
         onClick={() => everywhere.mutate()}
       >

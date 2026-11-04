@@ -27,18 +27,16 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError, field_validator
 
 from app.db import utcnow
-from app.deps import user_from_token
+from app.deps import authenticate
 from app.limits import MESSAGES
 from app.models import User
-from app.realtime import Hub
+from app.realtime import CLOSE_UNAUTHORIZED, Hub
 from app.schemas import MessageBody, ReactionEmoji
 from app.services import calls, chat
 from app.services.calls import CallKind
 
 log = logging.getLogger(__name__)
 router = APIRouter()
-
-CLOSE_UNAUTHORIZED = 4401
 
 
 class SendMessage(BaseModel):
@@ -196,11 +194,15 @@ async def _handle(hub: Hub, user_id: int, event: MatchEvent | CallEvent | Ping) 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, token: str = "") -> None:
     hub: Hub = websocket.app.state.hub
+    address = websocket.client.host if websocket.client else ""
     async with hub.db.session() as session:
-        user = await user_from_token(session, token, hub.settings.secret_key)
-    if user is None:
+        auth = await authenticate(session, token, hub.settings.secret_key, address)
+    if auth is None:
         await websocket.close(code=CLOSE_UNAUTHORIZED, reason="Not signed in")
         return
+    user = auth.user
+    # Lets "sign out that device" close just this device's sockets.
+    websocket.state.device_session_id = auth.device.id if auth.device else None
 
     await websocket.accept()
     if hub.manager.connect(user.id, websocket):

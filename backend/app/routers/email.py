@@ -1,6 +1,6 @@
 """Email confirmation and password resets, plus the development outbox."""
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 
 from app.db import utcnow
@@ -91,7 +91,7 @@ async def forgot_password(
 
 @router.post("/auth/reset-password")
 async def reset_password(
-    data: ResetPasswordIn, session: SessionDep, settings: SettingsDep
+    data: ResetPasswordIn, request: Request, session: SessionDep, settings: SettingsDep
 ) -> TokenOut:
     """Set a new password from a reset link. Signs out every device and signs this one in."""
     invalid = HTTPException(status.HTTP_400_BAD_REQUEST, "That reset link is invalid or used up")
@@ -107,7 +107,7 @@ async def reset_password(
     # Getting the link proves they can read mail sent to this address.
     user.email_verified_at = user.email_verified_at or utcnow()
     await session.commit()
-    return token_for(user, settings)
+    return await token_for(session, settings, user, request)
 
 
 @router.get("/dev/outbox")

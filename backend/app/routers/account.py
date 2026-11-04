@@ -2,7 +2,7 @@
 
 import json
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from sqlalchemy import select
 
 from app.db import utcnow
@@ -27,7 +27,11 @@ def _require_password(password: str, password_hash: str) -> None:
 
 @router.post("/password")
 async def change_password(
-    data: PasswordChange, user: CurrentUser, session: SessionDep, settings: SettingsDep
+    data: PasswordChange,
+    request: Request,
+    user: CurrentUser,
+    session: SessionDep,
+    settings: SettingsDep,
 ) -> TokenOut:
     """Set a new password. Other devices are signed out; this one gets a fresh token."""
     _require_password(data.current_password, user.password_hash)
@@ -38,7 +42,7 @@ async def change_password(
     user.password_hash = hash_password(data.new_password)
     user.token_version += 1
     await session.commit()
-    return token_for(user, settings)
+    return await token_for(session, settings, user, request)
 
 
 @router.get("/export", dependencies=[per_user(EXPORTS)])
