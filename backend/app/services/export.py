@@ -16,6 +16,7 @@ from app.models import (
     ProfileView,
     QuestionAnswer,
     Report,
+    SavedProfile,
     Swipe,
     User,
     VerificationRequest,
@@ -68,6 +69,13 @@ async def build_export(session: AsyncSession, user: User, now: datetime) -> dict
             select(User).where(User.id.in_([s.target_id for s in swipes]))
         )
     }
+    saved_for_later = (
+        await session.scalars(
+            select(SavedProfile)
+            .where(SavedProfile.user_id == user.id)
+            .order_by(SavedProfile.created_at)
+        )
+    ).all()
     looked_at = (
         await session.execute(
             select(ProfileView, User.name)
@@ -161,6 +169,9 @@ async def build_export(session: AsyncSession, user: User, now: datetime) -> dict
                 "at": _when(s.created_at),
             }
             for s in swipes
+        ],
+        "saved_for_later": [
+            {"who": row.saved.name, "saved_at": _when(row.created_at)} for row in saved_for_later
         ],
         # Whose profiles you opened. Who opened yours is theirs to export, not yours.
         "profiles_viewed": [

@@ -10,17 +10,24 @@ import { EmptyState, Photo, Spinner } from '@/components/ui'
 import { api } from '@/lib/api'
 import { LikeCommentNote } from '@/components/LikeComment'
 import { VerifiedBadge } from '@/components/Verification'
+import { SavedList } from '@/components/Saved'
 import { ViewedYouList } from '@/components/ViewedYou'
 import { keys } from '@/lib/cache'
 import type { Like, Match, PublicProfile, SwipeAction } from '@/lib/types'
 import { shortAgo } from '@/lib/time'
 import { useRecordView } from '@/lib/views'
 
-type Tab = 'likes' | 'views'
+type Tab = 'likes' | 'views' | 'saved'
 const TABS: { value: Tab; label: string }[] = [
   { value: 'likes', label: 'Likes' },
   { value: 'views', label: 'Viewed you' },
+  { value: 'saved', label: 'Saved' },
 ]
+const HEADINGS: Record<Tab, { title: string; text: string }> = {
+  likes: { title: 'Likes you', text: "They already said yes. Like them back and it's an instant match." },
+  views: { title: 'Viewed you', text: 'People who opened your full profile in the last 30 days.' },
+  saved: { title: 'Saved for later', text: 'People you set aside from Discover. Decide whenever you like.' },
+}
 
 /** A read-only look at someone's profile, from the Viewed you list. */
 function ProfileSheet({ profile, onClose }: { profile: PublicProfile | null; onClose: () => void }) {
@@ -67,7 +74,7 @@ export function LikesPage() {
   const [open, setOpen] = useState<Like | null>(null)
   const [viewing, setViewing] = useState<PublicProfile | null>(null)
   const [params, setParams] = useSearchParams()
-  const tab: Tab = params.get('tab') === 'views' ? 'views' : 'likes'
+  const tab: Tab = TABS.find((t) => t.value === params.get('tab'))?.value ?? 'likes'
   // Opening a like is a proper look at their profile.
   useRecordView(open?.user.id, open !== null, 0)
   useRecordView(viewing?.id, viewing !== null, 0)
@@ -92,12 +99,8 @@ export function LikesPage() {
     <div className="mx-auto w-full max-w-6xl px-4 pt-5 pb-6 sm:px-8 lg:pt-10">
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-5xl leading-none">{tab === 'views' ? 'Viewed you' : 'Likes you'}</h1>
-          <p className="mt-2 text-sm text-muted">
-            {tab === 'views'
-              ? 'People who opened your full profile in the last 30 days.'
-              : "They already said yes. Like them back and it's an instant match."}
-          </p>
+          <h1 className="font-display text-5xl leading-none">{HEADINGS[tab].title}</h1>
+          <p className="mt-2 text-sm text-muted">{HEADINGS[tab].text}</p>
         </div>
         <div role="tablist" aria-label="Show" className="inline-flex rounded-full border border-line bg-surface p-1">
           {TABS.map(({ value, label }) => (
@@ -120,6 +123,8 @@ export function LikesPage() {
 
       {tab === 'views' ? (
         <ViewedYouList onOpen={(viewer) => setViewing(viewer.user)} />
+      ) : tab === 'saved' ? (
+        <SavedList onOpen={setViewing} onMatch={setMatch} />
       ) : likes.isPending ? (
         <div className="grid place-items-center py-24">
           <Spinner className="text-coral" />

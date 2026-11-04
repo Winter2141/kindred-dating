@@ -429,6 +429,11 @@ class AdminAnnouncementOut(AnnouncementOut):
         )
 
 
+class SavedProfileOut(BaseModel):
+    user: PublicProfile
+    saved_at: datetime
+
+
 class TokenOut(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"

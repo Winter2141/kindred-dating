@@ -13,6 +13,7 @@ export const keys = {
   topPicks: ['top-picks'] as const,
   likes: ['likes'] as const,
   viewers: ['viewers'] as const,
+  saved: ['saved'] as const,
   matches: ['matches'] as const,
   match: (id: number) => ['matches', id] as const,
   messages: (id: number) => ['messages', id] as const,

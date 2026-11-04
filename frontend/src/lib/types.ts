@@ -269,6 +269,12 @@ export interface Viewers {
   viewers: Viewer[]
 }
 
+/** Someone set aside from Discover to decide on later. */
+export interface SavedProfile {
+  user: PublicProfile
+  saved_at: string
+}
+
 export type AnnouncementTone = 'info' | 'warning' | 'celebration'
 
 /** A notice from the moderators, shown as a banner until dismissed or ended. */

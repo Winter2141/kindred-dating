@@ -1,12 +1,12 @@
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.catalog import INTERESTS
 from app.deps import CurrentUser, HubDep, SessionDep
 from app.limits import SWIPES
-from app.models import Match, NotificationKind, Swipe, SwipeAction, User
+from app.models import Match, NotificationKind, SavedProfile, Swipe, SwipeAction, User
 from app.ratelimit import per_user
 from app.schemas import (
     Candidate,
@@ -89,6 +89,12 @@ async def swipe(data: SwipeIn, user: CurrentUser, session: SessionDep, hub: HubD
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT, "That photo or prompt isn't on their profile"
         )
+    # Deciding on someone saved for later takes them off the saved list.
+    await session.execute(
+        delete(SavedProfile).where(
+            SavedProfile.user_id == user.id, SavedProfile.saved_id == target.id
+        )
+    )
     session.add(
         Swipe(
             swiper_id=user.id,

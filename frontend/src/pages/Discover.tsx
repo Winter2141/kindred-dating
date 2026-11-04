@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Heart, MessageCircleHeart, Plane, RotateCcw, SearchX, Star, X } from 'lucide-react'
+import { Bookmark, Heart, MessageCircleHeart, Plane, RotateCcw, SearchX, Star, X } from 'lucide-react'
 import { AnimatePresence, motion, type HTMLMotionProps } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
@@ -112,6 +112,27 @@ export function DiscoverPage() {
     },
     [top, swipe],
   )
+
+  // Set the top card aside without swiping; it waits under Likes > Saved.
+  const save = useMutation({
+    mutationFn: (candidate: Candidate) => api.saveProfile(candidate.id),
+    onSuccess: (_, candidate) => {
+      void queryClient.invalidateQueries({ queryKey: keys.saved })
+      useToasts.getState().push({ title: `Saved ${candidate.name}`, body: 'Find them under Likes, in Saved.' })
+    },
+    onError: (error, candidate) => {
+      setGone(({ [candidate.id]: _, ...rest }) => rest)
+      useToasts.getState().push({ title: "Couldn't save", body: error.message })
+    },
+  })
+  const saveTop = () => {
+    if (!top) return
+    setLastAction('pass')
+    setDetailsOpen(false)
+    setGone((g) => ({ ...g, [top.id]: 'pass' }))
+    setRestored((r) => r.filter((c) => c.id !== top.id))
+    save.mutate(top)
+  }
 
   const sendLike = (target: LikeTarget, comment: string) => {
     setLikeTarget(null)
@@ -254,6 +275,9 @@ export function DiscoverPage() {
             className="size-16 border-transparent bg-gradient-brand text-ink shadow-glow"
           >
             <Heart className="size-7 fill-current" />
+          </ActionButton>
+          <ActionButton label="Save for later" onClick={saveTop} disabled={!top} className="size-12 text-mint">
+            <Bookmark className="size-5" />
           </ActionButton>
         </div>
         <p className="mt-4 hidden text-xs text-faint sm:block">

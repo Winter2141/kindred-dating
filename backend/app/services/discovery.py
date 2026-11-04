@@ -7,7 +7,7 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import ColumnElement, case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Swipe, SwipeAction, User
+from app.models import SavedProfile, Swipe, SwipeAction, User
 from app.realtime import Hub
 from app.schemas import Candidate, PublicProfile, TopPick
 from app.services.agreement import agreement, answers_for
@@ -66,8 +66,8 @@ async def find_candidates(
 ) -> list[Candidate]:
     """Everyone who fits `user` and whom `user` fits, best fit first.
 
-    Excludes people already swiped on, people who passed on `user`, paused, banned and
-    blocked accounts. People who super-liked `user` come first.
+    Excludes people already swiped on, people who passed on `user`, people `user` saved
+    for later, paused, banned and blocked accounts. People who super-liked `user` come first.
     """
     today = now.date()
     swiped_by_me = select(Swipe.target_id).where(Swipe.swiper_id == user.id)
@@ -97,6 +97,7 @@ async def find_candidates(
             User.id.not_in(swiped_by_me),
             User.id.not_in(passed_on_me),
             User.id.not_in(hidden_ids(user.id)),
+            User.id.not_in(select(SavedProfile.saved_id).where(SavedProfile.user_id == user.id)),
             User.gender.in_(user.interested_in),
             User.birthdate.between(earliest, latest),
         )

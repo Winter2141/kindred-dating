@@ -312,6 +312,24 @@ class ProfileView(Base):
     )
 
 
+class SavedProfile(Base):
+    """Someone set aside from Discover to decide on later (app.routers.saved).
+
+    Saved people leave the deck; liking or passing on them, or putting them back, clears it.
+    """
+
+    __tablename__ = "saved_profiles"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    saved_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    saved: Mapped[User] = relationship(foreign_keys=[saved_id], lazy="joined")
+
+    __table_args__ = (UniqueConstraint("user_id", "saved_id", name="uq_saved_profiles_pair"),)
+
+
 class Notification(Base):
     __tablename__ = "notifications"
 
