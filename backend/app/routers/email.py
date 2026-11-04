@@ -19,11 +19,14 @@ from app.models import OutboxEmail, User
 from app.ratelimit import per_ip, per_user
 from app.routers.auth import token_for
 from app.schemas import (
+    EmailPrefs,
+    EmailPrefsOut,
     EmailVerifiedOut,
     ForgotPasswordIn,
     OutboxEmailOut,
     ResetPasswordIn,
     TokenOut,
+    UnsubscribeIn,
     VerifyEmailIn,
 )
 from app.security import (
@@ -32,6 +35,7 @@ from app.security import (
     decode_purpose_token,
     hash_password,
 )
+from app.services.digest import DEFAULT_PREFS, UNSUBSCRIBE, prefs_for
 
 router = APIRouter(prefix="/api", tags=["email"])
 
@@ -64,6 +68,41 @@ async def verify_email(
         user.email_verified_at = utcnow()
         await session.commit()
     return EmailVerifiedOut(email=user.email)
+
+
+def _prefs_out(user: User) -> EmailPrefsOut:
+    return EmailPrefsOut(**prefs_for(user), email_verified=user.email_verified_at is not None)
+
+
+@router.get("/me/email-preferences")
+async def get_email_preferences(user: CurrentUser) -> EmailPrefsOut:
+    return _prefs_out(user)
+
+
+@router.put("/me/email-preferences")
+async def set_email_preferences(
+    data: EmailPrefs, user: CurrentUser, session: SessionDep
+) -> EmailPrefsOut:
+    user.email_prefs = data.model_dump()  # a new dict, so the JSON column sees the change
+    await session.commit()
+    return _prefs_out(user)
+
+
+@router.post("/email/unsubscribe", status_code=status.HTTP_204_NO_CONTENT)
+async def unsubscribe(data: UnsubscribeIn, session: SessionDep, settings: SettingsDep) -> Response:
+    """Turn every digest off from the link at the bottom of one. No sign-in needed."""
+    try:
+        user_id, _ = decode_purpose_token(data.token, UNSUBSCRIBE, settings.secret_key)
+    except InvalidToken:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "That link is invalid or has expired"
+        ) from None
+    user = await session.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That link is invalid or has expired")
+    user.email_prefs = dict.fromkeys(DEFAULT_PREFS, False)
+    await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(

@@ -8,6 +8,7 @@ import {
   Gavel,
   KeyRound,
   LogOut,
+  Mail,
   MonitorSmartphone,
   Palette,
   ShieldCheck,
@@ -16,6 +17,7 @@ import {
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { DeviceList } from '@/components/Devices'
+import { EmailPrefsForm } from '@/components/EmailPrefs'
 import { BlockedList } from '@/components/Safety'
 import { Segmented } from '@/components/ProfileFields'
 import { TwoFactorSettings } from '@/components/TwoFactor'
@@ -55,6 +57,14 @@ export function SettingsPage() {
           <VerificationFlow hasPhotos={user.photos.length > 0} />
         </Section>
         <DesktopSection />
+        <Section
+          id="email"
+          icon={<Mail className="size-5" />}
+          title="Email"
+          description="Missed something while you were away? We'll gather it into one email, so you hear about it without being flooded."
+        >
+          <EmailPrefsForm />
+        </Section>
         <PasswordSection />
         <Section
           icon={<ShieldCheck className="size-5" />}
@@ -85,12 +95,14 @@ export function SettingsPage() {
 }
 
 function Section({
+  id,
   icon,
   title,
   description,
   children,
   danger,
 }: {
+  id?: string
   icon: ReactNode
   title: string
   description: string
@@ -98,7 +110,7 @@ function Section({
   danger?: boolean
 }) {
   return (
-    <section className={danger ? 'card border-danger/30 p-6 sm:p-8' : 'card p-6 sm:p-8'}>
+    <section id={id} className={danger ? 'card scroll-mt-6 border-danger/30 p-6 sm:p-8' : 'card scroll-mt-6 p-6 sm:p-8'}>
       <div className="flex gap-4">
         <span
           className={

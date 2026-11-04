@@ -119,6 +119,9 @@ class User(Base):
     email_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
     # Set when a moderator matched a posed selfie to the profile photos.
     verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    # Which email digests they want (see app.services.digest); None means the defaults.
+    email_prefs: Mapped[dict[str, bool] | None] = mapped_column(JSON, default=None)
+    digest_sent_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     last_active_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 

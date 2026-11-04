@@ -129,6 +129,23 @@ class VerifyEmailIn(BaseModel):
     token: str
 
 
+class EmailPrefs(BaseModel):
+    """Which notifications also arrive by email, gathered into one digest."""
+
+    matches: bool
+    messages: bool
+    likes: bool
+    dates: bool
+
+
+class EmailPrefsOut(EmailPrefs):
+    email_verified: bool = Field(description="Digests only go to a confirmed address")
+
+
+class UnsubscribeIn(BaseModel):
+    token: str
+
+
 class EmailVerifiedOut(BaseModel):
     email: EmailStr
     verified: Literal[True] = True

@@ -1,7 +1,8 @@
-"""Background jobs that run on a timer: for now, reminders before accepted dates.
+"""Background jobs that run on a timer: reminders before accepted dates, and email digests.
 
 Every API process runs the loop. Each reminder is claimed with a conditional UPDATE
-(`reminded_at IS NULL`), so with several workers exactly one of them sends it.
+(`reminded_at IS NULL`), so with several workers exactly one of them sends it; digests are
+claimed the same way (see app.services.digest).
 """
 
 import asyncio
@@ -13,6 +14,7 @@ from sqlalchemy import select, update
 from app.db import utcnow
 from app.models import DateProposal, DateStatus, Match, NotificationKind
 from app.realtime import Hub
+from app.services.digest import send_due_digests
 from app.services.notifications import notify
 
 log = logging.getLogger(__name__)
@@ -83,4 +85,8 @@ async def run(hub: Hub, interval: float) -> None:
             await send_due_reminders(hub)
         except Exception:  # a bad pass must not stop future reminders
             log.exception("sending date reminders failed")
+        try:
+            await send_due_digests(hub)
+        except Exception:
+            log.exception("sending email digests failed")
         await asyncio.sleep(interval)

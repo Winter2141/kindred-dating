@@ -184,17 +184,21 @@ export function Switch({
   onChange,
   label,
   disabled,
+  ariaLabel,
 }: {
   checked: boolean
   onChange: (checked: boolean) => void
   label: string
   disabled?: boolean
+  /** For a switch whose visible label sits elsewhere in the row. */
+  ariaLabel?: string
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={ariaLabel}
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className="group inline-flex items-center gap-3 text-[15px] font-semibold disabled:opacity-60"

@@ -9,7 +9,13 @@ import { DiscoverPage } from '@/pages/Discover'
 import { InsightsPage } from '@/pages/Insights'
 import { LandingPage } from '@/pages/Landing'
 import { LikesPage } from '@/pages/Likes'
-import { DevOutboxPage, ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from '@/pages/AccountRecovery'
+import {
+  DevOutboxPage,
+  ForgotPasswordPage,
+  ResetPasswordPage,
+  UnsubscribePage,
+  VerifyEmailPage,
+} from '@/pages/AccountRecovery'
 import { LoginPage, SignupPage } from '@/pages/Auth'
 import { MatchesLayout, NoChatSelected } from '@/pages/Matches'
 import { ModerationPage } from '@/pages/Moderation'
@@ -50,6 +56,7 @@ export function App() {
       {/* Reset and confirm links work whether or not you're signed in on this device. */}
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/unsubscribe" element={<UnsubscribePage />} />
       <Route path="/dev/outbox" element={<DevOutboxPage />} />
       <Route path="/app" element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route index element={<Navigate to="discover" replace />} />

@@ -325,6 +325,11 @@ export interface Session {
   session_id?: number | null
 }
 
+export type EmailCategory = 'matches' | 'messages' | 'likes' | 'dates'
+
+/** Which notifications also come by email, in one digest (GET /api/me/email-preferences). */
+export type EmailPrefs = Record<EmailCategory, boolean> & { email_verified: boolean }
+
 /** A browser that's signed in to the account (GET /api/me/sessions). */
 export interface DeviceSession {
   id: number

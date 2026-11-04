@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Inbox, MailCheck, MailWarning } from 'lucide-react'
+import { ArrowLeft, Inbox, MailCheck, MailWarning, MailX } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { Spinner } from '@/components/ui'
@@ -180,6 +180,68 @@ export function VerifyEmailPage() {
       ) : (
         <div className="flex items-center gap-3 text-muted">
           <Spinner className="text-coral" /> Confirming your email…
+        </div>
+      )}
+    </AuthLayout>
+  )
+}
+
+/**
+ * The link at the bottom of every digest. It waits for a click instead of acting on arrival,
+ * because mail scanners open links in emails and would unsubscribe people by accident.
+ */
+export function UnsubscribePage() {
+  const token = useSearchParams()[0].get('token') ?? ''
+  const signedIn = Boolean(useAuth((s) => s.token))
+  const queryClient = useQueryClient()
+  const stop = useMutation({
+    mutationFn: () => api.unsubscribe(token),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: keys.emailPrefs }),
+  })
+  const back = signedIn ? '/app/settings#email' : '/login'
+
+  return (
+    <AuthLayout>
+      {stop.isSuccess ? (
+        <div>
+          <MailX className="size-10 text-mint" />
+          <h1 className="mt-5 font-display text-5xl leading-none">You're unsubscribed</h1>
+          <p className="mt-4 leading-relaxed text-muted">
+            We won't email you about matches, messages, likes or dates. You'll still get sign-in and password
+            links when you ask for them. Changed your mind? Pick what you'd like in Settings.
+          </p>
+          <Link to={back} className="btn-secondary mt-8">
+            {signedIn ? 'Open email settings' : 'Sign in'}
+          </Link>
+        </div>
+      ) : stop.isError || !token ? (
+        <div>
+          <MailWarning className="size-10 text-danger" />
+          <h1 className="mt-5 font-display text-5xl leading-none">That link didn't work</h1>
+          <p className="mt-4 text-muted">
+            It may be too old. You can turn emails off any time in Settings, under Email.
+          </p>
+          <Link to={back} className="btn-secondary mt-8">
+            {signedIn ? 'Open email settings' : 'Sign in'}
+          </Link>
+        </div>
+      ) : (
+        <div>
+          <h1 className="font-display text-6xl leading-none">Stop Kindred emails?</h1>
+          <p className="mt-4 leading-relaxed text-muted">
+            This turns off every digest: new matches, unread messages, likes and date reminders.
+          </p>
+          <button
+            type="button"
+            className="btn-primary mt-8 w-full py-4 text-base"
+            disabled={stop.isPending}
+            onClick={() => stop.mutate()}
+          >
+            {stop.isPending ? <Spinner className="size-5" /> : 'Unsubscribe'}
+          </button>
+          <Link to={back} className="btn-ghost mt-3 w-full">
+            Keep them coming
+          </Link>
         </div>
       )}
     </AuthLayout>

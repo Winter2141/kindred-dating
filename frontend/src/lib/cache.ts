@@ -30,6 +30,7 @@ export const keys = {
   verification: ['verification'] as const,
   twoFactor: ['two-factor'] as const,
   deviceSessions: ['device-sessions'] as const,
+  emailPrefs: ['email-prefs'] as const,
   verificationQueue: ['verification-queue'] as const,
 }
 

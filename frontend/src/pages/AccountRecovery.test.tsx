@@ -8,7 +8,7 @@ import { EmailBanner } from '@/components/EmailBanner'
 import { api } from '@/lib/api'
 import type { Me, Session } from '@/lib/types'
 import { useAuth } from '@/store/auth'
-import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from './AccountRecovery'
+import { ForgotPasswordPage, ResetPasswordPage, UnsubscribePage, VerifyEmailPage } from './AccountRecovery'
 
 afterEach(() => {
   cleanup()
@@ -96,5 +96,44 @@ describe('EmailBanner', () => {
 
     act(() => useAuth.getState().setUser({ id: 1, email: 'new@x.com', email_verified: true } as Me))
     expect(screen.queryByText(/confirm your email/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('UnsubscribePage', () => {
+  it('waits for a click, so mail scanners opening the link change nothing', async () => {
+    const stop = vi.spyOn(api, 'unsubscribe').mockResolvedValue()
+    const user = userEvent.setup()
+    renderAt('/unsubscribe?token=abc', <UnsubscribePage />, '/unsubscribe')
+    expect(screen.getByRole('heading', { name: 'Stop Kindred emails?' })).toBeInTheDocument()
+    expect(stop).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Unsubscribe' }))
+    expect(stop).toHaveBeenCalledWith('abc')
+    expect(await screen.findByRole('heading', { name: "You're unsubscribed" })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login')
+  })
+
+  it('explains a bad or missing link', async () => {
+    vi.spyOn(api, 'unsubscribe').mockRejectedValue(new Error('That link is invalid or has expired'))
+    const user = userEvent.setup()
+    renderAt('/unsubscribe?token=old', <UnsubscribePage />, '/unsubscribe')
+    await user.click(screen.getByRole('button', { name: 'Unsubscribe' }))
+    expect(await screen.findByRole('heading', { name: "That link didn't work" })).toBeInTheDocument()
+
+    cleanup()
+    renderAt('/unsubscribe', <UnsubscribePage />, '/unsubscribe')
+    expect(screen.getByRole('heading', { name: "That link didn't work" })).toBeInTheDocument()
+  })
+
+  it('sends signed-in people back to their email settings', async () => {
+    useAuth.setState({ token: 'token', user: { id: 1 } as Me })
+    vi.spyOn(api, 'unsubscribe').mockResolvedValue()
+    const user = userEvent.setup()
+    renderAt('/unsubscribe?token=abc', <UnsubscribePage />, '/unsubscribe')
+    await user.click(screen.getByRole('button', { name: 'Unsubscribe' }))
+    expect(await screen.findByRole('link', { name: 'Open email settings' })).toHaveAttribute(
+      'href',
+      '/app/settings#email',
+    )
   })
 })
