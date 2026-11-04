@@ -35,6 +35,7 @@ import type {
   SwipeAction,
   SwipeResult,
   TopPicks,
+  Trends,
   TwoFactorSetup,
   TwoFactorStatus,
   UpcomingDate,
@@ -272,6 +273,7 @@ export const api = {
     request<AdminReport>(`/api/admin/reports/${id}/resolve`, { method: 'POST', body: { action } }),
   unban: (userId: number) => request<void>(`/api/admin/users/${userId}/unban`, { method: 'POST' }),
   moderationStats: () => request<ModerationStats>('/api/admin/stats'),
+  moderationTrends: (days: number) => request<Trends>(`/api/admin/trends?days=${days}`),
   members: ({ q, filter, limit, offset }: { q: string; filter: MemberFilter; limit: number; offset: number }) =>
     request<{ total: number; items: AdminUser[] }>(
       `/api/admin/users?${new URLSearchParams({ q, filter, limit: String(limit), offset: String(offset) })}`,

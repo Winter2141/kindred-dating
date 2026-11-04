@@ -33,6 +33,7 @@ from app.models import (
 )
 from app.services.chat_settings import MuteFor
 from app.services.matching import age_on, display_distance
+from app.services.trends import Trends
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
 ShortText = Annotated[str, StringConstraints(strip_whitespace=True, max_length=80)]
@@ -707,6 +708,50 @@ class AuditEventOut(BaseModel):
             target=PublicProfile.build(event.target) if event.target else None,
             detail=event.detail,
             created_at=event.created_at,
+        )
+
+
+class TrendDayOut(BaseModel):
+    day: date
+    reports_filed: int
+    reports_resolved: int
+    new_members: int
+
+
+class ReasonCount(BaseModel):
+    reason: ReportReason
+    count: int
+
+
+class TrendsOut(BaseModel):
+    days: int
+    reports_filed: int
+    reports_resolved: int
+    new_members: int
+    median_hours_to_resolve: float | None
+    oldest_open_hours: float | None
+    by_reason: list[ReasonCount]
+    activity: list[TrendDayOut]
+
+    @classmethod
+    def build(cls, trends: Trends) -> Self:
+        return cls(
+            days=trends.days,
+            reports_filed=trends.reports_filed,
+            reports_resolved=trends.reports_resolved,
+            new_members=trends.new_members,
+            median_hours_to_resolve=trends.median_hours_to_resolve,
+            oldest_open_hours=trends.oldest_open_hours,
+            by_reason=[ReasonCount(reason=ReportReason(r), count=c) for r, c in trends.by_reason],
+            activity=[
+                TrendDayOut(
+                    day=d.day,
+                    reports_filed=d.reports_filed,
+                    reports_resolved=d.reports_resolved,
+                    new_members=d.new_members,
+                )
+                for d in trends.activity
+            ],
         )
 
 

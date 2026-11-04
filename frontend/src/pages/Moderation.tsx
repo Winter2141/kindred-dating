@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { Navigate } from 'react-router'
 import { REPORT_REASONS } from '@/components/Safety'
 import { AuditPanel, MembersPanel } from '@/components/ModerationPanels'
+import { ModerationTrends } from '@/components/Trends'
 import { VerificationQueue } from '@/components/Verification'
 import { Avatar, EmptyState, Spinner } from '@/components/ui'
 import { api } from '@/lib/api'
@@ -28,7 +29,7 @@ export function ModerationPage() {
   // Ask the server rather than trusting the profile saved in the browser, which may be stale.
   const me = useQuery({ queryKey: keys.me, queryFn: api.me })
   const isAdmin = me.data?.is_admin === true
-  const [area, setArea] = useState<'reports' | 'verification' | 'members' | 'audit'>('reports')
+  const [area, setArea] = useState<'reports' | 'verification' | 'members' | 'trends' | 'audit'>('reports')
   const [tab, setTab] = useState<ReportStatus>('open')
   const stats = useQuery({ queryKey: keys.moderationStats, queryFn: api.moderationStats, enabled: isAdmin })
   const reports = useQuery({ queryKey: keys.reports(tab), queryFn: () => api.reports(tab), enabled: isAdmin })
@@ -66,6 +67,7 @@ export function ModerationPage() {
             ['reports', 'Reports'],
             ['verification', 'Photo verification'],
             ['members', 'Members'],
+            ['trends', 'Trends'],
             ['audit', 'Audit log'],
           ] as const
         ).map(([value, label]) => (
@@ -89,6 +91,8 @@ export function ModerationPage() {
         <VerificationQueue />
       ) : area === 'members' ? (
         <MembersPanel />
+      ) : area === 'trends' ? (
+        <ModerationTrends />
       ) : area === 'audit' ? (
         <AuditPanel />
       ) : (

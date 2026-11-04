@@ -9,8 +9,9 @@ from app.db import utcnow
 from app.deps import AdminUser, HubDep, SessionDep
 from app.models import Report, ReportStatus, User, VerificationRequest, VerificationStatus
 from app.routers.ws import CLOSE_UNAUTHORIZED
-from app.schemas import ModerationStats, ReportOut, ResolveIn
+from app.schemas import ModerationStats, ReportOut, ResolveIn, TrendsOut
 from app.services import audit
+from app.services.trends import build_trends
 
 router = APIRouter(prefix="/api/admin", tags=["moderation"])
 
@@ -101,6 +102,16 @@ async def unban(user_id: int, admin: AdminUser, session: SessionDep) -> Response
     audit.record(session, admin.id, audit.AuditAction.USER_UNBANNED, target_user_id=user.id)
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/trends")
+async def trends(
+    _: AdminUser,
+    session: SessionDep,
+    days: int = Query(default=14, ge=7, le=90),
+) -> TrendsOut:
+    """Reports filed and resolved, new members, and how long reports wait, by day."""
+    return TrendsOut.build(await build_trends(session, utcnow(), days))
 
 
 @router.get("/stats")

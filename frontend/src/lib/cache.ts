@@ -25,6 +25,7 @@ export const keys = {
   places: (query: string) => ['places', query] as const,
   reports: (status: string) => ['reports', status] as const,
   moderationStats: ['moderation-stats'] as const,
+  moderationTrends: (days: number) => ['moderation-trends', days] as const,
   members: (q: string, filter: string, page: number) => ['members', q, filter, page] as const,
   audit: ['audit'] as const,
   verification: ['verification'] as const,

@@ -327,6 +327,25 @@ export interface Session {
   session_id?: number | null
 }
 
+/** One day of the moderation trends (GET /api/admin/trends). */
+export interface TrendDay {
+  day: string
+  reports_filed: number
+  reports_resolved: number
+  new_members: number
+}
+
+export interface Trends {
+  days: number
+  reports_filed: number
+  reports_resolved: number
+  new_members: number
+  median_hours_to_resolve: number | null
+  oldest_open_hours: number | null
+  by_reason: { reason: ReportReason; count: number }[]
+  activity: TrendDay[]
+}
+
 export type EmailCategory = 'matches' | 'messages' | 'likes' | 'dates'
 
 /** Which notifications also come by email, in one digest (GET /api/me/email-preferences). */
