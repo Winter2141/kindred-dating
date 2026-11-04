@@ -16,6 +16,8 @@ dependencies = [
     "pillow>=11.0",
     "alembic>=1.14",
     "segno>=1.6",
+    # Time zones for quiet hours; Windows and slim images have no system database.
+    "tzdata>=2024.1",
 ]
 
 [project.optional-dependencies]

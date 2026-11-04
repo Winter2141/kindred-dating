@@ -1,6 +1,7 @@
 import { useAuth } from '@/store/auth'
 import { NO_FILTERS, filtersToQuery, type DiscoverFilters } from './filters'
 import type { QuestionAnswer } from './questions'
+import type { QuietHours } from './quiet'
 import type {
   AdminAnnouncement,
   AdminReport,
@@ -197,6 +198,11 @@ export const api = {
   signOutEverywhere: () => request<void>('/api/me/sign-out-everywhere', { method: 'POST' }),
   logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
   emailPrefs: () => request<EmailPrefs>('/api/me/email-preferences'),
+  /** null turns quiet hours off. */
+  setQuietHours: (quiet: QuietHours | null) =>
+    quiet
+      ? request<Me>('/api/me/quiet-hours', { method: 'PUT', body: { ...quiet } })
+      : request<Me>('/api/me/quiet-hours', { method: 'DELETE' }),
   setEmailPrefs: (prefs: Record<EmailCategory, boolean>) =>
     request<EmailPrefs>('/api/me/email-preferences', { method: 'PUT', body: prefs }),
   unsubscribe: (token: string) => request<void>('/api/email/unsubscribe', { method: 'POST', body: { token } }),

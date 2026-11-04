@@ -1,3 +1,5 @@
+import type { QuietHours } from './quiet'
+
 export type Gender = 'woman' | 'man' | 'nonbinary'
 export type SwipeAction = 'like' | 'pass' | 'super'
 export type ReportReason = 'fake_profile' | 'inappropriate' | 'harassment' | 'spam' | 'underage' | 'other'
@@ -76,6 +78,8 @@ export interface Me extends PublicProfile {
   travel?: Trip | null
   /** Their profile views aren't recorded (and they can't see their own viewers). */
   browse_privately?: boolean
+  /** When digests and desktop alerts hold off (lib/quiet). */
+  quiet_hours?: QuietHours | null
 }
 
 export interface MfaChallenge {

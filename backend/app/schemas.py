@@ -33,6 +33,7 @@ from app.models import (
     User,
     VerificationStatus,
 )
+from app.quiet import valid_timezone
 from app.services.chat_settings import MuteFor
 from app.services.matching import age_on, display_distance, is_travelling
 from app.services.trends import Trends
@@ -308,6 +309,20 @@ class PublicProfile(BaseModel):
         )
 
 
+class QuietHoursIn(BaseModel):
+    start: int = Field(ge=0, le=23, description="Hour quiet hours begin, in `timezone`")
+    end: int = Field(ge=0, le=23, description="Hour they end; can be earlier than start")
+    timezone: Annotated[str, StringConstraints(strip_whitespace=True, max_length=64)]
+
+    @model_validator(mode="after")
+    def sensible(self) -> Self:
+        if self.start == self.end:
+            raise ValueError("start and end need to be different hours")
+        if not valid_timezone(self.timezone):
+            raise ValueError(f"unknown time zone {self.timezone!r}")
+        return self
+
+
 class TravelIn(BaseModel):
     place: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
     until: date = Field(description="The last day of the trip; it ends at midnight UTC after it")
@@ -340,6 +355,7 @@ class MeOut(PublicProfile):
     pending_email: EmailStr | None = None
     two_factor_enabled: bool = False
     travel: TravelOut | None = None
+    quiet_hours: QuietHoursIn | None = None
 
     @classmethod
     def build(cls, user: User, *, online: bool = True) -> Self:
@@ -360,6 +376,9 @@ class MeOut(PublicProfile):
             pending_email=user.pending_email,
             two_factor_enabled=user.totp_enabled_at is not None,
             travel=TravelOut.build(user),
+            quiet_hours=QuietHoursIn.model_construct(**user.quiet_hours)
+            if user.quiet_hours
+            else None,
         )
 
 

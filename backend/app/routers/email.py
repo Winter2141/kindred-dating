@@ -1,4 +1,4 @@
-"""Email confirmation and password resets, plus the development outbox."""
+"""Email confirmation, password resets, email preferences and quiet hours, plus the dev outbox."""
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
@@ -23,7 +23,9 @@ from app.schemas import (
     EmailPrefsOut,
     EmailVerifiedOut,
     ForgotPasswordIn,
+    MeOut,
     OutboxEmailOut,
+    QuietHoursIn,
     ResetPasswordIn,
     TokenOut,
     UnsubscribeIn,
@@ -86,6 +88,21 @@ async def set_email_preferences(
     user.email_prefs = data.model_dump()  # a new dict, so the JSON column sees the change
     await session.commit()
     return _prefs_out(user)
+
+
+@router.put("/me/quiet-hours")
+async def set_quiet_hours(data: QuietHoursIn, user: CurrentUser, session: SessionDep) -> MeOut:
+    """Hold digests (and, in the app, desktop alerts) during this nightly window."""
+    user.quiet_hours = data.model_dump()
+    await session.commit()
+    return MeOut.build(user)
+
+
+@router.delete("/me/quiet-hours")
+async def clear_quiet_hours(user: CurrentUser, session: SessionDep) -> MeOut:
+    user.quiet_hours = None
+    await session.commit()
+    return MeOut.build(user)
 
 
 @router.post("/email/unsubscribe", status_code=status.HTTP_204_NO_CONTENT)

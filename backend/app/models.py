@@ -138,6 +138,8 @@ class User(Base):
     # Which email digests they want (see app.services.digest); None means the defaults.
     email_prefs: Mapped[dict[str, bool] | None] = mapped_column(JSON, default=None)
     digest_sent_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    # {start, end, timezone}: when digests and desktop alerts hold off (app.quiet).
+    quiet_hours: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
     # How many messages they've sent that read as insults (app.kindness), for moderators.
     # A count on the account, so it survives the chat being deleted by a block.
     unkind_messages: Mapped[int] = mapped_column(default=0, server_default=text("0"))

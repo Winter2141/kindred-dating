@@ -2,7 +2,8 @@
 
 Notifications that sit unread for DIGEST_DELAY while their owner is offline are gathered
 into a single email, at most once every DIGEST_EVERY, and only for the kinds that person
-asked to hear about by email. Nothing goes to an address that was never confirmed.
+asked to hear about by email. Nothing goes to an address that was never confirmed, and
+nothing goes during someone's quiet hours (app.quiet); it waits for a later run.
 
 Like the date reminders, every API process runs this, and each digest is claimed with a
 conditional UPDATE on digest_sent_at, so only one worker sends it.
@@ -18,6 +19,7 @@ from app.config import Settings
 from app.db import utcnow
 from app.mail import send_email
 from app.models import Notification, NotificationKind, User
+from app.quiet import is_quiet
 from app.realtime import Hub
 from app.security import create_purpose_token
 
@@ -169,6 +171,8 @@ async def send_due_digests(hub: Hub, now: datetime | None = None) -> int:
         for user in candidates:
             if hub.manager.is_online(user.id):
                 continue  # they'll see it in the app
+            if is_quiet(user.quiet_hours, now):
+                continue  # it goes out after quiet hours, on a later run
             waiting = await _waiting(session, user, now)
             if not waiting:
                 continue

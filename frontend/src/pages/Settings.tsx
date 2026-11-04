@@ -11,6 +11,7 @@ import {
   LogOut,
   Mail,
   MonitorSmartphone,
+  Moon,
   Palette,
   ShieldCheck,
   Trash2,
@@ -20,6 +21,7 @@ import { Link } from 'react-router'
 import { DeviceList } from '@/components/Devices'
 import { EmailAddressForm, useSaveMe } from '@/components/EmailAddress'
 import { EmailPrefsForm } from '@/components/EmailPrefs'
+import { QuietHoursForm } from '@/components/QuietHours'
 import { BlockedList } from '@/components/Safety'
 import { Segmented } from '@/components/ProfileFields'
 import { TwoFactorSettings } from '@/components/TwoFactor'
@@ -58,6 +60,13 @@ export function SettingsPage() {
           <VerificationFlow hasPhotos={user.photos.length > 0} />
         </Section>
         <DesktopSection />
+        <Section
+          icon={<Moon className="size-5" />}
+          title="Quiet hours"
+          description="Set a nightly window when Kindred stays quiet: no desktop alerts, and email digests wait until morning. Everything is still there when you look."
+        >
+          <QuietHoursForm user={user} />
+        </Section>
         <Section
           icon={<AtSign className="size-5" />}
           title="Email address"

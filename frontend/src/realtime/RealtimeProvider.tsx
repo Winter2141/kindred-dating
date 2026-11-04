@@ -18,6 +18,7 @@ import {
 import * as calls from '@/lib/calls'
 import { upsertDate } from '@/lib/dates'
 import { notifyDesktop } from '@/lib/desktop'
+import { isQuietNow } from '@/lib/quiet'
 import { refetchIfLoading } from '@/lib/freshness'
 import { applyNotification, notificationHref, notificationText } from '@/lib/notifications'
 import { previewText } from '@/lib/photos'
@@ -42,6 +43,11 @@ const RealtimeContext = createContext<RealtimeClient | null>(null)
 export function useRealtimeSend(): (event: ClientEvent) => void {
   const client = useContext(RealtimeContext)
   return useCallback((event: ClientEvent) => client?.send(event), [client])
+}
+
+/** Desktop alerts are switched on here and it isn't the person's quiet hours. */
+function desktopAlertsOn(): boolean {
+  return usePrefs.getState().desktopNotifications && !isQuietNow(useAuth.getState().user?.quiet_hours)
 }
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
@@ -137,7 +143,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             href: `/app/matches/${match.id}`,
             tag: `match-${match.id}`,
           },
-          { enabled: usePrefs.getState().desktopNotifications },
+          { enabled: desktopAlertsOn() },
         )
       }
       if (activeMatchId === message.match_id) return
@@ -258,7 +264,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
                 href: notificationHref(event.notification),
                 tag: `notification-${event.notification.id}`,
               },
-              { enabled: usePrefs.getState().desktopNotifications },
+              { enabled: desktopAlertsOn() },
             )
           }
           break
@@ -308,7 +314,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
               href: `/app/matches/${event.match_id}`,
               tag: `call-${event.call_id}`,
             },
-            { enabled: usePrefs.getState().desktopNotifications },
+            { enabled: desktopAlertsOn() },
           )
           break
         case 'call.accepted':
