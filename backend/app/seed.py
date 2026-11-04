@@ -7,6 +7,7 @@ import argparse
 import asyncio
 import random
 import secrets
+import unicodedata
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import select
@@ -114,6 +115,11 @@ PAST_REASONS = [
 ]
 
 
+def _ascii(name: str) -> str:
+    """ "Inês" -> "ines", for persona email addresses."""
+    return unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode().lower()
+
+
 def _birthdate(age: int, today: date, rng: random.Random) -> date:
     return years_before(today, age) - timedelta(days=rng.randint(10, 340))
 
@@ -168,7 +174,7 @@ async def seed_demo_data(db: Database) -> bool:
             user = User(
                 email=SECOND_DEMO_EMAIL
                 if is_maya
-                else f"{spec.name.lower()}.{index}@personas.kindred.app",
+                else f"{_ascii(spec.name)}.{index}@personas.kindred.app",
                 password_hash=demo_hash if is_maya else locked_hash,
                 name=spec.name,
                 birthdate=_birthdate(spec.age, now.date(), rng),
@@ -192,6 +198,12 @@ async def seed_demo_data(db: Database) -> bool:
         for user in [alex, *people.values()]:
             if (coordinates := geocode(user.city)) is not None:
                 user.latitude, user.longitude = coordinates
+        for spec in PERSONAS:
+            if spec.visiting and (coordinates := geocode(spec.visiting)) is not None:
+                visitor = people[spec.name]
+                visitor.travel_place = spec.visiting
+                visitor.travel_latitude, visitor.travel_longitude = coordinates
+                visitor.travel_until = now + timedelta(days=6)
         await session.flush()
 
         for name, hours_ago, lines, unread in CONVERSATIONS:

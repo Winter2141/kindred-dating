@@ -181,6 +181,8 @@ export const api = {
       method: 'POST',
       body: { current_password: currentPassword, new_password: newPassword },
     }),
+  startTrip: (place: string, until: string) => request<Me>('/api/me/travel', { method: 'PUT', body: { place, until } }),
+  endTrip: () => request<Me>('/api/me/travel', { method: 'DELETE' }),
   changeEmail: (newEmail: string, password: string) =>
     request<Me>('/api/me/email', { method: 'POST', body: { new_email: newEmail, password } }),
   resendEmailChange: () => request<void>('/api/me/email/resend', { method: 'POST' }),

@@ -14,6 +14,8 @@ class PersonaSpec(NamedTuple):
     bio: str
     prompts: list[tuple[str, str]]
     interested_in: list[str]
+    # Somewhere they're on a trip to (travel mode) for the coming week.
+    visiting: str | None = None
 
 
 def unsplash(photo_id: str) -> str:
@@ -22,6 +24,8 @@ def unsplash(photo_id: str) -> str:
 
 W, M, NB = "woman", "man", "nonbinary"
 BK, MN, QN, JC, HB = "Brooklyn, NY", "Manhattan, NY", "Queens, NY", "Jersey City, NJ", "Hoboken, NJ"
+# A few people abroad, so travel mode has someone to show.
+LIS, LDN, PAR, BER = "Lisbon, Portugal", "London, UK", "Paris, France", "Berlin, Germany"
 
 PERSONAS: list[PersonaSpec] = [
     PersonaSpec(
@@ -400,6 +404,63 @@ PERSONAS: list[PersonaSpec] = [
         [("The best trip I've taken", "Surf trip down the Baja peninsula"),
          ("We'll get along if", "You don't mind sand in the car")],
         [W],
+    ),
+    PersonaSpec(
+        "Inês", W, 29, "1520813792240-56fc4a3765a7", "Azulejo restorer", LIS,
+        ["Art galleries", "Museums", "Wine", "Live music", "Swimming"],
+        "I put Lisbon's tiles back on its walls, one tiny blue square at a time.",
+        [("My ideal Sunday", "Sea swim at Carcavelos, grilled sardines, a nap in the shade"),
+         ("We'll get along if", "You'll climb every miradouro with me and not complain about the hills")],
+        [M],
+    ),
+    PersonaSpec(
+        "Beatriz", W, 31, "1485875437342-9b39470b3d95", "Architect", LIS,
+        ["Photography", "Cycling", "Coffee", "Books", "Travel"],
+        "Designing flats with too many windows. Fluent in Portuguese, English and bad puns.",
+        [("I geek out on", "Old trams and the engineering that keeps them climbing"),
+         ("Typical Friday night", "Pastéis de nata, a terrace in Alfama and a fado bar later")],
+        [M],
+    ),
+    PersonaSpec(
+        "Leonor", W, 26, "1496440737103-cd596325d314", "Surf photographer", LIS,
+        ["Surfing", "Photography", "Camping", "Yoga", "Dancing"],
+        "Ericeira most weekends, behind a waterproof camera.",
+        [("The best trip I've taken", "A van down the Alentejo coast with no plan at all"),
+         ("Green flags I look for", "You're up early and you're happy about it")],
+        [M],
+    ),
+    PersonaSpec(
+        "Harriet", W, 30, "1541823709867-1b206113eafd", "Botanist at Kew", LDN,
+        ["Gardening", "Hiking", "Books", "Theatre", "Coffee"],
+        "I name the plants so you don't have to. In New York for a conference this week.",
+        [("I geek out on", "Ferns. There are over ten thousand kinds and I love them all"),
+         ("I'm looking for", "Someone to show me their favourite park while I'm in town")],
+        [M],
+        visiting=BK,
+    ),
+    PersonaSpec(
+        "Callum", M, 33, "1521119989659-a83eee488004", "Radio producer", LDN,
+        ["Podcasts", "Vinyl", "Live music", "Running", "Craft beer"],
+        "I make other people sound good for a living. My own voice is fine, thanks.",
+        [("Typical Friday night", "A gig in Camden, chips on the bus home"),
+         ("Two truths and a lie", "I've interviewed a prime minister, I hate tea, I run marathons")],
+        [W],
+    ),
+    PersonaSpec(
+        "Linh", W, 28, "1534751516642-a1af1ef26a56", "Pastry chef", PAR,
+        ["Baking", "Cooking", "Wine", "Museums", "Film"],
+        "Trained in Lyon, now laminating dough in the 11th.",
+        [("My simple pleasures", "The crackle of a baguette straight from the oven"),
+         ("The way to win me over is", "Find me a bakery in Paris I haven't tried")],
+        [M],
+    ),
+    PersonaSpec(
+        "Hana", W, 27, "1502823403499-6ccfcf4fb453", "Sound engineer", BER,
+        ["Live music", "Vinyl", "Dancing", "Cycling", "Tech"],
+        "Mixing records by day, dancing to other people's by night.",
+        [("Typical Friday night", "Doors at midnight, home at sunrise"),
+         ("A shower thought I recently had", "Every song is just air, arranged carefully")],
+        [M],
     ),
 ]
 

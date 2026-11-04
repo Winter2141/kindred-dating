@@ -4,6 +4,7 @@ import { motion, useMotionValue, useTransform, type PanInfo } from 'motion/react
 import type { Candidate, SwipeAction } from '@/lib/types'
 import { lastSeen } from '@/lib/time'
 import { CompatibilityRing, InterestChip, Photo, useInterestEmoji } from './ui'
+import { VisitingBadge } from './Travel'
 import { VerifiedBadge } from './Verification'
 
 const SWIPE_DISTANCE = 120
@@ -138,6 +139,7 @@ export function SwipeCard({
               )}
               <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <MapPin className="size-4 shrink-0" /> {candidate.city || 'Nearby'}
+                {candidate.visiting && <VisitingBadge place={candidate.visiting} className="bg-cream/15 text-cream" />}
                 {candidate.distance_km != null && (
                   <span className="rounded-full bg-cream/15 px-2 py-0.5 text-xs font-semibold">
                     {candidate.distance_km} km

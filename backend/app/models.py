@@ -100,6 +100,12 @@ class User(Base):
     latitude: Mapped[float | None] = mapped_column(default=None)
     longitude: Mapped[float | None] = mapped_column(default=None)
     max_distance_km: Mapped[int] = mapped_column(default=50, server_default=text("50"))
+    # Travel mode: while travel_until is in the future, they match from this place instead
+    # (see app.services.matching.location), and their profile says they're visiting.
+    travel_place: Mapped[str | None] = mapped_column(String(80), default=None)
+    travel_latitude: Mapped[float | None] = mapped_column(default=None)
+    travel_longitude: Mapped[float | None] = mapped_column(default=None)
+    travel_until: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
 
     is_persona: Mapped[bool] = mapped_column(default=False)
     # Paused profiles keep their matches and chats but don't appear in anyone's deck.

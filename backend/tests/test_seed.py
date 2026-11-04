@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 from fastapi.testclient import TestClient
 
 from app.config import Settings
+from app.db import utcnow
 from app.main import create_app
 from app.seed_data import DEMO_EMAIL, DEMO_PASSWORD, SECOND_DEMO_EMAIL
 
@@ -47,3 +50,22 @@ def test_demo_data_gives_a_full_first_session(settings: Settings) -> None:
         )
         headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
         assert len(client.get("/api/matches", headers=headers).json()) == 5
+
+
+def test_demo_data_has_people_to_travel_to(settings: Settings) -> None:
+    seeded = settings.model_copy(update={"seed_on_startup": True})
+    with TestClient(create_app(seeded)) as client:
+        login = client.post(
+            "/api/auth/login", json={"email": DEMO_EMAIL, "password": DEMO_PASSWORD}
+        )
+        headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+        deck = client.get("/api/discover", params={"limit": 50}, headers=headers).json()
+        # Harriet lives in London but is visiting Brooklyn this week.
+        (harriet,) = [card for card in deck if card["name"] == "Harriet"]
+        assert harriet["visiting"] == "Brooklyn, NY" and harriet["city"] == "London, UK"
+        assert not any(card["city"] == "Lisbon, Portugal" for card in deck)
+
+        until = (utcnow().date() + timedelta(days=3)).isoformat()
+        client.put("/api/me/travel", json={"place": "Lisbon", "until": until}, headers=headers)
+        deck = client.get("/api/discover", params={"limit": 50}, headers=headers).json()
+        assert {card["name"] for card in deck} == {"Inês", "Beatriz", "Leonor"}

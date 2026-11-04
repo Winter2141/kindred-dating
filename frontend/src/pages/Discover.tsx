@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Heart, MessageCircleHeart, RotateCcw, SearchX, Star, X } from 'lucide-react'
+import { Heart, MessageCircleHeart, Plane, RotateCcw, SearchX, Star, X } from 'lucide-react'
 import { AnimatePresence, motion, type HTMLMotionProps } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
@@ -10,11 +10,13 @@ import { SwipeCard } from '@/components/SwipeCard'
 import { FiltersButton } from '@/components/DiscoverFilters'
 import { LikeCommentDialog, likedItemKey, type LikeTarget } from '@/components/LikeComment'
 import { TopPicksButton } from '@/components/TopPicks'
+import { TravelButton } from '@/components/Travel'
 import { EmptyState, Spinner } from '@/components/ui'
 import { api, ApiError } from '@/lib/api'
 import { keys } from '@/lib/cache'
 import type { Candidate, Match, SwipeAction, SwipeResult } from '@/lib/types'
 import { activeFilterCount, NO_FILTERS } from '@/lib/filters'
+import { shortPlace } from '@/lib/travel'
 import { useAuth } from '@/store/auth'
 import { useToasts } from '@/store/live'
 import { usePrefs } from '@/store/prefs'
@@ -147,11 +149,18 @@ export function DiscoverPage() {
           <div>
             <h1 className="font-display text-4xl leading-none sm:text-5xl">Discover</h1>
             <p className="mt-2 text-sm text-muted">
-              Picked for you{user?.city ? ` around ${user.city}` : ''} · best fit first
+              {user?.travel ? (
+                <>
+                  Exploring <span className="text-apricot">{shortPlace(user.travel.place)}</span> · best fit first
+                </>
+              ) : (
+                <>Picked for you{user?.city ? ` around ${user.city}` : ''} · best fit first</>
+              )}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <TopPicksButton onSwiped={onPickSwiped} />
+            {user && <TravelButton user={user} />}
             <FiltersButton />
           </div>
         </header>
@@ -173,6 +182,16 @@ export function DiscoverPage() {
                 }
               >
                 Try fewer filters, or a wider set of interests.
+              </EmptyState>
+            </div>
+          ) : deck.length === 0 && user?.travel ? (
+            <div className="card grid size-full place-items-center">
+              <EmptyState
+                icon={<Plane className="size-8" />}
+                title={`That's everyone in ${shortPlace(user.travel.place)} for now`}
+              >
+                More people join every day. Check back before you go, or end the trip from the plane button to see
+                people at home.
               </EmptyState>
             </div>
           ) : deck.length === 0 ? (

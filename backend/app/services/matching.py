@@ -52,7 +52,18 @@ def bounding_box(
     return lat - lat_delta, lat + lat_delta, lng - lng_delta, lng + lng_delta
 
 
-def location(user: "User") -> tuple[float, float] | None:
+def is_travelling(user: "User", now: datetime | None = None) -> bool:
+    return (
+        user.travel_until is not None
+        and user.travel_latitude is not None
+        and user.travel_until > (now or datetime.now(UTC))
+    )
+
+
+def location(user: "User", now: datetime | None = None) -> tuple[float, float] | None:
+    """Where someone matches from: the place they're visiting, if any, else home."""
+    if is_travelling(user, now):
+        return user.travel_latitude, user.travel_longitude  # type: ignore[return-value]
     if user.latitude is None or user.longitude is None:
         return None
     return user.latitude, user.longitude

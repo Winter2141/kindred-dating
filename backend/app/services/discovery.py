@@ -4,7 +4,7 @@ import random
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Swipe, SwipeAction, User
@@ -42,6 +42,19 @@ class Filters:
 
 NO_FILTERS = Filters()
 
+
+def matching_coordinates(now: datetime) -> tuple[ColumnElement[float], ColumnElement[float]]:
+    """SQL for where each person matches from: travel_* while a trip lasts, else home.
+
+    The same rule as app.services.matching.location, so the prefilter agrees with it.
+    """
+    travelling = User.travel_until.is_not(None) & (User.travel_until > now)
+    return (
+        case((travelling, User.travel_latitude), else_=User.latitude),
+        case((travelling, User.travel_longitude), else_=User.longitude),
+    )
+
+
 TOP_PICKS_PER_DAY = 4
 # Picks are drawn from this many of your strongest candidates, so they vary day to day.
 TOP_PICKS_POOL = 12
@@ -66,11 +79,11 @@ async def find_candidates(
     # SQL narrows by the cheap columns; JSON list membership and exact distances are checked
     # in Python so the query stays portable between SQLite and Postgres.
     query = select(User)
-    if (here := location(user)) is not None:
+    if (here := location(user, now)) is not None:
         min_lat, max_lat, min_lng, max_lng = bounding_box(here, user.max_distance_km)
+        lat, lng = matching_coordinates(now)
         query = query.where(
-            User.latitude.is_(None)
-            | (User.latitude.between(min_lat, max_lat) & User.longitude.between(min_lng, max_lng))
+            lat.is_(None) | (lat.between(min_lat, max_lat) & lng.between(min_lng, max_lng))
         )
     if filters.verified_only:
         query = query.where(User.verified_at.is_not(None))

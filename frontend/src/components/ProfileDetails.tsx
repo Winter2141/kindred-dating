@@ -5,6 +5,7 @@ import { formatDistance } from '@/lib/distance'
 import type { PublicProfile } from '@/lib/types'
 import { lastSeen } from '@/lib/time'
 import { AgreementPanel } from './Questions'
+import { VisitingBadge } from './Travel'
 import { VerifiedBadge } from './Verification'
 import { InterestChip, useInterestEmoji } from './ui'
 
@@ -46,6 +47,7 @@ export function ProfileDetails({
               {[profile.city, formatDistance(profile.distance_km)].filter(Boolean).join(' · ')}
             </span>
           )}
+          {profile.visiting && <VisitingBadge place={profile.visiting} />}
         </div>
       )}
 

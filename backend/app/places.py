@@ -48,6 +48,9 @@ PLACES: dict[str, tuple[float, float]] = {
 
 _BY_KEY = {name.lower(): coords for name, coords in PLACES.items()}
 _BY_SHORT_NAME = {name.split(",")[0].lower(): coords for name, coords in PLACES.items()}
+_NAMES = {name.lower(): name for name in PLACES} | {
+    name.split(",")[0].lower(): name for name in PLACES
+}
 
 
 def geocode(city: str) -> tuple[float, float] | None:
@@ -56,6 +59,12 @@ def geocode(city: str) -> tuple[float, float] | None:
     if not key:
         return None
     return _BY_KEY.get(key) or _BY_SHORT_NAME.get(key.split(",")[0].strip())
+
+
+def canonical(city: str) -> str | None:
+    """The gazetteer's own spelling of a known place ("lisbon" -> "Lisbon, Portugal")."""
+    key = " ".join(city.lower().split())
+    return _NAMES.get(key) or _NAMES.get(key.split(",")[0].strip()) if key else None
 
 
 def search(query: str, limit: int = 8) -> list[str]:

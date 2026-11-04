@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Annotated, Any, Literal, Self
 
 from pydantic import (
@@ -32,7 +32,7 @@ from app.models import (
     VerificationStatus,
 )
 from app.services.chat_settings import MuteFor
-from app.services.matching import age_on, display_distance
+from app.services.matching import age_on, display_distance, is_travelling
 from app.services.trends import Trends
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
@@ -282,11 +282,13 @@ class PublicProfile(BaseModel):
     is_online: bool = False
     distance_km: int | None = None
     verified: bool = False
+    visiting: str | None = Field(default=None, description="Where they are on a trip, if anywhere")
 
     @classmethod
     def build(cls, user: User, *, online: bool = False, distance_km: float | None = None) -> Self:
         return cls(
             verified=user.verified_at is not None,
+            visiting=user.travel_place if is_travelling(user) else None,
             id=user.id,
             name=user.name,
             age=age_on(user.birthdate, date.today()),
@@ -303,6 +305,23 @@ class PublicProfile(BaseModel):
         )
 
 
+class TravelIn(BaseModel):
+    place: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+    until: date = Field(description="The last day of the trip; it ends at midnight UTC after it")
+
+
+class TravelOut(BaseModel):
+    place: str
+    until: date
+
+    @classmethod
+    def build(cls, user: User) -> Self | None:
+        if not is_travelling(user):
+            return None
+        assert user.travel_place is not None and user.travel_until is not None
+        return cls(place=user.travel_place, until=(user.travel_until - timedelta(days=1)).date())
+
+
 class MeOut(PublicProfile):
     email: EmailStr
     birthdate: date
@@ -316,6 +335,7 @@ class MeOut(PublicProfile):
     email_verified: bool = False
     pending_email: EmailStr | None = None
     two_factor_enabled: bool = False
+    travel: TravelOut | None = None
 
     @classmethod
     def build(cls, user: User, *, online: bool = True) -> Self:
@@ -334,6 +354,7 @@ class MeOut(PublicProfile):
             email_verified=user.email_verified_at is not None,
             pending_email=user.pending_email,
             two_factor_enabled=user.totp_enabled_at is not None,
+            travel=TravelOut.build(user),
         )
 
 

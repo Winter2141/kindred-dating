@@ -24,6 +24,14 @@ export interface PublicProfile {
   distance_km?: number | null
   /** A moderator matched a posed selfie to their photos. */
   verified?: boolean
+  /** Where they're on a trip right now (travel mode), if anywhere. */
+  visiting?: string | null
+}
+
+export interface Trip {
+  place: string
+  /** The last day, YYYY-MM-DD in UTC. */
+  until: string
 }
 
 export interface Pose {
@@ -65,6 +73,7 @@ export interface Me extends PublicProfile {
   /** A new address waiting for its confirmation link to be followed. */
   pending_email?: string | null
   two_factor_enabled?: boolean
+  travel?: Trip | null
 }
 
 export interface MfaChallenge {
