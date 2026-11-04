@@ -27,6 +27,9 @@ Swipe through people who fit you, see *why* they fit, match, then talk: live cha
 - **Transparent matching.** Every card shows a 0–100 compatibility score and the interests you share. Discover only shows people whose gender, age *and distance* preferences fit yours, and yours theirs.
 - **Compatibility questions.** Answer twenty questions with what you'd accept from a match and how much it matters; profiles show your agreement and the answers you share.
 - **Filters** for verified profiles, recent activity, interests, prompts and minimum agreement, plus **daily top picks** with a reason for each.
+- **Travel mode:** pick a city and the last day you'll be there (up to 30 days ahead). Until then your deck and distances are measured from there, locals can find you, and your card says "Visiting Lisbon". It ends on its own.
+- **Save for later:** set someone aside without liking or passing. They leave the deck and wait under Likes until you decide.
+- **Viewed you:** who opened your full profile in the last 30 days (a look counts after a few seconds, not a swipe past). **Browse privately** stops your own looks being recorded, and in return hides your viewers.
 - **Likes with a comment** on a specific prompt. If it turns into a match, the comment opens the chat.
 - **Photo verification:** copy a random pose in a selfie, a moderator compares it with your photos, and you get a blue tick.
 
@@ -37,7 +40,7 @@ Swipe through people who fit you, see *why* they fit, match, then talk: live cha
 - **Search** across all your conversations, with highlighted snippets that jump to the message, even if it's pages back.
 - **Pin, mute and archive** chats; muted chats stay quiet and out of the unread count.
 - **Date planning** inside the chat: propose a place and time, accept or decline live, add it to your calendar (`.ics`), and get a **reminder** two hours before.
-- **Notifications** for likes, matches, missed messages and reminders: a live bell, unread counts in the tab title and opt-in desktop notifications.
+- **Notifications** for likes, matches, missed messages and reminders: a live bell, unread counts in the tab title and opt-in desktop notifications, plus **quiet hours** in your own time zone, when desktop alerts hold off and digests wait until morning.
 - **An email digest** of what you missed while away: one email at most every six hours, only to a confirmed address, with a switch for each kind and an unsubscribe link that mail scanners can't trigger.
 - **"Are you sure?"** before sending a message that reads as an insult. It's a nudge, not a filter: edit it or send anyway. The server owns the word list and shares it with the app, so the check is instant.
 
@@ -45,17 +48,18 @@ Swipe through people who fit you, see *why* they fit, match, then talk: live cha
 - **Profile editor** with photo upload (validated, EXIF-rotated, resized to WebP with Pillow), interests, prompts and preferences, plus a **profile strength** meter.
 - **Email confirmation and password reset** through signed, single-purpose links.
 - **Two-factor sign-in** with any authenticator app (TOTP, written to RFC 6238) and one-time recovery codes.
-- **Signed-in devices:** see each browser ("Safari on iPhone", last active, IP) and sign any one out, every other one, or all of them.
+- **Signed-in devices:** see each browser ("Safari on iPhone", last active, IP) and sign any one out, every other one, or all of them. Below it, **recent security activity** lists sign-ins, wrong passwords, and password, email and two-factor changes.
+- **Change your email address:** the new inbox has to confirm before it replaces the old one, and the old address is told when the change is asked for and when it's done.
 - **Download your data** as one JSON file, pause your profile or delete the account.
 - **Insights** on likes, match rate, reply rate and reply speed, with day-by-day charts.
 - **Light and dark themes**, **keyboard shortcuts** (press `?`) and an **installable PWA**.
 
 **Safety and operations**
-- **Block and report** from any chat. Moderators get a report queue (which shows how many unkind messages a reported person has sent), a **photo verification** queue, a **member directory** with direct bans, **trends** (reports filed and resolved per day, time to resolve, what people report) and an append-only **audit log**.
+- **Block and report** from any chat. Moderators get a report queue (which shows how many unkind messages a reported person has sent), a **photo verification** queue, a **member directory** with direct bans, **trends** (reports filed and resolved per day, time to resolve, what people report), **announcements** shown to everyone as a dismissable banner, and an append-only **audit log**.
 - **Rate limits** on sign-in, sign-up, swipes, messages, uploads and emails.
 - **Scales out:** with Redis, events, presence *and* rate limits are shared by every API worker.
 - **Observable:** request IDs on every response and log line, optional JSON logs and a Prometheus `/metrics` endpoint.
-- **A demo that feels alive.** About 45 seeded personas like you back, reply in context (even to voice notes) and say yes to dates, so a reviewer can try every flow alone.
+- **A demo that feels alive.** About 55 seeded personas (a few in Lisbon, London, Paris and Berlin, for travel mode) like you back, reply in context (even to voice notes) and say yes to dates, so a reviewer can try every flow alone.
 
 | Video call | Replies, edits, voice notes and a call record | Search |
 | --- | --- | --- |
@@ -166,15 +170,16 @@ flowchart LR
 | Path | Responsibility |
 | --- | --- |
 | `main.py` | App factory and lifespan: migrate, seed, start the broker and the scheduler, metrics, CORS, static media |
-| `models.py` · `migrations/` | 15 tables with the constraints that keep them honest; 26 Alembic revisions applied on startup, and a test that fails if models and migrations drift |
+| `models.py` · `migrations/` | 20 tables with the constraints that keep them honest; 33 Alembic revisions applied on startup, and a test that fails if models and migrations drift |
 | `schemas.py` | Pydantic v2 validation (18+, known interests, prompts and questions, ranges, aware datetimes) and response shapes |
-| `routers/` | `auth`, `email`, `two_factor`, `users`, `account`, `devices`, `questions`, `discover`, `matches`, `search`, `dates`, `notifications`, `safety`, `verification`, `admin`, `admin_users`, `ws` |
+| `routers/` | `auth`, `email`, `email_change`, `two_factor`, `users`, `account`, `devices`, `travel`, `views`, `saved`, `questions`, `discover`, `matches`, `search`, `dates`, `notifications`, `safety`, `verification`, `admin`, `admin_users`, `announcements`, `ws` |
 | `services/discovery.py` · `matching.py` · `agreement.py` | Who can see whom, filters, top picks, the compatibility score, distance and question agreement |
 | `services/chat.py` · `chat_settings.py` · `audio.py` | Messages, replies, edits, unsend, reactions, voice notes, read receipts, persona replies; pin, mute and archive |
 | `services/calls.py` | Call registry and WebRTC signalling relay: ringing, busy, missed and the call record |
 | `services/verification.py` · `audit.py` · `export.py` · `trends.py` | Posed-selfie verification, the moderator audit log, the data export, and moderation trends |
 | `services/devices.py` · `useragent.py` | Device sessions: started at sign-in, checked on every request and socket, signed out one at a time |
-| `services/digest.py` · `kindness.py` | The email digest (who's due, what to say, claimed once across workers); the unkind-message patterns shared with the app |
+| `services/digest.py` · `kindness.py` · `quiet.py` | The email digest (who's due, what to say, claimed once across workers); the unkind-message patterns shared with the app; quiet hours in each person's own time zone |
+| `services/security_log.py` | The account's recent security activity: sign-ins, wrong passwords, password, email and two-factor changes |
 | `totp.py` · `security.py` · `mail.py` | RFC 6238 one-time codes and recovery codes; access and single-purpose tokens; SMTP or outbox email |
 | `realtime.py` · `broker.py` | Per-user socket fan-out and shared presence (heartbeats per worker), through an in-process or Redis broker |
 | `limits.py` · `ratelimit.py` | Sliding-window limits in memory or in Redis sorted sets, and the FastAPI dependencies that apply them |
@@ -254,13 +259,13 @@ The SQL query narrows candidates on indexed columns (not swiped, not rejected by
 ## Tests and CI
 
 ```bash
-cd backend && pytest                       # 281 tests
-cd frontend && npm run lint && npm test    # 208 tests
-cd frontend && npm run e2e                 # 7 browser tests (starts its own API and web app)
+cd backend && pytest                       # 325 tests
+cd frontend && npm run lint && npm test    # 251 tests
+cd frontend && npm run e2e                 # 10 browser tests (starts its own API and web app)
 ```
 
 - **Backend tests** drive real WebSocket connections through the app: delivery, replies, edits, presence across two workers, a whole video call, missed calls and busy signals, bans closing sockets. They also check TOTP against the RFC's test vectors, run two rate limiters against one fake Redis, and include a migration test that upgrades a database holding a conversation and checks every row survives.
-- **End-to-end tests** run the real API (fresh SQLite, demo data) and web app in Chromium with a fake camera. They cover signing up and confirming the email, resetting a password, swiping into a match, two people chatting live, the "Are you sure?" nudge with the server's real patterns, and a video call between two browsers.
+- **End-to-end tests** run the real API (fresh SQLite, demo data) and web app in Chromium with a fake camera. They cover signing up and confirming the email, resetting a password, swiping into a match, two people chatting live, the "Are you sure?" nudge with the server's real patterns, a video call between two browsers, a trip in travel mode, saving someone for later, the Viewed you list and dismissing an announcement.
 
 CI (`.github/workflows/ci.yml`) runs four jobs:
 
