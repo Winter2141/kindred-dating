@@ -19,6 +19,7 @@ from app.routers import (
     account,
     admin,
     admin_users,
+    announcements,
     auth,
     dates,
     devices,
@@ -106,6 +107,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         views,
         admin,
         admin_users,
+        announcements,
         ws,
     ):
         app.include_router(module.router)

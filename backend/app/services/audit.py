@@ -13,6 +13,8 @@ class AuditAction(StrEnum):
     USER_UNBANNED = "user.unbanned"
     VERIFICATION_APPROVED = "verification.approved"
     VERIFICATION_REJECTED = "verification.rejected"
+    ANNOUNCEMENT_POSTED = "announcement.posted"
+    ANNOUNCEMENT_ENDED = "announcement.ended"
 
 
 def record(

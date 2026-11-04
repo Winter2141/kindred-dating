@@ -81,3 +81,5 @@ def test_demo_data_shows_who_viewed_alex(settings: Settings) -> None:
         viewers = client.get("/api/me/viewers", headers=headers).json()["viewers"]
         assert [v["user"]["name"] for v in viewers][:2] == ["Harriet", "Amara"]
         assert next(v for v in viewers if v["user"]["name"] == "Amara")["liked_you"] is True
+        (news,) = client.get("/api/announcements", headers=headers).json()
+        assert news["title"] == "New: travel mode." and news["tone"] == "celebration"

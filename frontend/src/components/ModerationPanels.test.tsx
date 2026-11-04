@@ -46,6 +46,7 @@ describe('describeAudit', () => {
     expect(describeAudit(event())).toBe('Alex banned Sam')
     expect(describeAudit(event({ action: 'verification.approved' }))).toBe('Alex verified the photos of Sam')
     expect(describeAudit(event({ actor_name: null, target: null }))).toBe('A former moderator banned a deleted account')
+    expect(describeAudit(event({ action: 'announcement.posted', target: null }))).toBe('Alex posted an announcement')
   })
 })
 

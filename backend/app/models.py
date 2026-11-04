@@ -67,6 +67,12 @@ class VerificationStatus(StrEnum):
     REJECTED = "rejected"
 
 
+class AnnouncementTone(StrEnum):
+    INFO = "info"
+    WARNING = "warning"
+    CELEBRATION = "celebration"
+
+
 class DateStatus(StrEnum):
     PROPOSED = "proposed"
     ACCEPTED = "accepted"
@@ -420,6 +426,42 @@ class AuditEvent(Base):
 
     actor: Mapped[User | None] = relationship(foreign_keys=[actor_id], lazy="joined")
     target: Mapped[User | None] = relationship(foreign_keys=[target_user_id], lazy="joined")
+
+
+class Announcement(Base):
+    """A notice from the moderators, shown to everyone as a banner (app.routers.announcements)."""
+
+    __tablename__ = "announcements"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    author_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+    title: Mapped[str] = mapped_column(String(80))
+    body: Mapped[str] = mapped_column(Text, default="")
+    tone: Mapped[str] = mapped_column(String(16), default=AnnouncementTone.INFO)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, index=True)
+    # None means it stays up until a moderator ends it.
+    ends_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+
+    author: Mapped[User | None] = relationship(lazy="joined")
+
+
+class AnnouncementDismissal(Base):
+    """Someone closed an announcement's banner, so it stays closed for them."""
+
+    __tablename__ = "announcement_dismissals"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    announcement_id: Mapped[int] = mapped_column(
+        ForeignKey("announcements.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "announcement_id", name="uq_announcement_dismissals_pair"),
+    )
 
 
 class OutboxEmail(Base):

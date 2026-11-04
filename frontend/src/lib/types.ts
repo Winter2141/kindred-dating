@@ -265,6 +265,32 @@ export interface Viewers {
   viewers: Viewer[]
 }
 
+export type AnnouncementTone = 'info' | 'warning' | 'celebration'
+
+/** A notice from the moderators, shown as a banner until dismissed or ended. */
+export interface Announcement {
+  id: number
+  title: string
+  body: string
+  tone: AnnouncementTone
+  created_at: string
+  ends_at: string | null
+}
+
+export interface AdminAnnouncement extends Announcement {
+  active: boolean
+  author_name: string | null
+  dismissed_count: number
+}
+
+export interface AnnouncementInput {
+  title: string
+  body: string
+  tone: AnnouncementTone
+  /** How long it stays up, or null until a moderator ends it. */
+  hours: number | null
+}
+
 export type ReportStatus = 'open' | 'dismissed' | 'actioned'
 
 export interface AdminReport {

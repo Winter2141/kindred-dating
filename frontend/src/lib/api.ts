@@ -2,9 +2,12 @@ import { useAuth } from '@/store/auth'
 import { NO_FILTERS, filtersToQuery, type DiscoverFilters } from './filters'
 import type { QuestionAnswer } from './questions'
 import type {
+  AdminAnnouncement,
   AdminReport,
   AdminUser,
   Agreement,
+  Announcement,
+  AnnouncementInput,
   AuditEvent,
   MemberFilter,
   AppNotification,
@@ -220,6 +223,13 @@ export const api = {
   undoSwipe: () => request<PublicProfile>('/api/swipes/undo', { method: 'POST' }),
   likes: () => request<Like[]>('/api/likes'),
   viewers: () => request<Viewers>('/api/me/viewers'),
+  announcements: () => request<Announcement[]>('/api/announcements'),
+  dismissAnnouncement: (id: number) => request<void>(`/api/announcements/${id}/dismiss`, { method: 'POST' }),
+  adminAnnouncements: () => request<AdminAnnouncement[]>('/api/admin/announcements'),
+  postAnnouncement: (data: AnnouncementInput) =>
+    request<AdminAnnouncement>('/api/admin/announcements', { method: 'POST', body: { ...data } }),
+  endAnnouncement: (id: number) =>
+    request<AdminAnnouncement>(`/api/admin/announcements/${id}/end`, { method: 'POST' }),
   recordView: (userId: number) => request<void>(`/api/users/${userId}/view`, { method: 'POST' }),
 
   matches: () => request<Match[]>('/api/matches'),

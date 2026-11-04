@@ -16,6 +16,8 @@ from pydantic import (
 from app import kindness
 from app.catalog import INTERESTS, MAX_INTERESTS, MAX_PROMPTS, PROMPT_QUESTIONS, REACTIONS
 from app.models import (
+    Announcement,
+    AnnouncementTone,
     AuditEvent,
     DateProposal,
     DateStatus,
@@ -371,6 +373,41 @@ class ViewerOut(BaseModel):
 class ViewersOut(BaseModel):
     private: bool = Field(description="You browse privately, so viewers are hidden from you too")
     viewers: list[ViewerOut]
+
+
+class AnnouncementIn(BaseModel):
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+    body: Annotated[str, StringConstraints(strip_whitespace=True, max_length=400)] = ""
+    tone: AnnouncementTone = AnnouncementTone.INFO
+    hours: int | None = Field(
+        default=72, ge=1, le=24 * 30, description="How long it stays up; None until ended"
+    )
+
+
+class AnnouncementOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    body: str
+    tone: AnnouncementTone
+    created_at: datetime
+    ends_at: datetime | None
+
+
+class AdminAnnouncementOut(AnnouncementOut):
+    active: bool
+    author_name: str | None
+    dismissed_count: int
+
+    @classmethod
+    def build(cls, announcement: Announcement, *, now: datetime, dismissed_count: int) -> Self:
+        return cls(
+            **AnnouncementOut.model_validate(announcement).model_dump(),
+            active=announcement.ends_at is None or announcement.ends_at > now,
+            author_name=announcement.author.name if announcement.author else None,
+            dismissed_count=dismissed_count,
+        )
 
 
 class TokenOut(BaseModel):

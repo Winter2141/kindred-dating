@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { CallScreen } from '@/components/CallScreen'
+import { AnnouncementBanner } from '@/components/Announcements'
 import { EmailBanner } from '@/components/EmailBanner'
 import { ShortcutsButton, ShortcutsDialog, useGlobalShortcuts } from '@/components/Shortcuts'
 import { api, signOutHere } from '@/lib/api'
@@ -233,6 +234,7 @@ export function AppShell() {
           </header>
         )}
         <main className={clsx('flex-1', !inChat && 'pb-24 lg:pb-0')}>
+          {!inChat && <AnnouncementBanner />}
           {!inChat && <EmailBanner />}
           <Outlet />
         </main>

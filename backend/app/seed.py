@@ -15,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import Base, Database, utcnow
 from app.models import (
+    Announcement,
+    AnnouncementTone,
     Match,
     Message,
     Notification,
@@ -299,6 +301,15 @@ async def seed_demo_data(db: Database) -> bool:
         _seed_answers([alex, *people.values()], session)
         _seed_verification(list(people.values()), now, session)
         _seed_views(alex, people, now, session)
+        session.add(
+            Announcement(
+                author=alex,
+                title="New: travel mode.",
+                body="Heading somewhere? Tap the plane on Discover to meet people there first.",
+                tone=AnnouncementTone.CELEBRATION,
+                created_at=now - timedelta(hours=6),
+            )
+        )
         await session.commit()
     return True
 

@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Gavel,
   History,
+  Megaphone,
   Search,
   ShieldCheck,
   Undo2,
@@ -221,7 +222,9 @@ function BanDialog({ member, onClose }: { member: AdminUser | null; onClose: () 
   )
 }
 
-const ACTIONS: Record<string, { icon: ReactNode; verb: string }> = {
+const ACTIONS: Record<string, { icon: ReactNode; verb: string; untargeted?: boolean }> = {
+  'announcement.posted': { icon: <Megaphone className="size-4 text-sky" />, verb: 'posted an announcement', untargeted: true },
+  'announcement.ended': { icon: <Megaphone className="size-4 text-muted" />, verb: 'ended an announcement', untargeted: true },
   'report.dismissed': { icon: <Check className="size-4 text-muted" />, verb: 'dismissed a report about' },
   'user.banned': { icon: <Gavel className="size-4 text-danger" />, verb: 'banned' },
   'user.unbanned': { icon: <Undo2 className="size-4 text-mint" />, verb: 'unbanned' },
@@ -230,8 +233,11 @@ const ACTIONS: Record<string, { icon: ReactNode; verb: string }> = {
 }
 
 export function describeAudit(event: AuditEvent): string {
-  const verb = ACTIONS[event.action]?.verb ?? event.action
-  return `${event.actor_name ?? 'A former moderator'} ${verb} ${event.target?.name ?? 'a deleted account'}`
+  const action = ACTIONS[event.action]
+  const actor = event.actor_name ?? 'A former moderator'
+  // Announcements are for everyone, so there's no one person they were done to.
+  if (action?.untargeted) return `${actor} ${action.verb}`
+  return `${actor} ${action?.verb ?? event.action} ${event.target?.name ?? 'a deleted account'}`
 }
 
 /** Everything moderators did, newest first. */

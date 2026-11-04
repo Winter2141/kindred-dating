@@ -29,6 +29,8 @@ export const keys = {
   moderationTrends: (days: number) => ['moderation-trends', days] as const,
   members: (q: string, filter: string, page: number) => ['members', q, filter, page] as const,
   audit: ['audit'] as const,
+  announcements: ['announcements'] as const,
+  adminAnnouncements: ['admin-announcements'] as const,
   verification: ['verification'] as const,
   twoFactor: ['two-factor'] as const,
   deviceSessions: ['device-sessions'] as const,
