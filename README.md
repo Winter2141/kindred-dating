@@ -38,17 +38,20 @@ Swipe through people who fit you, see *why* they fit, match, then talk: live cha
 - **Pin, mute and archive** chats; muted chats stay quiet and out of the unread count.
 - **Date planning** inside the chat: propose a place and time, accept or decline live, add it to your calendar (`.ics`), and get a **reminder** two hours before.
 - **Notifications** for likes, matches, missed messages and reminders: a live bell, unread counts in the tab title and opt-in desktop notifications.
+- **An email digest** of what you missed while away: one email at most every six hours, only to a confirmed address, with a switch for each kind and an unsubscribe link that mail scanners can't trigger.
+- **"Are you sure?"** before sending a message that reads as an insult. It's a nudge, not a filter: edit it or send anyway. The server owns the word list and shares it with the app, so the check is instant.
 
 **Your account**
 - **Profile editor** with photo upload (validated, EXIF-rotated, resized to WebP with Pillow), interests, prompts and preferences, plus a **profile strength** meter.
 - **Email confirmation and password reset** through signed, single-purpose links.
 - **Two-factor sign-in** with any authenticator app (TOTP, written to RFC 6238) and one-time recovery codes.
-- **Download your data** as one JSON file, pause your profile, sign out everywhere or delete the account.
+- **Signed-in devices:** see each browser ("Safari on iPhone", last active, IP) and sign any one out, every other one, or all of them.
+- **Download your data** as one JSON file, pause your profile or delete the account.
 - **Insights** on likes, match rate, reply rate and reply speed, with day-by-day charts.
 - **Light and dark themes**, **keyboard shortcuts** (press `?`) and an **installable PWA**.
 
 **Safety and operations**
-- **Block and report** from any chat. Moderators get a report queue, a **photo verification** queue, a **member directory** with direct bans and an append-only **audit log**.
+- **Block and report** from any chat. Moderators get a report queue (which shows how many unkind messages a reported person has sent), a **photo verification** queue, a **member directory** with direct bans, **trends** (reports filed and resolved per day, time to resolve, what people report) and an append-only **audit log**.
 - **Rate limits** on sign-in, sign-up, swipes, messages, uploads and emails.
 - **Scales out:** with Redis, events, presence *and* rate limits are shared by every API worker.
 - **Observable:** request IDs on every response and log line, optional JSON logs and a Prometheus `/metrics` endpoint.
@@ -61,6 +64,10 @@ Swipe through people who fit you, see *why* they fit, match, then talk: live cha
 | Compatibility questions | Filters | Two-factor sign-in |
 | --- | --- | --- |
 | <img src="docs/screenshots/questions.png" alt="Answering a compatibility question" /> | <img src="docs/screenshots/filters.png" alt="Discover filters" /> | <img src="docs/screenshots/two-factor.png" alt="Setting up an authenticator app with a QR code" /> |
+
+| Signed-in devices | "Are you sure?" | Moderation trends |
+| --- | --- | --- |
+| <img src="docs/screenshots/devices.png" alt="Settings listing three signed-in browsers, each with a sign-out button" /> | <img src="docs/screenshots/kindness.png" alt="A dialog asking whether to send a message that reads as an insult" /> | <img src="docs/screenshots/trends.png" alt="Reports filed and resolved per day, with time to resolve" /> |
 
 | Match | Live chat | Likes you |
 | --- | --- | --- |
@@ -159,17 +166,19 @@ flowchart LR
 | Path | Responsibility |
 | --- | --- |
 | `main.py` | App factory and lifespan: migrate, seed, start the broker and the scheduler, metrics, CORS, static media |
-| `models.py` · `migrations/` | 14 tables with the constraints that keep them honest; 22 Alembic revisions applied on startup, and a test that fails if models and migrations drift |
+| `models.py` · `migrations/` | 15 tables with the constraints that keep them honest; 26 Alembic revisions applied on startup, and a test that fails if models and migrations drift |
 | `schemas.py` | Pydantic v2 validation (18+, known interests, prompts and questions, ranges, aware datetimes) and response shapes |
-| `routers/` | `auth`, `email`, `two_factor`, `users`, `account`, `questions`, `discover`, `matches`, `search`, `dates`, `notifications`, `safety`, `verification`, `admin`, `admin_users`, `ws` |
+| `routers/` | `auth`, `email`, `two_factor`, `users`, `account`, `devices`, `questions`, `discover`, `matches`, `search`, `dates`, `notifications`, `safety`, `verification`, `admin`, `admin_users`, `ws` |
 | `services/discovery.py` · `matching.py` · `agreement.py` | Who can see whom, filters, top picks, the compatibility score, distance and question agreement |
 | `services/chat.py` · `chat_settings.py` · `audio.py` | Messages, replies, edits, unsend, reactions, voice notes, read receipts, persona replies; pin, mute and archive |
 | `services/calls.py` | Call registry and WebRTC signalling relay: ringing, busy, missed and the call record |
-| `services/verification.py` · `audit.py` · `export.py` | Posed-selfie verification, the moderator audit log, and the data export |
+| `services/verification.py` · `audit.py` · `export.py` · `trends.py` | Posed-selfie verification, the moderator audit log, the data export, and moderation trends |
+| `services/devices.py` · `useragent.py` | Device sessions: started at sign-in, checked on every request and socket, signed out one at a time |
+| `services/digest.py` · `kindness.py` | The email digest (who's due, what to say, claimed once across workers); the unkind-message patterns shared with the app |
 | `totp.py` · `security.py` · `mail.py` | RFC 6238 one-time codes and recovery codes; access and single-purpose tokens; SMTP or outbox email |
 | `realtime.py` · `broker.py` | Per-user socket fan-out and shared presence (heartbeats per worker), through an in-process or Redis broker |
 | `limits.py` · `ratelimit.py` | Sliding-window limits in memory or in Redis sorted sets, and the FastAPI dependencies that apply them |
-| `observability.py` · `scheduler.py` | Request IDs, JSON logs and Prometheus metrics; the background job that sends date reminders |
+| `observability.py` · `scheduler.py` | Request IDs, JSON logs and Prometheus metrics; the background jobs that send date reminders and digests |
 
 **Frontend (`frontend/src`)**
 
@@ -236,6 +245,7 @@ The SQL query narrows candidates on indexed columns (not swiped, not rejected by
 ### Security notes
 
 - Passwords are hashed with bcrypt. Sessions are JWTs carrying a **token version**, so a password change, a reset, "sign out everywhere" or a ban revokes every token at once.
+- Each token also names its **device session**, so one browser can be signed out without the others; that closes its open sockets too. The session's last-seen time is written at most every five minutes, so reads stay reads.
 - Emailed links are **single-purpose tokens**, which can't be used as sessions or as each other. Reset links carry the token version, so each one works only once.
 - **Two-factor codes** can't be replayed: the last accepted time step is stored. Recovery codes are stored as hashes and work once.
 - Uploads are checked by content, not file name: images by decoding them, voice notes by their first bytes.
@@ -244,13 +254,13 @@ The SQL query narrows candidates on indexed columns (not swiped, not rejected by
 ## Tests and CI
 
 ```bash
-cd backend && pytest                       # 213 tests
-cd frontend && npm run lint && npm test    # 169 tests
-cd frontend && npm run e2e                 # 6 browser tests (starts its own API and web app)
+cd backend && pytest                       # 281 tests
+cd frontend && npm run lint && npm test    # 208 tests
+cd frontend && npm run e2e                 # 7 browser tests (starts its own API and web app)
 ```
 
 - **Backend tests** drive real WebSocket connections through the app: delivery, replies, edits, presence across two workers, a whole video call, missed calls and busy signals, bans closing sockets. They also check TOTP against the RFC's test vectors, run two rate limiters against one fake Redis, and include a migration test that upgrades a database holding a conversation and checks every row survives.
-- **End-to-end tests** run the real API (fresh SQLite, demo data) and web app in Chromium with a fake camera. They cover signing up and confirming the email, resetting a password, swiping into a match, two people chatting live, and a video call between two browsers.
+- **End-to-end tests** run the real API (fresh SQLite, demo data) and web app in Chromium with a fake camera. They cover signing up and confirming the email, resetting a password, swiping into a match, two people chatting live, the "Are you sure?" nudge with the server's real patterns, and a video call between two browsers.
 
 CI (`.github/workflows/ci.yml`) runs four jobs:
 
