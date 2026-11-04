@@ -17,6 +17,7 @@ import { keys } from '@/lib/cache'
 import type { Candidate, Match, SwipeAction, SwipeResult } from '@/lib/types'
 import { activeFilterCount, NO_FILTERS } from '@/lib/filters'
 import { shortPlace } from '@/lib/travel'
+import { useRecordView, wideScreen } from '@/lib/views'
 import { useAuth } from '@/store/auth'
 import { useToasts } from '@/store/live'
 import { usePrefs } from '@/store/prefs'
@@ -45,6 +46,8 @@ export function DiscoverPage() {
     return [...restored, ...fresh]
   }, [discover.data, gone, restored])
   const top = deck[0]
+  // Their full profile is open: in the sheet on phones, or always in the side panel on wide screens.
+  useRecordView(top?.id, detailsOpen || wideScreen())
 
   const [likeTarget, setLikeTarget] = useState<LikeTarget | null>(null)
   const swipe = useMutation({

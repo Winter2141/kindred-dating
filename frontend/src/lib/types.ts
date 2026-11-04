@@ -74,6 +74,8 @@ export interface Me extends PublicProfile {
   pending_email?: string | null
   two_factor_enabled?: boolean
   travel?: Trip | null
+  /** Their profile views aren't recorded (and they can't see their own viewers). */
+  browse_privately?: boolean
 }
 
 export interface MfaChallenge {
@@ -246,6 +248,21 @@ export interface Like {
   created_at: string
   comment?: string | null
   liked_item?: LikedItem | null
+}
+
+/** Someone who opened your full profile. */
+export interface Viewer {
+  user: PublicProfile
+  viewed_at: string
+  /** How many separate days they looked. */
+  times: number
+  liked_you: boolean
+}
+
+export interface Viewers {
+  /** You browse privately, so you don't get to see who looked at you either. */
+  private: boolean
+  viewers: Viewer[]
 }
 
 export type ReportStatus = 'open' | 'dismissed' | 'actioned'

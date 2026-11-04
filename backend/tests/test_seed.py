@@ -69,3 +69,15 @@ def test_demo_data_has_people_to_travel_to(settings: Settings) -> None:
         client.put("/api/me/travel", json={"place": "Lisbon", "until": until}, headers=headers)
         deck = client.get("/api/discover", params={"limit": 50}, headers=headers).json()
         assert {card["name"] for card in deck} == {"Inês", "Beatriz", "Leonor"}
+
+
+def test_demo_data_shows_who_viewed_alex(settings: Settings) -> None:
+    seeded = settings.model_copy(update={"seed_on_startup": True})
+    with TestClient(create_app(seeded)) as client:
+        login = client.post(
+            "/api/auth/login", json={"email": DEMO_EMAIL, "password": DEMO_PASSWORD}
+        )
+        headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+        viewers = client.get("/api/me/viewers", headers=headers).json()["viewers"]
+        assert [v["user"]["name"] for v in viewers][:2] == ["Harriet", "Amara"]
+        assert next(v for v in viewers if v["user"]["name"] == "Amara")["liked_you"] is True

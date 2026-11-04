@@ -2,22 +2,75 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Heart, Star, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
-import { Link } from 'react-router'
+import clsx from 'clsx'
+import { Link, useSearchParams } from 'react-router'
 import { MatchCelebration } from '@/components/MatchCelebration'
 import { ProfileDetails } from '@/components/ProfileDetails'
 import { EmptyState, Photo, Spinner } from '@/components/ui'
 import { api } from '@/lib/api'
 import { LikeCommentNote } from '@/components/LikeComment'
 import { VerifiedBadge } from '@/components/Verification'
+import { ViewedYouList } from '@/components/ViewedYou'
 import { keys } from '@/lib/cache'
-import type { Like, Match, SwipeAction } from '@/lib/types'
+import type { Like, Match, PublicProfile, SwipeAction } from '@/lib/types'
 import { shortAgo } from '@/lib/time'
+import { useRecordView } from '@/lib/views'
+
+type Tab = 'likes' | 'views'
+const TABS: { value: Tab; label: string }[] = [
+  { value: 'likes', label: 'Likes' },
+  { value: 'views', label: 'Viewed you' },
+]
+
+/** A read-only look at someone's profile, from the Viewed you list. */
+function ProfileSheet({ profile, onClose }: { profile: PublicProfile | null; onClose: () => void }) {
+  return (
+    <AnimatePresence>
+      {profile && (
+        <motion.div
+          className="fixed inset-0 z-40 grid place-items-end bg-ink/70 backdrop-blur-md sm:place-items-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[2rem] border border-line-strong bg-surface sm:rounded-[2rem]"
+            role="dialog"
+            aria-label={`${profile.name}'s profile`}
+          >
+            <div className="relative h-72 shrink-0 [container-type:inline-size]">
+              <Photo src={profile.photos[0]} name={profile.name} className="size-full" />
+              <div className="absolute inset-0 bg-gradient-to-t from-surface to-transparent to-60%" />
+            </div>
+            <div className="-mt-12 overflow-y-auto px-7 pb-7">
+              <ProfileDetails profile={profile} />
+              <button type="button" className="btn-secondary mt-7 w-full" onClick={onClose}>
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
 
 export function LikesPage() {
   const queryClient = useQueryClient()
   const likes = useQuery({ queryKey: keys.likes, queryFn: api.likes })
   const [match, setMatch] = useState<Match | null>(null)
   const [open, setOpen] = useState<Like | null>(null)
+  const [viewing, setViewing] = useState<PublicProfile | null>(null)
+  const [params, setParams] = useSearchParams()
+  const tab: Tab = params.get('tab') === 'views' ? 'views' : 'likes'
+  // Opening a like is a proper look at their profile.
+  useRecordView(open?.user.id, open !== null, 0)
+  useRecordView(viewing?.id, viewing !== null, 0)
 
   const respond = useMutation({
     mutationFn: ({ like, action }: { like: Like; action: SwipeAction }) =>
@@ -37,14 +90,37 @@ export function LikesPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pt-5 pb-6 sm:px-8 lg:pt-10">
-      <header className="mb-8">
-        <h1 className="font-display text-5xl leading-none">Likes you</h1>
-        <p className="mt-2 text-sm text-muted">
-          They already said yes. Like them back and it's an instant match.
-        </p>
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-5xl leading-none">{tab === 'views' ? 'Viewed you' : 'Likes you'}</h1>
+          <p className="mt-2 text-sm text-muted">
+            {tab === 'views'
+              ? 'People who opened your full profile in the last 30 days.'
+              : "They already said yes. Like them back and it's an instant match."}
+          </p>
+        </div>
+        <div role="tablist" aria-label="Show" className="inline-flex rounded-full border border-line bg-surface p-1">
+          {TABS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={tab === value}
+              onClick={() => setParams(value === 'likes' ? {} : { tab: value }, { replace: true })}
+              className={clsx(
+                'rounded-full px-4 py-1.5 text-sm font-semibold transition',
+                tab === value ? 'bg-raised text-cream shadow-card' : 'text-muted hover:text-cream',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </header>
 
-      {likes.isPending ? (
+      {tab === 'views' ? (
+        <ViewedYouList onOpen={(viewer) => setViewing(viewer.user)} />
+      ) : likes.isPending ? (
         <div className="grid place-items-center py-24">
           <Spinner className="text-coral" />
         </div>
@@ -175,6 +251,7 @@ export function LikesPage() {
         )}
       </AnimatePresence>
 
+      <ProfileSheet profile={viewing} onClose={() => setViewing(null)} />
       <MatchCelebration match={match} onClose={() => setMatch(null)} />
     </div>
   )

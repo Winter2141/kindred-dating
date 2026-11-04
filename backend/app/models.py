@@ -110,6 +110,8 @@ class User(Base):
     is_persona: Mapped[bool] = mapped_column(default=False)
     # Paused profiles keep their matches and chats but don't appear in anyone's deck.
     is_paused: Mapped[bool] = mapped_column(default=False, server_default=false())
+    # Their profile views aren't recorded, and in return they don't see who viewed them.
+    browse_privately: Mapped[bool] = mapped_column(default=False, server_default=false())
     # Bumped to revoke every token issued so far (password change, sign out everywhere).
     token_version: Mapped[int] = mapped_column(default=0, server_default=text("0"))
     is_admin: Mapped[bool] = mapped_column(default=False, server_default=false())
@@ -279,6 +281,27 @@ class Report(Base):
 
     reporter: Mapped[User] = relationship(foreign_keys=[reporter_id], lazy="joined")
     reported: Mapped[User] = relationship(foreign_keys=[reported_id], lazy="joined")
+
+
+class ProfileView(Base):
+    """`viewer` opened `viewed`'s full profile. One row per pair, refreshed on every look."""
+
+    __tablename__ = "profile_views"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    viewer_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    viewed_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    # How many separate (UTC) days they've looked, so a long look isn't counted ten times.
+    times: Mapped[int] = mapped_column(default=1, server_default=text("1"))
+    first_viewed_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    viewed_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    viewer: Mapped[User] = relationship(foreign_keys=[viewer_id], lazy="joined")
+
+    __table_args__ = (
+        UniqueConstraint("viewer_id", "viewed_id", name="uq_profile_views_pair"),
+        Index("ix_profile_views_viewed_at", "viewed_id", "viewed_at"),
+    )
 
 
 class Notification(Base):

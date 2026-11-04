@@ -41,6 +41,7 @@ import type {
   UpcomingDate,
   VerificationReview,
   VerificationState,
+  Viewers,
 } from './types'
 
 export function isMfaChallenge(result: Session | MfaChallenge): result is MfaChallenge {
@@ -123,6 +124,7 @@ export type ProfileUpdate = Partial<
     | 'age_max'
     | 'photos'
     | 'is_paused'
+    | 'browse_privately'
     | 'max_distance_km'
   >
 > & { latitude?: number; longitude?: number }
@@ -217,6 +219,8 @@ export const api = {
     request<SwipeResult>('/api/swipes', { method: 'POST', body: { target_id: targetId, action, ...extras } }),
   undoSwipe: () => request<PublicProfile>('/api/swipes/undo', { method: 'POST' }),
   likes: () => request<Like[]>('/api/likes'),
+  viewers: () => request<Viewers>('/api/me/viewers'),
+  recordView: (userId: number) => request<void>(`/api/users/${userId}/view`, { method: 'POST' }),
 
   matches: () => request<Match[]>('/api/matches'),
   search: (query: string) => request<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`),

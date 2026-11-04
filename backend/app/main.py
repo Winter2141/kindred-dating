@@ -34,6 +34,7 @@ from app.routers import (
     two_factor,
     users,
     verification,
+    views,
     ws,
 )
 from app.seed import seed_demo_data
@@ -102,6 +103,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         notifications,
         safety,
         verification,
+        views,
         admin,
         admin_users,
         ws,

@@ -244,6 +244,7 @@ class ProfileUpdate(BaseModel):
     latitude: Latitude | None = None
     longitude: Longitude | None = None
     is_paused: bool | None = None
+    browse_privately: bool | None = None
     photos: list[str] | None = Field(
         default=None, description="Reorder or remove existing photos; new ones are uploaded."
     )
@@ -331,6 +332,7 @@ class MeOut(PublicProfile):
     max_distance_km: int
     has_location: bool
     is_paused: bool
+    browse_privately: bool = False
     is_admin: bool
     email_verified: bool = False
     pending_email: EmailStr | None = None
@@ -350,12 +352,25 @@ class MeOut(PublicProfile):
             max_distance_km=user.max_distance_km,
             has_location=user.latitude is not None,
             is_paused=user.is_paused,
+            browse_privately=user.browse_privately,
             is_admin=user.is_admin,
             email_verified=user.email_verified_at is not None,
             pending_email=user.pending_email,
             two_factor_enabled=user.totp_enabled_at is not None,
             travel=TravelOut.build(user),
         )
+
+
+class ViewerOut(BaseModel):
+    user: PublicProfile
+    viewed_at: datetime
+    times: int = Field(description="How many separate days they looked")
+    liked_you: bool
+
+
+class ViewersOut(BaseModel):
+    private: bool = Field(description="You browse privately, so viewers are hidden from you too")
+    viewers: list[ViewerOut]
 
 
 class TokenOut(BaseModel):

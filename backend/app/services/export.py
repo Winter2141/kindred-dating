@@ -13,6 +13,7 @@ from app.models import (
     Match,
     Message,
     Notification,
+    ProfileView,
     QuestionAnswer,
     Report,
     Swipe,
@@ -67,6 +68,14 @@ async def build_export(session: AsyncSession, user: User, now: datetime) -> dict
             select(User).where(User.id.in_([s.target_id for s in swipes]))
         )
     }
+    looked_at = (
+        await session.execute(
+            select(ProfileView, User.name)
+            .join(User, User.id == ProfileView.viewed_id)
+            .where(ProfileView.viewer_id == user.id)
+            .order_by(ProfileView.viewed_at)
+        )
+    ).all()
     answers = (
         await session.scalars(select(QuestionAnswer).where(QuestionAnswer.user_id == user.id))
     ).all()
@@ -115,6 +124,7 @@ async def build_export(session: AsyncSession, user: User, now: datetime) -> dict
             "two_factor_enabled": user.totp_enabled_at is not None,
             "photo_verified_at": _when(user.verified_at),
             "is_paused": user.is_paused,
+            "browses_privately": user.browse_privately,
         },
         "profile": {
             "name": user.name,
@@ -151,6 +161,11 @@ async def build_export(session: AsyncSession, user: User, now: datetime) -> dict
                 "at": _when(s.created_at),
             }
             for s in swipes
+        ],
+        # Whose profiles you opened. Who opened yours is theirs to export, not yours.
+        "profiles_viewed": [
+            {"who": name, "last_viewed_at": _when(view.viewed_at), "days": view.times}
+            for view, name in looked_at
         ],
         "conversations": [
             {

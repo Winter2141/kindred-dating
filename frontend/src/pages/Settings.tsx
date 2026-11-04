@@ -189,18 +189,34 @@ function VisibilitySection({ user }: { user: Me }) {
       })
     },
   })
+  const privately = useMutation({
+    mutationFn: (on: boolean) => api.updateMe({ browse_privately: on }),
+    onSuccess: saveMe,
+    onError: (error) => useToasts.getState().push({ title: "Couldn't save that", body: error.message }),
+  })
   return (
     <Section
       icon={<EyeOff className="size-5" />}
-      title="Take a break"
-      description="Pausing hides you from Discover. Your matches and conversations stay exactly as they are."
+      title="Visibility"
+      description="Pausing hides you from Discover; your matches and conversations stay exactly as they are. Browsing privately keeps your profile views to yourself."
     >
-      <Switch
-        checked={user.is_paused}
-        disabled={pause.isPending}
-        onChange={(paused) => pause.mutate(paused)}
-        label="Pause my profile"
-      />
+      <div className="flex flex-col gap-4">
+        <Switch
+          checked={user.is_paused}
+          disabled={pause.isPending}
+          onChange={(paused) => pause.mutate(paused)}
+          label="Pause my profile"
+        />
+        <Switch
+          checked={user.browse_privately ?? false}
+          disabled={privately.isPending}
+          onChange={(on) => privately.mutate(on)}
+          label="Browse privately"
+        />
+        <p className="-mt-2 text-xs text-faint">
+          People won't see that you looked at their profile. In return, you won't see who looked at yours.
+        </p>
+      </div>
     </Section>
   )
 }

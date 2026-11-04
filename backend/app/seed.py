@@ -19,6 +19,7 @@ from app.models import (
     Message,
     Notification,
     NotificationKind,
+    ProfileView,
     QuestionAnswer,
     Report,
     ReportReason,
@@ -297,6 +298,7 @@ async def seed_demo_data(db: Database) -> bool:
             user.email_verified_at = user.created_at
         _seed_answers([alex, *people.values()], session)
         _seed_verification(list(people.values()), now, session)
+        _seed_views(alex, people, now, session)
         await session.commit()
     return True
 
@@ -316,6 +318,31 @@ def _seed_verification(people: list[User], now: datetime, session: AsyncSession)
                 status=VerificationStatus.PENDING,
                 created_at=now - timedelta(hours=hours_ago + 2),
                 submitted_at=now - timedelta(hours=hours_ago + 1),
+            )
+        )
+
+
+# Who opened Alex's profile lately: (name, hours ago, separate days they looked).
+VIEWED_ALEX = [
+    ("Harriet", 1, 1),
+    ("Amara", 3, 2),
+    ("Leila", 9, 1),
+    ("Nora", 20, 3),
+    ("Elena", 50, 1),
+    ("Priya", 120, 2),
+]
+
+
+def _seed_views(alex: User, people: dict[str, User], now: datetime, session: AsyncSession) -> None:
+    for name, hours_ago, days in VIEWED_ALEX:
+        viewed_at = now - timedelta(hours=hours_ago)
+        session.add(
+            ProfileView(
+                viewer_id=people[name].id,
+                viewed_id=alex.id,
+                times=days,
+                first_viewed_at=viewed_at - timedelta(days=days - 1),
+                viewed_at=viewed_at,
             )
         )
 
