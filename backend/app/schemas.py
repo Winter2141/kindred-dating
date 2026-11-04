@@ -441,6 +441,14 @@ class TokenOut(BaseModel):
     session_id: int | None = None
 
 
+class SecurityEventOut(BaseModel):
+    id: int
+    kind: str
+    device: str = Field(description='A readable guess like "Safari on iPhone", or ""')
+    ip_address: str
+    created_at: datetime
+
+
 class DeviceSessionOut(BaseModel):
     id: int
     label: str = Field(description='A readable guess like "Safari on iPhone"')

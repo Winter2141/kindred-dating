@@ -497,6 +497,21 @@ class OutboxEmail(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
 
+class SecurityEvent(Base):
+    """Something that touched an account's security (see app.services.security_log)."""
+
+    __tablename__ = "security_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(32))
+    user_agent: Mapped[str] = mapped_column(String(255), default="")
+    ip_address: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    __table_args__ = (Index("ix_security_events_user_created", "user_id", "created_at"),)
+
+
 class DeviceSession(Base):
     """One signed-in browser. Its id rides in the access token, so it can be signed out alone.
 

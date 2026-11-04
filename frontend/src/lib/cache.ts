@@ -14,6 +14,7 @@ export const keys = {
   likes: ['likes'] as const,
   viewers: ['viewers'] as const,
   saved: ['saved'] as const,
+  securityEvents: ['security-events'] as const,
   matches: ['matches'] as const,
   match: (id: number) => ['matches', id] as const,
   messages: (id: number) => ['messages', id] as const,

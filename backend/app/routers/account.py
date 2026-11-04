@@ -12,10 +12,13 @@ from app.models import Match
 from app.ratelimit import per_user
 from app.routers.auth import token_for
 from app.routers.ws import CLOSE_UNAUTHORIZED
-from app.schemas import AccountDelete, PasswordChange, TokenOut
+from app.schemas import AccountDelete, PasswordChange, SecurityEventOut, TokenOut
 from app.security import hash_password, verify_password
+from app.services import security_log
 from app.services.export import build_export
 from app.services.images import delete_local
+from app.services.security_log import SecurityKind
+from app.useragent import parse
 
 router = APIRouter(prefix="/api/me", tags=["account"])
 
@@ -41,8 +44,24 @@ async def change_password(
         )
     user.password_hash = hash_password(data.new_password)
     user.token_version += 1
+    security_log.record(session, user.id, SecurityKind.PASSWORD_CHANGED, request)
     await session.commit()
     return await token_for(session, settings, user, request)
+
+
+@router.get("/security-events")
+async def security_events(user: CurrentUser, session: SessionDep) -> list[SecurityEventOut]:
+    """The last few sign-ins and security changes on this account, newest first."""
+    return [
+        SecurityEventOut(
+            id=event.id,
+            kind=event.kind,
+            device=parse(event.user_agent).label if event.user_agent else "",
+            ip_address=event.ip_address,
+            created_at=event.created_at,
+        )
+        for event in await security_log.recent(session, user.id)
+    ]
 
 
 @router.get("/export", dependencies=[per_user(EXPORTS)])
@@ -58,8 +77,11 @@ async def export_my_data(user: CurrentUser, session: SessionDep) -> Response:
 
 
 @router.post("/sign-out-everywhere", status_code=status.HTTP_204_NO_CONTENT)
-async def sign_out_everywhere(user: CurrentUser, session: SessionDep, hub: HubDep) -> Response:
+async def sign_out_everywhere(
+    request: Request, user: CurrentUser, session: SessionDep, hub: HubDep
+) -> Response:
     user.token_version += 1
+    security_log.record(session, user.id, SecurityKind.SIGNED_OUT_EVERYWHERE, request)
     await session.commit()
     await hub.manager.close_all(user.id, CLOSE_UNAUTHORIZED)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

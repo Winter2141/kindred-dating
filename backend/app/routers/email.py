@@ -37,7 +37,9 @@ from app.security import (
     decode_purpose_token,
     hash_password,
 )
+from app.services import security_log
 from app.services.digest import DEFAULT_PREFS, UNSUBSCRIBE, prefs_for
+from app.services.security_log import SecurityKind
 
 router = APIRouter(prefix="/api", tags=["email"])
 
@@ -160,6 +162,7 @@ async def reset_password(
         raise invalid
     user.password_hash = hash_password(data.new_password)
     user.token_version += 1
+    security_log.record(session, user.id, SecurityKind.PASSWORD_RESET, request)
     # Getting the link proves they can read mail sent to this address.
     user.email_verified_at = user.email_verified_at or utcnow()
     await session.commit()

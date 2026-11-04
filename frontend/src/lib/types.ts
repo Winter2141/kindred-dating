@@ -269,6 +269,27 @@ export interface Viewers {
   viewers: Viewer[]
 }
 
+export type SecurityEventKind =
+  | 'sign_in'
+  | 'sign_in_failed'
+  | 'password_changed'
+  | 'password_reset'
+  | 'email_change_requested'
+  | 'email_changed'
+  | 'two_factor_on'
+  | 'two_factor_off'
+  | 'signed_out_everywhere'
+
+/** Something that touched the account's security, for the list in Settings. */
+export interface SecurityEvent {
+  id: number
+  kind: SecurityEventKind
+  /** "Safari on iPhone", or empty when it didn't come from a browser. */
+  device: string
+  ip_address: string
+  created_at: string
+}
+
 /** Someone set aside from Discover to decide on later. */
 export interface SavedProfile {
   user: PublicProfile

@@ -16,7 +16,8 @@ from app.security import (
     hash_password,
     verify_password,
 )
-from app.services import devices
+from app.services import devices, security_log
+from app.services.security_log import SecurityKind
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -82,6 +83,9 @@ async def login(
     """Sign in. With two-factor on, this returns a challenge for /auth/login/2fa instead."""
     user = await session.scalar(select(User).where(User.email == data.email.lower()))
     if user is None or not verify_password(data.password, user.password_hash):
+        if user is not None:  # so they can see someone trying their account
+            security_log.record(session, user.id, SecurityKind.SIGN_IN_FAILED, request)
+            await session.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wrong email or password")
     if user.banned_at is not None:
         raise HTTPException(
@@ -92,6 +96,7 @@ async def login(
             user.id, MFA_LOGIN, settings.secret_key, MFA_TTL_MINUTES, {"ver": user.token_version}
         )
         return MfaChallenge(mfa_token=token)
+    security_log.record(session, user.id, SecurityKind.SIGN_IN, request)
     return await token_for(session, settings, user, request)
 
 

@@ -35,6 +35,7 @@ import type {
   ReportReason,
   ReportStatus,
   SavedProfile,
+  SecurityEvent,
   SearchResults,
   Session,
   SwipeAction,
@@ -208,6 +209,7 @@ export const api = {
     request<EmailPrefs>('/api/me/email-preferences', { method: 'PUT', body: prefs }),
   unsubscribe: (token: string) => request<void>('/api/email/unsubscribe', { method: 'POST', body: { token } }),
   deviceSessions: () => request<DeviceSession[]>('/api/me/sessions'),
+  securityEvents: () => request<SecurityEvent[]>('/api/me/security-events'),
   endSession: (id: number) => request<void>(`/api/me/sessions/${id}`, { method: 'DELETE' }),
   signOutOtherSessions: () => request<void>('/api/me/sessions/sign-out-others', { method: 'POST' }),
   /** The JSON export as a file to save. */

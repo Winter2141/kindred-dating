@@ -22,6 +22,7 @@ import { DeviceList } from '@/components/Devices'
 import { EmailAddressForm, useSaveMe } from '@/components/EmailAddress'
 import { EmailPrefsForm } from '@/components/EmailPrefs'
 import { QuietHoursForm } from '@/components/QuietHours'
+import { SecurityLog } from '@/components/SecurityLog'
 import { BlockedList } from '@/components/Safety'
 import { Segmented } from '@/components/ProfileFields'
 import { TwoFactorSettings } from '@/components/TwoFactor'
@@ -370,6 +371,14 @@ function SessionsSection() {
       description="Don't recognise one? Sign it out, then change your password. Lost a phone or used a shared computer? You can sign out everywhere at once, including here."
     >
       <DeviceList />
+      <details className="group mt-4 rounded-2xl border border-line bg-raised/40 px-4 py-3">
+        <summary className="cursor-pointer text-sm font-semibold text-muted group-open:text-cream hover:text-cream">
+          Recent security activity
+        </summary>
+        <div className="mt-2">
+          <SecurityLog />
+        </div>
+      </details>
       <button
         type="button"
         className="btn-ghost mt-3 text-sm text-danger"

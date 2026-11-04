@@ -5,7 +5,7 @@ address hears about it twice: when the change is asked for (so a stolen session 
 in time) and once it's done. Until the link is followed, sign-in keeps using the old address.
 """
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +28,8 @@ from app.ratelimit import per_user
 from app.routers.account import _require_password
 from app.schemas import EmailChangeConfirmIn, EmailChangeIn, EmailVerifiedOut, MeOut
 from app.security import InvalidToken, create_purpose_token, decode_purpose_token
+from app.services import security_log
+from app.services.security_log import SecurityKind
 
 router = APIRouter(prefix="/api", tags=["email"])
 
@@ -64,7 +66,11 @@ async def _send_link(session: AsyncSession, settings: Settings, user: User) -> N
 
 @router.post("/me/email", status_code=status.HTTP_202_ACCEPTED, dependencies=[per_user(EMAILS)])
 async def request_email_change(
-    data: EmailChangeIn, user: CurrentUser, session: SessionDep, settings: SettingsDep
+    data: EmailChangeIn,
+    request: Request,
+    user: CurrentUser,
+    session: SessionDep,
+    settings: SettingsDep,
 ) -> MeOut:
     """Start moving to a new address. Asking again replaces the earlier request."""
     _require_password(data.password, user.password_hash)
@@ -75,6 +81,7 @@ async def request_email_change(
         raise HTTPException(status.HTTP_409_CONFLICT, TAKEN)
 
     user.pending_email = new_email
+    security_log.record(session, user.id, SecurityKind.EMAIL_CHANGE_REQUESTED, request)
     await session.commit()
     await _send_link(session, settings, user)
     subject, body = change_requested_notice(user.name, new_email)
@@ -106,7 +113,7 @@ async def cancel_email_change(user: CurrentUser, session: SessionDep) -> MeOut:
 
 @router.post("/auth/confirm-email-change")
 async def confirm_email_change(
-    data: EmailChangeConfirmIn, session: SessionDep, settings: SettingsDep
+    data: EmailChangeConfirmIn, request: Request, session: SessionDep, settings: SettingsDep
 ) -> EmailVerifiedOut:
     """Follow the link sent to the new address. Works without being signed in."""
     try:
@@ -131,6 +138,7 @@ async def confirm_email_change(
     user.pending_email = None
     # Following the link proves they can read mail sent there.
     user.email_verified_at = utcnow()
+    security_log.record(session, user.id, SecurityKind.EMAIL_CHANGED, request)
     try:
         await session.commit()
     except IntegrityError:  # lost a race with a sign-up for the same address

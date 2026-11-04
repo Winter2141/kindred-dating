@@ -20,6 +20,8 @@ from app.schemas import (
     TwoFactorStatus,
 )
 from app.security import InvalidToken, decode_purpose_token, verify_password
+from app.services import security_log
+from app.services.security_log import SecurityKind
 
 router = APIRouter(prefix="/api", tags=["two-factor"])
 
@@ -76,7 +78,9 @@ async def start_setup(user: CurrentUser, session: SessionDep) -> TwoFactorSetupO
 
 
 @router.post("/me/2fa/enable")
-async def enable(data: TwoFactorCodeIn, user: CurrentUser, session: SessionDep) -> RecoveryCodesOut:
+async def enable(
+    data: TwoFactorCodeIn, request: Request, user: CurrentUser, session: SessionDep
+) -> RecoveryCodesOut:
     """Turn it on with a code from the app. Returns recovery codes, shown only this once."""
     if user.totp_enabled_at is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Two-factor sign-in is already on")
@@ -88,18 +92,22 @@ async def enable(data: TwoFactorCodeIn, user: CurrentUser, session: SessionDep) 
     user.totp_last_counter = counter
     user.totp_enabled_at = utcnow()
     codes = _fresh_codes(user)
+    security_log.record(session, user.id, SecurityKind.TWO_FACTOR_ON, request)
     await session.commit()
     return RecoveryCodesOut(recovery_codes=codes)
 
 
 @router.post("/me/2fa/disable", status_code=status.HTTP_204_NO_CONTENT)
-async def disable(data: TwoFactorDisableIn, user: CurrentUser, session: SessionDep) -> Response:
+async def disable(
+    data: TwoFactorDisableIn, request: Request, user: CurrentUser, session: SessionDep
+) -> Response:
     """Needs your password and a code (or recovery code), so a stolen session can't do it."""
     if user.totp_enabled_at is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Two-factor sign-in is already off")
     _check_password(user, data.password)
     if not check_second_factor(user, data.code):
         raise _wrong_code()
+    security_log.record(session, user.id, SecurityKind.TWO_FACTOR_OFF, request)
     user.totp_secret = None
     user.totp_enabled_at = None
     user.totp_last_counter = None
@@ -138,5 +146,6 @@ async def login_second_step(
         raise expired
     if not check_second_factor(user, data.code):
         raise _wrong_code()
+    security_log.record(session, user.id, SecurityKind.SIGN_IN, request)
     await session.commit()  # records the used code, so it can't be replayed
     return await token_for(session, settings, user, request)
