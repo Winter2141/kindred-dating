@@ -18,6 +18,7 @@ import {
 import * as calls from '@/lib/calls'
 import { upsertDate } from '@/lib/dates'
 import { notifyDesktop } from '@/lib/desktop'
+import { refetchIfLoading } from '@/lib/freshness'
 import { applyNotification, notificationHref, notificationText } from '@/lib/notifications'
 import { previewText } from '@/lib/photos'
 import { RealtimeClient, socketUrl } from '@/lib/realtime'
@@ -116,6 +117,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData<Message[]>(keys.messages(message.match_id), (list) =>
         list ? upsertMessage(list, message, clientId) : list,
       )
+      refetchIfLoading(queryClient, keys.messages(message.match_id))
       queryClient.setQueryData<Match[]>(keys.matches, (matches) =>
         applyMessageToMatches(matches, message, me?.id ?? -1, activeMatchId),
       )
