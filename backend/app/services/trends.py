@@ -70,9 +70,7 @@ async def build_trends(session: AsyncSession, now: datetime, days: int) -> Trend
             waits.append(_hours(report.resolved_at - report.created_at))
             bump(report.resolved_at, "reports_resolved")
 
-    joined = await session.scalars(
-        select(User.created_at).where(User.created_at >= since, User.is_persona.is_(False))
-    )
+    joined = await session.scalars(select(User.created_at).where(User.created_at >= since))
     for created_at in joined:
         result.new_members += 1
         bump(created_at, "new_members")

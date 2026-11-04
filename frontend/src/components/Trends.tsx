@@ -222,7 +222,7 @@ function ReasonBars({ items }: { items: Trends['by_reason'] }) {
   return (
     <ul className="mt-5 space-y-3" aria-label="Reports by reason">
       {items.map((item) => (
-        <li key={item.reason} className="grid grid-cols-[minmax(0,9rem)_1fr_2rem] items-center gap-3 text-sm">
+        <li key={item.reason} className="grid grid-cols-[minmax(0,13rem)_1fr_2rem] items-center gap-3 text-sm">
           <span className="truncate">{reasonName(item.reason)}</span>
           <span
             className="h-3 rounded-r-[4px]"

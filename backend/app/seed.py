@@ -21,6 +21,7 @@ from app.models import (
     QuestionAnswer,
     Report,
     ReportReason,
+    ReportStatus,
     Swipe,
     SwipeAction,
     User,
@@ -100,6 +101,16 @@ REPORTS = [
         ReportReason.HARASSMENT,
         "Kept messaging after I said I wasn't interested.",
     ),
+]
+# Reports a moderator already looked at and dismissed, so the Trends tab has a history.
+PAST_REPORTS = 18
+PAST_REASONS = [
+    ReportReason.SPAM,
+    ReportReason.SPAM,
+    ReportReason.FAKE_PROFILE,
+    ReportReason.INAPPROPRIATE,
+    ReportReason.HARASSMENT,
+    ReportReason.OTHER,
 ]
 
 
@@ -267,6 +278,9 @@ async def seed_demo_data(db: Database) -> bool:
                     created_at=now - timedelta(hours=hours_ago * 5),
                 )
             )
+        _seed_report_history(alex, list(people.values()), now, session)
+        # The man in the open harassment report kept going; moderators see the count.
+        people["Henrik"].unkind_messages = 3
         for user in [alex, *people.values()]:
             user.email_verified_at = user.created_at
         _seed_answers([alex, *people.values()], session)
@@ -290,6 +304,28 @@ def _seed_verification(people: list[User], now: datetime, session: AsyncSession)
                 status=VerificationStatus.PENDING,
                 created_at=now - timedelta(hours=hours_ago + 2),
                 submitted_at=now - timedelta(hours=hours_ago + 1),
+            )
+        )
+
+
+def _seed_report_history(
+    moderator: User, people: list[User], now: datetime, session: AsyncSession
+) -> None:
+    """Three weeks of reports that were handled within a day or so, oldest first."""
+    rng = random.Random(13)  # its own stream, like _seed_answers, so nothing else shifts
+    for _ in range(PAST_REPORTS):
+        reporter, reported = rng.sample(people, k=2)
+        filed = now - timedelta(days=rng.uniform(1.5, 21), hours=rng.uniform(0, 12))
+        session.add(
+            Report(
+                reporter_id=reporter.id,
+                reported_id=reported.id,
+                reason=rng.choice(PAST_REASONS),
+                details="",
+                status=ReportStatus.DISMISSED,
+                created_at=filed,
+                resolved_at=filed + timedelta(hours=rng.uniform(0.5, 30)),
+                resolved_by_id=moderator.id,
             )
         )
 

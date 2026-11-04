@@ -30,6 +30,10 @@ def test_demo_data_gives_a_full_first_session(settings: Settings) -> None:
         assert {n["kind"] for n in bell["items"]} == {"like", "super_like", "match", "message"}
         queue = client.get("/api/admin/reports", headers=headers).json()
         assert [r["reported"]["name"] for r in queue] == ["Ryan", "Ryan", "Owen", "Henrik"]
+        assert queue[-1]["reported"]["unkind_messages"] == 3
+        trends = client.get("/api/admin/trends", params={"days": 30}, headers=headers).json()
+        assert trends["reports_resolved"] == 18  # the dismissed history behind the Trends tab
+        assert trends["median_hours_to_resolve"] is not None
 
         second = client.post(
             "/api/auth/login", json={"email": SECOND_DEMO_EMAIL, "password": DEMO_PASSWORD}
