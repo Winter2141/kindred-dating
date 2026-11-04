@@ -181,6 +181,12 @@ export const api = {
       method: 'POST',
       body: { current_password: currentPassword, new_password: newPassword },
     }),
+  changeEmail: (newEmail: string, password: string) =>
+    request<Me>('/api/me/email', { method: 'POST', body: { new_email: newEmail, password } }),
+  resendEmailChange: () => request<void>('/api/me/email/resend', { method: 'POST' }),
+  cancelEmailChange: () => request<Me>('/api/me/email/pending', { method: 'DELETE' }),
+  confirmEmailChange: (token: string) =>
+    request<{ email: string; verified: true }>('/api/auth/confirm-email-change', { method: 'POST', body: { token } }),
   signOutEverywhere: () => request<void>('/api/me/sign-out-everywhere', { method: 'POST' }),
   logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
   emailPrefs: () => request<EmailPrefs>('/api/me/email-preferences'),

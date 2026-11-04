@@ -117,6 +117,8 @@ class User(Base):
     recovery_codes: Mapped[list[str] | None] = mapped_column(JSON, default=None)
     # Set once they follow the link in the confirmation email.
     email_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    # A new address they asked to move to; it replaces `email` once its link is followed.
+    pending_email: Mapped[str | None] = mapped_column(String(255), default=None)
     # Set when a moderator matched a posed selfie to the profile photos.
     verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
     # Which email digests they want (see app.services.digest); None means the defaults.

@@ -15,6 +15,7 @@ import {
   ResetPasswordPage,
   UnsubscribePage,
   VerifyEmailPage,
+  ConfirmEmailChangePage,
 } from '@/pages/AccountRecovery'
 import { LoginPage, SignupPage } from '@/pages/Auth'
 import { MatchesLayout, NoChatSelected } from '@/pages/Matches'
@@ -56,6 +57,7 @@ export function App() {
       {/* Reset and confirm links work whether or not you're signed in on this device. */}
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
       <Route path="/unsubscribe" element={<UnsubscribePage />} />
       <Route path="/dev/outbox" element={<DevOutboxPage />} />
       <Route path="/app" element={<RequireAuth><AppShell /></RequireAuth>}>

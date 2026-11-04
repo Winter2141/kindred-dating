@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
+  AtSign,
   Ban,
   BadgeCheck,
   BellRing,
@@ -17,6 +18,7 @@ import {
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { DeviceList } from '@/components/Devices'
+import { EmailAddressForm, useSaveMe } from '@/components/EmailAddress'
 import { EmailPrefsForm } from '@/components/EmailPrefs'
 import { BlockedList } from '@/components/Safety'
 import { Segmented } from '@/components/ProfileFields'
@@ -26,7 +28,6 @@ import { VerificationFlow } from '@/components/Verification'
 import { Spinner, Switch } from '@/components/ui'
 import { api } from '@/lib/api'
 import { desktopPermission, requestDesktopPermission, type DesktopPermission } from '@/lib/desktop'
-import { keys } from '@/lib/cache'
 import type { Me } from '@/lib/types'
 import { useAuth } from '@/store/auth'
 import { useToasts } from '@/store/live'
@@ -57,6 +58,13 @@ export function SettingsPage() {
           <VerificationFlow hasPhotos={user.photos.length > 0} />
         </Section>
         <DesktopSection />
+        <Section
+          icon={<AtSign className="size-5" />}
+          title="Email address"
+          description="Where we send sign-in links and digests, and what you sign in with. A new address has to confirm before it replaces this one."
+        >
+          <EmailAddressForm user={user} />
+        </Section>
         <Section
           id="email"
           icon={<Mail className="size-5" />}
@@ -167,15 +175,6 @@ export function ExportButton() {
       {download.isPending ? <Spinner className="size-4" /> : <FileDown className="size-4" />} Download my data
     </button>
   )
-}
-
-function useSaveMe() {
-  const queryClient = useQueryClient()
-  const setUser = useAuth((s) => s.setUser)
-  return (me: Me) => {
-    setUser(me)
-    queryClient.setQueryData(keys.me, me)
-  }
 }
 
 function VisibilitySection({ user }: { user: Me }) {

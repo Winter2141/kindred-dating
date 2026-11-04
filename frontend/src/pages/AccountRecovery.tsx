@@ -190,6 +190,56 @@ export function VerifyEmailPage() {
  * The link at the bottom of every digest. It waits for a click instead of acting on arrival,
  * because mail scanners open links in emails and would unsubscribe people by accident.
  */
+export function ConfirmEmailChangePage() {
+  const token = useSearchParams()[0].get('token') ?? ''
+  const signedIn = Boolean(useAuth((s) => s.token))
+  const queryClient = useQueryClient()
+  const confirm = useMutation({
+    mutationFn: () => api.confirmEmailChange(token),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: keys.me }),
+  })
+  // Confirm once on arrival; StrictMode mounts effects twice in development.
+  const sent = useRef(false)
+  const { mutate } = confirm
+  useEffect(() => {
+    if (!token || sent.current) return
+    sent.current = true
+    mutate()
+  }, [token, mutate])
+
+  const home = signedIn ? '/app/settings' : '/login'
+  return (
+    <AuthLayout>
+      {confirm.isSuccess ? (
+        <div>
+          <MailCheck className="size-10 text-mint" />
+          <h1 className="mt-5 font-display text-5xl leading-none">New email confirmed</h1>
+          <p className="mt-4 text-muted">From now on, sign in with {confirm.data.email}.</p>
+          <Link to={home} className="btn-primary mt-8">
+            {signedIn ? 'Back to Settings' : 'Sign in'}
+          </Link>
+        </div>
+      ) : confirm.isError || !token ? (
+        <div>
+          <MailWarning className="size-10 text-danger" />
+          <h1 className="mt-5 font-display text-5xl leading-none">That link didn't work</h1>
+          <p className="mt-4 text-muted">
+            {confirm.error?.message ?? 'The link is missing its code'}. Your email hasn't changed; you can ask for a
+            new link in Settings.
+          </p>
+          <Link to={home} className="btn-secondary mt-8">
+            {signedIn ? 'Open Settings' : 'Sign in'}
+          </Link>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 text-muted">
+          <Spinner className="text-coral" /> Confirming your new email…
+        </div>
+      )}
+    </AuthLayout>
+  )
+}
+
 export function UnsubscribePage() {
   const token = useSearchParams()[0].get('token') ?? ''
   const signedIn = Boolean(useAuth((s) => s.token))

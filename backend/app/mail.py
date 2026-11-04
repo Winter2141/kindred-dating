@@ -22,8 +22,10 @@ log = logging.getLogger(__name__)
 # Purposes for the signed tokens in emailed links, and how long each link works.
 VERIFY_EMAIL = "verify_email"
 RESET_PASSWORD = "reset_password"
+CHANGE_EMAIL = "change_email"
 VERIFY_TTL_MINUTES = 3 * 24 * 60
 RESET_TTL_MINUTES = 60
+CHANGE_EMAIL_TTL_MINUTES = 24 * 60
 
 
 def link(settings: Settings, path: str, token: str) -> str:
@@ -88,6 +90,51 @@ def reset_email(name: str, link: str) -> tuple[str, str]:
         f"{link}\n\n"
         "The link works once, for an hour. If you didn't ask for this, your password hasn't "
         "changed and you can ignore this email.\n\n"
+        "The Kindred team\n"
+    )
+    return subject, body
+
+
+def mask_email(address: str) -> str:
+    """Enough of an address to recognise it, for mail that goes to a different one."""
+    local, _, domain = address.partition("@")
+    return f"{local[:1]}{'•' * max(2, len(local) - 1)}@{domain}"
+
+
+def change_email_message(name: str, new_email: str, link: str) -> tuple[str, str]:
+    subject = "Confirm your new email for Kindred"
+    body = (
+        f"Hi {name},\n\n"
+        f"You asked to sign in to Kindred with {new_email} from now on. Confirm it's yours:\n\n"
+        f"{link}\n\n"
+        "The link works for a day. Until you follow it, your old address stays in use. If you "
+        "didn't ask for this, ignore this email and nothing changes.\n\n"
+        "The Kindred team\n"
+    )
+    return subject, body
+
+
+def change_requested_notice(name: str, new_email: str) -> tuple[str, str]:
+    subject = "Your Kindred email is about to change"
+    body = (
+        f"Hi {name},\n\n"
+        f"Someone signed in to your account asked to move it to {mask_email(new_email)}. "
+        "Nothing changes until that address confirms.\n\n"
+        "If this wasn't you, sign in and cancel the change under Settings, then change your "
+        "password and sign out your other devices.\n\n"
+        "The Kindred team\n"
+    )
+    return subject, body
+
+
+def email_changed_notice(name: str, new_email: str) -> tuple[str, str]:
+    subject = "Your Kindred email has changed"
+    body = (
+        f"Hi {name},\n\n"
+        f"Your account now signs in with {mask_email(new_email)}, so this is the last email "
+        "you'll get from us at this address.\n\n"
+        "If you didn't make this change, reply to this email straight away and we'll help you "
+        "get your account back.\n\n"
         "The Kindred team\n"
     )
     return subject, body

@@ -62,6 +62,8 @@ export interface Me extends PublicProfile {
   is_admin: boolean
   /** They followed the link in the confirmation email. */
   email_verified?: boolean
+  /** A new address waiting for its confirmation link to be followed. */
+  pending_email?: string | null
   two_factor_enabled?: boolean
 }
 

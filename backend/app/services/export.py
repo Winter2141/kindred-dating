@@ -107,6 +107,7 @@ async def build_export(session: AsyncSession, user: User, now: datetime) -> dict
         "account": {
             "email": user.email,
             "email_confirmed_at": _when(user.email_verified_at),
+            "pending_email": user.pending_email,
             "created_at": _when(user.created_at),
             "last_active_at": _when(user.last_active_at),
             "two_factor_enabled": user.totp_enabled_at is not None,

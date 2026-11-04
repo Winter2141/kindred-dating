@@ -8,7 +8,13 @@ import { EmailBanner } from '@/components/EmailBanner'
 import { api } from '@/lib/api'
 import type { Me, Session } from '@/lib/types'
 import { useAuth } from '@/store/auth'
-import { ForgotPasswordPage, ResetPasswordPage, UnsubscribePage, VerifyEmailPage } from './AccountRecovery'
+import {
+  ConfirmEmailChangePage,
+  ForgotPasswordPage,
+  ResetPasswordPage,
+  UnsubscribePage,
+  VerifyEmailPage,
+} from './AccountRecovery'
 
 afterEach(() => {
   cleanup()
@@ -135,5 +141,23 @@ describe('UnsubscribePage', () => {
       'href',
       '/app/settings#email',
     )
+  })
+})
+
+describe('ConfirmEmailChangePage', () => {
+  it('confirms the new address once on arrival', async () => {
+    const confirm = vi.spyOn(api, 'confirmEmailChange').mockResolvedValue({ email: 'maya@new.example', verified: true })
+    renderAt('/confirm-email-change?token=abc', <ConfirmEmailChangePage />, '/confirm-email-change')
+    expect(await screen.findByText('New email confirmed')).toBeInTheDocument()
+    expect(screen.getByText('From now on, sign in with maya@new.example.')).toBeInTheDocument()
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(confirm).toHaveBeenCalledWith('abc')
+  })
+
+  it('explains a link that no longer works', async () => {
+    vi.spyOn(api, 'confirmEmailChange').mockRejectedValue(new Error('That link is invalid, expired or replaced by a newer one'))
+    renderAt('/confirm-email-change?token=old', <ConfirmEmailChangePage />, '/confirm-email-change')
+    expect(await screen.findByText("That link didn't work")).toBeInTheDocument()
+    expect(screen.getByText(/replaced by a newer one\. Your email hasn't changed/)).toBeInTheDocument()
   })
 })

@@ -148,6 +148,15 @@ class UnsubscribeIn(BaseModel):
     token: str
 
 
+class EmailChangeIn(BaseModel):
+    new_email: EmailStr
+    password: str
+
+
+class EmailChangeConfirmIn(BaseModel):
+    token: str
+
+
 class EmailVerifiedOut(BaseModel):
     email: EmailStr
     verified: Literal[True] = True
@@ -305,6 +314,7 @@ class MeOut(PublicProfile):
     is_paused: bool
     is_admin: bool
     email_verified: bool = False
+    pending_email: EmailStr | None = None
     two_factor_enabled: bool = False
 
     @classmethod
@@ -322,6 +332,7 @@ class MeOut(PublicProfile):
             is_paused=user.is_paused,
             is_admin=user.is_admin,
             email_verified=user.email_verified_at is not None,
+            pending_email=user.pending_email,
             two_factor_enabled=user.totp_enabled_at is not None,
         )
 
