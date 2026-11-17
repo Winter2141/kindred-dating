@@ -8,6 +8,7 @@ from app.limits import REPORTS
 from app.models import Block, Match, Report, User
 from app.ratelimit import per_user
 from app.schemas import BlockIn, PublicProfile, ReportIn
+from app.services.safety import conversation_evidence
 
 router = APIRouter(prefix="/api", tags=["safety"])
 
@@ -79,7 +80,11 @@ async def report(
     """File a report for the moderators; by default the person is blocked too."""
     target = await _target(session, user, data.user_id)
     filed = Report(
-        reporter_id=user.id, reported_id=target.id, reason=data.reason, details=data.details
+        reporter_id=user.id,
+        reported_id=target.id,
+        reason=data.reason,
+        details=data.details,
+        evidence=await conversation_evidence(session, user.id, target.id),
     )
     session.add(filed)
     await session.commit()

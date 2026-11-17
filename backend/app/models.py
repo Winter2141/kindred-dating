@@ -280,6 +280,9 @@ class Report(Base):
     reported_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     reason: Mapped[str] = mapped_column(String(24))
     details: Mapped[str] = mapped_column(Text, default="")
+    # The pair's last messages when the report was filed ({"from", "text", "at"}), kept
+    # because reporting usually blocks, and blocking deletes the chat.
+    evidence: Mapped[list[dict[str, str]] | None] = mapped_column(JSON, default=None)
     status: Mapped[str] = mapped_column(String(16), default=ReportStatus.OPEN, index=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     resolved_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)

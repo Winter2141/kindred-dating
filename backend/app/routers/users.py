@@ -31,12 +31,13 @@ router = APIRouter(prefix="/api", tags=["profile"])
 
 
 @router.get("/meta")
-async def meta(settings: SettingsDep) -> MetaOut:
+async def meta(settings: SettingsDep, hub: HubDep) -> MetaOut:
     return MetaOut(
         interests=[Interest(name=n, emoji=e) for n, e in INTERESTS.items()],
         prompt_questions=PROMPT_QUESTIONS,
         genders=list(Gender),
         max_photos=settings.max_photos,
+        ai_enabled=hub.ai is not None,
     )
 
 

@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app import scheduler
+from app.ai import make_writer
 from app.broker import RedisBroker
 from app.config import Settings, get_settings
 from app.db import Database
@@ -19,6 +20,7 @@ from app.routers import (
     account,
     admin,
     admin_users,
+    ai,
     announcements,
     auth,
     dates,
@@ -58,7 +60,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             RedisRateLimiter.from_url(settings.redis_url) if settings.redis_url else RateLimiter()
         )
         app.state.hub = hub = Hub(
-            settings=settings, db=db, manager=ConnectionManager(broker), limiter=limiter
+            settings=settings,
+            db=db,
+            manager=ConnectionManager(broker),
+            limiter=limiter,
+            ai=make_writer(settings),
         )
         await hub.manager.start()
         # Not a hub task: hub.drain() waits for those to finish, and this loop never does.
@@ -110,6 +116,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         admin,
         admin_users,
         announcements,
+        ai,
         ws,
     ):
         app.include_router(module.router)

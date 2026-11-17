@@ -434,6 +434,24 @@ class SavedProfileOut(BaseModel):
     saved_at: datetime
 
 
+class BioIdeasIn(BaseModel):
+    draft: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)] = ""
+    tone: Literal["warm", "funny", "direct"] = "warm"
+
+
+class IdeasOut(BaseModel):
+    ideas: list[str]
+    source: Literal["ai", "basic"] = Field(
+        description="ai: written by the model; basic: built-in suggestions (no API key)"
+    )
+
+
+class ReportSummaryOut(BaseModel):
+    summary: str
+    concerns: list[str]
+    suggested_action: Literal["dismiss", "warn", "ban"]
+
+
 class TokenOut(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"
@@ -702,6 +720,9 @@ class MetaOut(BaseModel):
     unkind_patterns: list[str] = Field(
         default_factory=kindness.patterns,
         description="Case-insensitive regexes for the send-anyway nudge (app.kindness)",
+    )
+    ai_enabled: bool = Field(
+        default=False, description="Writing help goes to OpenAI; otherwise it's built in"
     )
 
 
