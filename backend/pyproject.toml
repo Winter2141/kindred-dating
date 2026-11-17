@@ -18,6 +18,8 @@ dependencies = [
     "segno>=1.6",
     # Time zones for quiet hours; Windows and slim images have no system database.
     "tzdata>=2024.1",
+    # Writing help (app.ai); only used when KINDRED_OPENAI_API_KEY is set.
+    "openai>=1.60",
 ]
 
 [project.optional-dependencies]

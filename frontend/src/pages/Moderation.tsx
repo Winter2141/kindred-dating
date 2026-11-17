@@ -15,6 +15,7 @@ import { keys } from '@/lib/cache'
 import { ago } from '@/lib/time'
 import type { AdminReport, ReportStatus } from '@/lib/types'
 import { useToasts } from '@/store/live'
+import { ReportSummaryPanel } from '@/components/WritingHelp'
 
 const TABS: { value: ReportStatus; label: string }[] = [
   { value: 'open', label: 'Open' },
@@ -223,6 +224,7 @@ export function ReportCard({ report }: { report: AdminReport }) {
             <Avatar src={report.reporter.photos[0]} name={report.reporter.name} size={18} />
             Reported by {report.reporter.name} · {ago(report.created_at)}
           </p>
+          {report.status === 'open' && <ReportSummaryPanel report={report} />}
         </div>
       </div>
 

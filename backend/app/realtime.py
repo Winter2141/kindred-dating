@@ -22,6 +22,7 @@ from typing import Any
 from fastapi import WebSocket
 from fastapi.encoders import jsonable_encoder
 
+from app.ai import Writer
 from app.broker import Broker, LocalBroker
 from app.config import Settings
 from app.db import Database
@@ -220,6 +221,8 @@ class Hub:
     db: Database
     manager: ConnectionManager = field(default_factory=ConnectionManager)
     limiter: Limiter = field(default_factory=RateLimiter)
+    # The language model for writing help, or None to use built-in suggestions (app.ai).
+    ai: Writer | None = None
     # Matches with a persona reply in flight; later messages are folded into that reply.
     pending_replies: set[int] = field(default_factory=set)
     _tasks: set[asyncio.Task[Any]] = field(default_factory=set)

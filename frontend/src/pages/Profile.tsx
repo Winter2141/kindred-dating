@@ -21,6 +21,7 @@ import { currentPosition } from '@/lib/distance'
 import type { Gender, Me } from '@/lib/types'
 import { useAuth } from '@/store/auth'
 import { useToasts } from '@/store/live'
+import { BioHelper } from '@/components/WritingHelp'
 
 function formFrom(user: Me) {
   return {
@@ -133,6 +134,7 @@ function ProfileEditor({ user }: { user: Me }) {
                   <span className="text-xs text-faint">{form.bio.length}/500</span>
                 </span>
                 <textarea className="field min-h-28 resize-y" value={form.bio} maxLength={500} placeholder="A few lines that sound like you." onChange={(e) => set('bio', e.target.value)} />
+                <BioHelper draft={form.bio} onUse={(bio) => set('bio', bio)} />
               </label>
             </div>
           </section>

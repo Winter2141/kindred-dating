@@ -55,6 +55,14 @@ class Settings(BaseSettings):
     log_format: Literal["text", "json"] = "text"
     metrics_token: str | None = None
 
+    # Writing help through the OpenAI API (app.ai): bio ideas, message ideas and report
+    # summaries. Without a key, each feature uses its built-in suggestions instead.
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-4.1-mini"
+    # For an OpenAI-compatible gateway or proxy; leave unset for api.openai.com.
+    openai_base_url: str | None = None
+    ai_timeout_seconds: float = 20
+
     # Demo mode makes the seeded personas feel alive: they like you back and reply in chat.
     demo_mode: bool = True
     seed_on_startup: bool = True

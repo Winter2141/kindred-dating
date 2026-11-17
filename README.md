@@ -42,6 +42,7 @@ Swipe through people who fit you, see *why* they fit, match, then talk: live cha
 - **Date planning** inside the chat: propose a place and time, accept or decline live, add it to your calendar (`.ics`), and get a **reminder** two hours before.
 - **Notifications** for likes, matches, missed messages and reminders: a live bell, unread counts in the tab title and opt-in desktop notifications, plus **quiet hours** in your own time zone, when desktop alerts hold off and digests wait until morning.
 - **An email digest** of what you missed while away: one email at most every six hours, only to a confirmed address, with a switch for each kind and an unsubscribe link that mail scanners can't trigger.
+- **Writing help with the OpenAI API:** "Help me write" drafts three bios from your profile in a warm, funny or direct tone; the sparkle in a chat suggests an opener from both profiles, or a reply to where the conversation is; and moderators can summarise a report with a suggested action. Without an API key, bios and messages fall back to built-in suggestions, so the demo works the same.
 - **"Are you sure?"** before sending a message that reads as an insult. It's a nudge, not a filter: edit it or send anyway. The server owns the word list and shares it with the app, so the check is instant.
 
 **Your account**
@@ -170,15 +171,16 @@ flowchart LR
 | Path | Responsibility |
 | --- | --- |
 | `main.py` | App factory and lifespan: migrate, seed, start the broker and the scheduler, metrics, CORS, static media |
-| `models.py` · `migrations/` | 20 tables with the constraints that keep them honest; 33 Alembic revisions applied on startup, and a test that fails if models and migrations drift |
+| `models.py` · `migrations/` | 20 tables with the constraints that keep them honest; 34 Alembic revisions applied on startup, and a test that fails if models and migrations drift |
 | `schemas.py` | Pydantic v2 validation (18+, known interests, prompts and questions, ranges, aware datetimes) and response shapes |
-| `routers/` | `auth`, `email`, `email_change`, `two_factor`, `users`, `account`, `devices`, `travel`, `views`, `saved`, `questions`, `discover`, `matches`, `search`, `dates`, `notifications`, `safety`, `verification`, `admin`, `admin_users`, `announcements`, `ws` |
+| `routers/` | `auth`, `email`, `email_change`, `two_factor`, `users`, `account`, `devices`, `travel`, `views`, `saved`, `questions`, `discover`, `matches`, `search`, `dates`, `notifications`, `safety`, `verification`, `admin`, `admin_users`, `announcements`, `ai`, `ws` |
 | `services/discovery.py` · `matching.py` · `agreement.py` | Who can see whom, filters, top picks, the compatibility score, distance and question agreement |
 | `services/chat.py` · `chat_settings.py` · `audio.py` | Messages, replies, edits, unsend, reactions, voice notes, read receipts, persona replies; pin, mute and archive |
 | `services/calls.py` | Call registry and WebRTC signalling relay: ringing, busy, missed and the call record |
 | `services/verification.py` · `audit.py` · `export.py` · `trends.py` | Posed-selfie verification, the moderator audit log, the data export, and moderation trends |
 | `services/devices.py` · `useragent.py` | Device sessions: started at sign-in, checked on every request and socket, signed out one at a time |
 | `services/digest.py` · `kindness.py` · `quiet.py` | The email digest (who's due, what to say, claimed once across workers); the unkind-message patterns shared with the app; quiet hours in each person's own time zone |
+| `ai.py` · `services/assistant.py` | The OpenAI client (Responses API, strict JSON schemas, `store=False`) and the writing help built on it: prompts, output checks and built-in fallbacks |
 | `services/security_log.py` | The account's recent security activity: sign-ins, wrong passwords, password, email and two-factor changes |
 | `totp.py` · `security.py` · `mail.py` | RFC 6238 one-time codes and recovery codes; access and single-purpose tokens; SMTP or outbox email |
 | `realtime.py` · `broker.py` | Per-user socket fan-out and shared presence (heartbeats per worker), through an in-process or Redis broker |
@@ -259,8 +261,8 @@ The SQL query narrows candidates on indexed columns (not swiped, not rejected by
 ## Tests and CI
 
 ```bash
-cd backend && pytest                       # 325 tests
-cd frontend && npm run lint && npm test    # 251 tests
+cd backend && pytest                       # 340 tests
+cd frontend && npm run lint && npm test    # 258 tests
 cd frontend && npm run e2e                 # 10 browser tests (starts its own API and web app)
 ```
 
@@ -289,12 +291,21 @@ All settings are environment variables with a `KINDRED_` prefix (see `backend/.e
 | `KINDRED_ICE_SERVERS` | Google's public STUN | JSON list of `RTCIceServer`s; add TURN for strict networks |
 | `KINDRED_LOG_FORMAT` | `text` | `json` for one JSON object per log line |
 | `KINDRED_METRICS_TOKEN` | unset | Require `Authorization: Bearer <token>` for `/metrics` |
+| `KINDRED_OPENAI_API_KEY` | unset | Turn on AI writing help; without it, bios and messages use built-in suggestions |
+| `KINDRED_OPENAI_MODEL` | `gpt-4.1-mini` | Any model that supports structured outputs on the Responses API |
+| `KINDRED_OPENAI_BASE_URL` | unset | An OpenAI-compatible gateway, if you use one |
 | `KINDRED_RATE_LIMIT_ENABLED` | `true` | Sliding-window limits |
 | `KINDRED_DEMO_MODE` | `true` | Personas like back, reply and accept dates |
 | `KINDRED_SEED_ON_STARTUP` | `true` | Seed an empty database on boot |
 | `KINDRED_CORS_ORIGINS` | `["http://localhost:5173"]` | JSON list |
 
 Schema changes go through Alembic: edit `models.py`, then run `alembic revision --autogenerate -m "what changed"` in `backend/` and review the generated file.
+
+### Writing help and privacy
+
+Nothing goes to OpenAI unless someone presses a button for it. A prompt holds only what other members can already see (first name, age, job, city, interests, prompts and bio) plus, for chat help, the last twelve messages of that one conversation; never emails, locations or photos. Requests are sent with `store=False` and a hashed user id, answers must match a strict JSON schema, and anything empty, repeated or too long is dropped before it reaches the app. Model-written text is labelled as such, and nothing is sent until the person chooses to.
+
+Reporting someone blocks them, and blocking deletes the chat, so a report now keeps the pair's last twenty messages as evidence. The AI summary reads that, and the moderator still makes the decision.
 
 ## What I'd add next
 

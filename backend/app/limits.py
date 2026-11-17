@@ -30,6 +30,8 @@ VOICE_NOTES = Limit("voice-notes", 40, 60 * 60)
 REPORTS = Limit("reports", 10, 60 * 60)
 EMAILS = Limit("emails", 5, 60 * 60)
 EXPORTS = Limit("exports", 10, 60 * 60)
+# Writing help calls a paid API, so each person gets a modest number per hour.
+AI = Limit("ai", 30, 60 * 60)
 
 
 class Limiter(Protocol):
