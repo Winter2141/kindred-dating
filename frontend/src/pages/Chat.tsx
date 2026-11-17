@@ -54,6 +54,7 @@ import { clockTime, dayLabel, isSameDay, lastSeen, shortAgo } from '@/lib/time'
 import { useRealtimeSend } from '@/realtime/RealtimeProvider'
 import { useAuth } from '@/store/auth'
 import { useLive, useToasts } from '@/store/live'
+import { MessageIdeasButton } from '@/components/WritingHelp'
 
 const PAGE_SIZE = 50
 /** How far back opening a chat at a search result will page to find the message. */
@@ -993,7 +994,7 @@ function Composer({
           onSend={() => void sendRecording()}
         />
       ) : (
-        <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-[1.6rem] border border-line bg-raised/70 p-1.5 pl-2 transition focus-within:border-coral/50">
+        <div className="relative mx-auto flex max-w-3xl items-end gap-2 rounded-[1.6rem] border border-line bg-raised/70 p-1.5 pl-2 transition focus-within:border-coral/50">
           <button
             type="button"
             onClick={() => fileInput.current?.click()}
@@ -1004,6 +1005,15 @@ function Composer({
           >
             <ImagePlus className="size-5" />
           </button>
+          <MessageIdeasButton
+            matchId={matchId}
+            name={name}
+            disabled={Boolean(editing) || Boolean(photo)}
+            onPick={(idea) => {
+              setText(idea)
+              textarea.current?.focus()
+            }}
+          />
           <input
             ref={fileInput}
             type="file"

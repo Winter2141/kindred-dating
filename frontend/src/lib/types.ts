@@ -296,6 +296,20 @@ export interface SavedProfile {
   saved_at: string
 }
 
+export type BioTone = 'warm' | 'funny' | 'direct'
+
+/** Suggestions from the writing helper: written by AI, or built in when there's no key. */
+export interface Ideas {
+  ideas: string[]
+  source: 'ai' | 'basic'
+}
+
+export interface ReportSummary {
+  summary: string
+  concerns: string[]
+  suggested_action: 'dismiss' | 'warn' | 'ban'
+}
+
 export type AnnouncementTone = 'info' | 'warning' | 'celebration'
 
 /** A notice from the moderators, shown as a banner until dismissed or ended. */
@@ -403,6 +417,8 @@ export interface Meta {
   reactions: string[]
   /** Case-insensitive regex sources for the "Are you sure?" nudge (lib/kindness.ts). */
   unkind_patterns?: string[]
+  /** Writing help goes to OpenAI; otherwise it uses built-in suggestions. */
+  ai_enabled?: boolean
 }
 
 export interface Session {
